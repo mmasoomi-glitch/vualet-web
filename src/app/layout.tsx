@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
-import { Nav } from "@/components/nav";
-import { Footer } from "@/components/footer";
-import { CsBot } from "@/components/cs-bot";
+import { SiteChrome } from "@/components/site-chrome";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -52,10 +50,7 @@ export default function RootLayout({
       className={`${inter.variable} ${plexSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)]">
-        <Nav />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <CsBot />
+        <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
   );
