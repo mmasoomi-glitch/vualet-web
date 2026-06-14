@@ -12,6 +12,22 @@ export type Product = {
 
 export const PRODUCTS: Product[] = [
   {
+    slug: "mira",
+    glyph: "M",
+    name: "Mira — Personal Assistant",
+    category: "Customer Conversations",
+    tagline: "Your own assistant, in the chat you already use. No app.",
+    description:
+      "Mira lives in your Telegram or WhatsApp. She talks, remembers you, and quietly gets things done — from answering a question to building you a small app — delivered like a voice note from a friend. Scan a code, talk to yourself, and she's there.",
+    bullets: [
+      "No app to install — she messages you on Telegram or WhatsApp",
+      "Voice-first and multilingual, on the fly",
+      "Remembers you across every conversation",
+      "Feed her a PDF, link, or notes and she becomes the expert",
+    ],
+    startingPriceUsd: 19,
+  },
+  {
     slug: "whatsapp-agents",
     glyph: "W",
     name: "WhatsApp AI Agents",

@@ -3,6 +3,7 @@ import { Inter, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
+import { CsBot } from "@/components/cs-bot";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -54,6 +55,7 @@ export default function RootLayout({
         <Nav />
         <main className="flex-1">{children}</main>
         <Footer />
+        <CsBot />
       </body>
     </html>
   );
