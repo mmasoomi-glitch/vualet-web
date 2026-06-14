@@ -48,3 +48,6 @@
 
 @keyframes mira-breathe { 0%,100% { opacity:.5; transform: scale(1); } 50% { opacity:.8; transform: scale(1.05); } }
 .mira-aura { animation: mira-breathe 2400ms cubic-bezier(.4,0,.2,1) infinite; transform-origin: center; }
+
+.mira-root .mira-navlink { transition: color .2s; }
+.mira-root .mira-navlink:hover { color: var(--mira-rose-deep); }
