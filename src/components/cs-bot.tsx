@@ -41,10 +41,25 @@ export function CsBot() {
     <>
       <button
         onClick={() => setOpen((o) => !o)}
-        aria-label="Support"
+        aria-label={open ? "Close support" : "Open support"}
+        aria-expanded={open}
         className="fixed bottom-5 right-5 z-50 grid place-items-center w-14 h-14 rounded-full text-white bg-[var(--color-vualet-indigo)] hover:bg-[var(--color-vualet-indigo-hover)] shadow-lg transition-colors"
       >
-        {open ? "✕" : "💬"}
+        {open ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        ) : (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
       </button>
 
       {open && (
@@ -52,9 +67,17 @@ export function CsBot() {
           className="fixed bottom-24 right-5 z-50 w-[min(92vw,380px)] rounded-2xl border border-[var(--border)] bg-[var(--background)] shadow-2xl overflow-hidden flex flex-col"
           style={{ maxHeight: "70vh" }}
         >
-          <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-2)]">
-            <p className="text-sm font-semibold">Vualet Support</p>
-            <p className="text-xs text-[var(--muted)]">Refunds · Billing · Questions</p>
+          <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-3">
+            <div
+              className="grid place-items-center w-9 h-9 rounded-full text-xs font-bold text-white bg-[var(--color-vualet-indigo)]"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              V
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Vualet Support</p>
+              <p className="text-xs text-[var(--muted)]">Refunds · Billing · Questions</p>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
