@@ -47,6 +47,33 @@ export default function MiraAccount() {
   const canUpgrade = nextPlan.id !== plan.id;
   const u = STUB_ACCOUNT.usage;
 
+  async function checkout(planId: string) {
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: planId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.url) window.location.href = data.url;
+    else alert(data.message || "Couldn't start checkout right now.");
+  }
+
+  async function openBilling() {
+    const customerId = typeof window !== "undefined" ? localStorage.getItem("mira_customer") : null;
+    if (!customerId) {
+      alert("Open billing from the link in your welcome email — your account isn't signed in yet.");
+      return;
+    }
+    const res = await fetch("/api/portal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ customer_id: customerId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.url) window.location.href = data.url;
+    else alert(data.message || "Couldn't open the billing portal.");
+  }
+
   return (
     <main style={{ maxWidth: 880, margin: "0 auto", padding: "48px 24px 80px" }}>
       <header style={{ marginBottom: 28 }}>
@@ -74,13 +101,13 @@ export default function MiraAccount() {
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
             {canUpgrade && (
-              <Link className="btn-mira" href={`/signup?product=mira&plan=${nextPlan.id}`} style={{ padding: "11px 20px", fontSize: 14 }}>
+              <button type="button" className="btn-mira" onClick={() => checkout(nextPlan.id)} style={{ padding: "11px 20px", fontSize: 14, cursor: "pointer" }}>
                 Upgrade to {nextPlan.name} →
-              </Link>
+              </button>
             )}
-            <Link className="btn-mira-soft" href="/mira/plans" style={{ padding: "10px 18px", fontSize: 14 }}>
-              Manage plan
-            </Link>
+            <button type="button" className="btn-mira-soft" onClick={openBilling} style={{ padding: "10px 18px", fontSize: 14, cursor: "pointer" }}>
+              Manage billing
+            </button>
           </div>
         </section>
 

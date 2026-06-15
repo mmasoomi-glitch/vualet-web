@@ -6,9 +6,38 @@ import { TIERS } from "../_components/tiers";
 
 export default function MiraPlans() {
   const [selected, setSelected] = useState<string>("assistant");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  // TODO(backend): replace placeholder /signup checkout with real billing flow.
-  const continueHref = `/signup?product=mira&plan=${selected}`;
+  async function startCheckout() {
+    setNotice(null);
+    if (selected === "trial") {
+      window.location.href = "/mira/welcome";
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: selected }),
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        window.location.href = data.url; // Dodo hosted checkout
+        return;
+      }
+      setNotice(
+        data.error === "not_configured"
+          ? "Card payments switch on shortly — start the free trial meanwhile."
+          : "Couldn't start checkout just now. Please try again.",
+      );
+    } catch {
+      setNotice("Network hiccup — please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <main style={{ maxWidth: 1080, margin: "0 auto", padding: "56px 24px 80px" }}>
@@ -99,11 +128,24 @@ export default function MiraPlans() {
       </div>
 
       <div style={{ textAlign: "center", marginTop: 36 }}>
-        <Link className="btn-mira" href={continueHref} style={{ minWidth: 240 }}>
-          Continue with {TIERS.find((t) => t.id === selected)?.name} →
-        </Link>
+        <button
+          type="button"
+          className="btn-mira"
+          onClick={startCheckout}
+          disabled={busy}
+          style={{ minWidth: 240, opacity: busy ? 0.7 : 1, cursor: busy ? "wait" : "pointer" }}
+        >
+          {busy
+            ? "Opening secure checkout…"
+            : selected === "trial"
+              ? "Start free →"
+              : `Continue with ${TIERS.find((t) => t.id === selected)?.name} →`}
+        </button>
+        {notice && (
+          <p style={{ fontSize: 13.5, color: "var(--mira-rose-deep)", margin: "12px 0 0" }}>{notice}</p>
+        )}
         <p style={{ fontSize: 13, color: "var(--mira-slate)", margin: "14px 0 0" }}>
-          No card needed to start the trial · Cancel anytime
+          No card needed to start the trial · Secure checkout by Dodo · Cancel anytime
         </p>
         <p style={{ fontSize: 14, color: "var(--mira-graphite)", margin: "20px 0 0" }}>
           Haven&apos;t shaped her yet? <Link href="/mira/start" style={{ color: "var(--mira-rose-deep)" }}>Start here →</Link>
