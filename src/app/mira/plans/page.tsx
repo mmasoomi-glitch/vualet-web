@@ -3,44 +3,23 @@
 import Link from "next/link";
 import { useState } from "react";
 import { TIERS } from "../_components/tiers";
+import { Stepper } from "../_components/Stepper";
 
 export default function MiraPlans() {
   const [selected, setSelected] = useState<string>("assistant");
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
 
-  async function startCheckout() {
-    setNotice(null);
+  function startCheckout() {
+    // Trial needs no card → straight to welcome. Paid → the payment step.
     if (selected === "trial") {
       window.location.href = "/mira/welcome";
-      return;
-    }
-    setBusy(true);
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: selected }),
-      });
-      const data = await res.json();
-      if (res.ok && data.url) {
-        window.location.href = data.url; // Dodo hosted checkout
-        return;
-      }
-      setNotice(
-        data.error === "not_configured"
-          ? "Card payments switch on shortly — start the free trial meanwhile."
-          : "Couldn't start checkout just now. Please try again.",
-      );
-    } catch {
-      setNotice("Network hiccup — please try again.");
-    } finally {
-      setBusy(false);
+    } else {
+      window.location.href = `/mira/checkout?plan=${selected}`;
     }
   }
 
   return (
-    <main style={{ maxWidth: 1080, margin: "0 auto", padding: "56px 24px 80px" }}>
+    <main style={{ maxWidth: 1080, margin: "0 auto", padding: "48px 24px 80px" }}>
+      <Stepper current={2} />
       <header style={{ textAlign: "center", marginBottom: 36 }}>
         <h1 className="display" style={{ fontSize: "clamp(30px,5vw,48px)", margin: "0 0 8px" }}>
           Choose how far <span className="grad">she goes</span>
@@ -132,18 +111,12 @@ export default function MiraPlans() {
           type="button"
           className="btn-mira"
           onClick={startCheckout}
-          disabled={busy}
-          style={{ minWidth: 240, opacity: busy ? 0.7 : 1, cursor: busy ? "wait" : "pointer" }}
+          style={{ minWidth: 240, cursor: "pointer" }}
         >
-          {busy
-            ? "Opening secure checkout…"
-            : selected === "trial"
-              ? "Start free →"
-              : `Continue with ${TIERS.find((t) => t.id === selected)?.name} →`}
+          {selected === "trial"
+            ? "Start free →"
+            : `Continue with ${TIERS.find((t) => t.id === selected)?.name} →`}
         </button>
-        {notice && (
-          <p style={{ fontSize: 13.5, color: "var(--mira-rose-deep)", margin: "12px 0 0" }}>{notice}</p>
-        )}
         <p style={{ fontSize: 13, color: "var(--mira-slate)", margin: "14px 0 0" }}>
           No card needed to start the trial · Secure checkout by Dodo · Cancel anytime
         </p>

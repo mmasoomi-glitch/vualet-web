@@ -43,7 +43,7 @@ export default function MiraPage() {
             done — from a quick answer to storing your family albums to running your accounting, all by voice.
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", marginTop: 34, flexWrap: "wrap" }}>
-            <Link className="btn-mira" href="/signup?product=mira">Start free — 1 hour →</Link>
+            <Link className="btn-mira" href="/mira/signup">Start free — 1 hour →</Link>
             <Link className="btn-mira-soft" href="#how">See how she works</Link>
           </div>
           <p style={{ marginTop: 16, fontSize: 13, color: "var(--mira-slate)" }}>Free 1-hour trial · No credit card · Cancel anytime</p>
@@ -107,7 +107,7 @@ export default function MiraPage() {
             ))}
           </div>
           <div style={{ textAlign: "center", marginTop: 30 }}>
-            <Link className="btn-mira" href="/signup?product=mira">Meet Mira →</Link>
+            <Link className="btn-mira" href="/mira/signup">Meet Mira →</Link>
           </div>
         </div>
       </section>
