@@ -52,7 +52,7 @@ export default function MiraPage() {
 
       {/* Trust strip */}
       <section style={{ borderTop: "1px solid var(--mira-fog)", borderBottom: "1px solid var(--mira-fog)" }}>
-        <div style={{ maxWidth: 1080, margin: "0 auto", padding: "26px 24px", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 18, textAlign: "center" }}>
+        <div className="mira-4col" style={{ maxWidth: 1080, margin: "0 auto", padding: "26px 24px", textAlign: "center" }}>
           {[["Voice-first", "Talk, don't type"], ["Multilingual", "In your language"], ["No install", "Telegram or WhatsApp"], ["Private", "Yours alone, always"]].map(([t, s]) => (
             <div key={t}><p className="display" style={{ fontSize: 18, fontWeight: 400, margin: 0 }}>{t}</p><span style={{ fontSize: 13, color: "var(--mira-slate)" }}>{s}</span></div>
           ))}
@@ -63,7 +63,7 @@ export default function MiraPage() {
       <section id="how" style={{ maxWidth: 1080, margin: "0 auto", padding: "64px 24px" }}>
         <h2 className="display" style={{ fontSize: "clamp(28px,4vw,38px)", textAlign: "center", margin: "0 0 8px" }}>Three steps. No tech required.</h2>
         <p style={{ textAlign: "center", color: "var(--mira-graphite)", maxWidth: 540, margin: "0 auto 36px" }}>You never install anything. You just start talking.</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 18 }}>
+        <div className="mira-3col">
           {STEPS.map(([t, s], i) => (
             <div key={t} style={{ ...card, padding: 26 }}>
               <div style={{ display: "grid", placeItems: "center", width: 36, height: 36, borderRadius: "50%", color: "#fff", background: "var(--mira-grad-presence)", fontWeight: 600 }}>{i + 1}</div>
@@ -78,7 +78,7 @@ export default function MiraPage() {
       <section style={{ maxWidth: 1080, margin: "0 auto", padding: "8px 24px 64px" }}>
         <h2 className="display" style={{ fontSize: "clamp(28px,4vw,38px)", textAlign: "center", margin: "0 0 8px" }}>The one that does everything</h2>
         <p style={{ textAlign: "center", color: "var(--mira-graphite)", maxWidth: 560, margin: "0 auto 36px" }}>The app that replaces your apps — by voice.</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 18 }}>
+        <div className="mira-3col">
           {FEATURES.map(([k, t, s]) => (
             <div key={t} style={{ ...card, padding: 26 }}>
               <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-deep)", fontWeight: 600, margin: 0 }}>{k}</p>
@@ -94,7 +94,7 @@ export default function MiraPage() {
         <div style={{ maxWidth: 1080, margin: "0 auto", padding: "64px 24px" }}>
           <h2 className="display" style={{ fontSize: "clamp(28px,4vw,38px)", textAlign: "center", margin: "0 0 8px" }}>Simple plans</h2>
           <p style={{ textAlign: "center", color: "var(--mira-graphite)", margin: "0 auto 36px" }}>Start free for an hour. Upgrade only when she&apos;s already earned it.</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 18 }}>
+          <div className="mira-4col">
             {TIERS.map((t) => (
               <div key={t.name} style={{ background: "var(--mira-cream)", border: `1px solid ${t.featured ? "var(--mira-rose)" : "var(--mira-fog)"}`, borderRadius: "var(--mira-radius-lg)", padding: 24, boxShadow: t.featured ? "var(--mira-shadow-md)" : "none" }}>
                 <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-deep)", fontWeight: 600, margin: 0 }}>{t.name}</p>

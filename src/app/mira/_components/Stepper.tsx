@@ -39,6 +39,7 @@ export function Stepper({ current }: { current: number }) {
                 {done ? "✓" : n}
               </span>
               <span
+                className="mira-step-label"
                 style={{
                   fontSize: 13.5,
                   fontWeight: active ? 600 : 400,
