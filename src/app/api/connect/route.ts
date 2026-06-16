@@ -16,6 +16,9 @@ export async function GET(req: Request) {
     plan: rec.plan,
     status: rec.status,
     customerId: rec.customerId ?? null,
+    persona: rec.persona ?? null,
+    role: rec.role ?? null,
+    assistantName: rec.assistantName ?? null,
     botUrl: `https://t.me/${bot}?start=${rec.token}`,
   });
 }

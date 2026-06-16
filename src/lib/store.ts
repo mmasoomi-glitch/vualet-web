@@ -57,6 +57,10 @@ export type ConnectRecord = {
   customerId?: string;
   subscriptionId?: string;
   telegramId?: number;
+  // Persona chosen while shaping Mira on the web, carried to the bot at /start.
+  persona?: string;
+  role?: string;
+  assistantName?: string;
   createdAt: string;
 };
 

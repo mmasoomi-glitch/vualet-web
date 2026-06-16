@@ -30,11 +30,34 @@ function Checkout() {
   const plan = tierById(params.get("plan")) ?? TIERS.find((t) => t.id === "assistant")!;
   const [paying, setPaying] = useState(false);
 
-  function pay(e: React.FormEvent) {
+  async function pay(e: React.FormEvent) {
     e.preventDefault();
     setPaying(true);
-    // DEMO: no real charge. Real Dodo processing gets wired to this submit later.
-    setTimeout(() => router.push("/mira/welcome"), 650);
+    // DEMO: no real charge. We still mint a connect token via /api/begin so the
+    // persona chosen on /mira/start rides through to the Telegram bot. Real Dodo
+    // processing gets wired to this submit later.
+    let setup: Record<string, unknown> = {};
+    try {
+      setup = JSON.parse(localStorage.getItem("mira_setup") || "{}");
+    } catch {
+      /* setup is optional — persona just won't be carried */
+    }
+    try {
+      const res = await fetch("/api/begin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: plan.id, setup }),
+      });
+      const data = (await res.json()) as { token?: string; botUrl?: string };
+      if (data.token) {
+        if (data.botUrl) localStorage.setItem("mira_bot_url", data.botUrl);
+        router.push(`/mira/welcome?token=${data.token}`);
+        return;
+      }
+    } catch {
+      /* fall through to the plain welcome page below */
+    }
+    router.push("/mira/welcome");
   }
 
   return (

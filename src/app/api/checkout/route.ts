@@ -35,6 +35,7 @@ export async function POST(req: Request) {
     plan,
     email,
     status: "pending",
+    persona,
     createdAt: new Date().toISOString(),
   };
 

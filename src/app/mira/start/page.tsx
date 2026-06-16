@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /* ---------- presets / option data ---------- */
 
@@ -106,6 +106,28 @@ export default function ShapeYourMira() {
   const vibeLabel = VIBES.find((v) => v.id === vibe)?.label ?? "";
   const roleLabel = ROLES.find((r) => r.id === role)?.label ?? "";
   const channelLabel = CHANNELS.find((c) => c.id === channel)?.label ?? "";
+
+  // Compose the system prompt the bot will adopt as its persona, and persist
+  // the whole setup to localStorage so checkout can carry it through the
+  // connect token to the Telegram bot. (See /api/begin → /api/connect.)
+  useEffect(() => {
+    const assistantName = name.trim() || "Mira";
+    const roleText = (roleLabel || "personal assistant").toLowerCase();
+    const vibeBlurb = VIBES.find((v) => v.id === vibe)?.blurb ?? "";
+    const vibe_ = vibeText.trim() || vibeBlurb;
+    const persona =
+      `You are ${assistantName}, a ${roleText}. ${vibe_} ` +
+      `Talk warmly and in character, keep replies short and natural, ` +
+      `never mention being an AI, a model, or any company/technology.`;
+    try {
+      localStorage.setItem(
+        "mira_setup",
+        JSON.stringify({ assistantName, role, vibe, persona }),
+      );
+    } catch {
+      /* ignore (e.g. storage disabled) */
+    }
+  }, [name, role, vibe, vibeText, roleLabel]);
 
   // TODO(backend): replace with the real Telegram bot deep-link once provisioning exists.
   const telegramLink = useMemo(() => {
