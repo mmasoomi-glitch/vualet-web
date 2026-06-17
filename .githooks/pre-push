@@ -1,0 +1,23 @@
+#!/bin/sh
+# Block direct pushes to protected branches. Everyone branches off `develop`
+# and opens a PR. This hook is a courtesy guard — it can be bypassed with
+# `git push --no-verify`, so GitHub branch protection is the authoritative lock.
+#
+# Enable after cloning:  git config core.hooksPath .githooks
+
+protected="main develop"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+	branch=$(printf '%s' "$remote_ref" | sed 's#refs/heads/##')
+	for p in $protected; do
+		if [ "$branch" = "$p" ]; then
+			echo "✋ Direct push to '$p' is blocked."
+			echo "   Branch off develop and open a PR:"
+			echo "     git checkout develop && git pull"
+			echo "     git checkout -b feature/your-change"
+			exit 1
+		fi
+	done
+done
+
+exit 0
