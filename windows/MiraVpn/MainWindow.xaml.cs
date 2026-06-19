@@ -31,6 +31,7 @@ public partial class MainWindow : Window
 
         var prefs = Prefs.Load();
         AutoConnectCheck.IsChecked = prefs.AutoConnect;
+        KillSwitchCheck.IsChecked = prefs.KillSwitchEnabled;
         UpdateUI(ConnectionState.Disconnected, "Disconnected");
     }
 
@@ -132,6 +133,13 @@ public partial class MainWindow : Window
     {
         var prefs = Prefs.Load();
         prefs.AutoConnect = AutoConnectCheck.IsChecked ?? false;
+        prefs.Save();
+    }
+
+    private void KillSwitch_Changed(object sender, RoutedEventArgs e)
+    {
+        var prefs = Prefs.Load();
+        prefs.KillSwitchEnabled = KillSwitchCheck.IsChecked ?? false;
         prefs.Save();
     }
 
