@@ -43,9 +43,20 @@ func (t *Tunnel) Start() error {
     t.dev = device.NewDevice(tunDev, conn.NewDefaultBind(), logger)
     if err := t.dev.IpcSet(t.cfg.ToIPC()); err != nil { t.dev.Close(); return fmt.Errorf("configure: %w", err) }
     if err := t.dev.Up(); err != nil { t.dev.Close(); return fmt.Errorf("bring up: %w", err) }
-    if err := setIP(InterfaceName, t.cfg.InterfaceIP, t.cfg.InterfaceMask); err != nil {
-        t.dev.Close(); return fmt.Errorf("set ip: %w", err)
+
+    // Retry setIP: wintun adapter may not be immediately visible to netsh after CreateTUN.
+    // 5 attempts x 300ms = up to 1.5s grace period for the adapter to settle.
+    var setIPErr error
+    for i := 0; i < 5; i++ {
+        time.Sleep(300 * time.Millisecond)
+        if setIPErr = setIP(InterfaceName, t.cfg.InterfaceIP, t.cfg.InterfaceMask); setIPErr == nil {
+            break
+        }
     }
+    if setIPErr != nil {
+        t.dev.Close(); return fmt.Errorf("set ip: %w", setIPErr)
+    }
+
     for _, dns := range t.cfg.DNS { _ = setDNS(InterfaceName, dns) }
     _ = setMetric(InterfaceName, 1)
     gw, _ := defaultGateway()
