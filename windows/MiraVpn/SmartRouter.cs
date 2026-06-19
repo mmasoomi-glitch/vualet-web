@@ -1,42 +1,50 @@
 using System.Diagnostics;
-using System.Net.Sockets;
+using System.Net.Http;
 
 namespace MiraVpn;
 
 /// <summary>
-/// Pings candidate Mira servers via TCP SYN to the WireGuard port.
-/// Returns the one with the lowest measured RTT.
-/// This is the "AI-assisted" piece — real measurement, no LLM.
+/// Measures RTT to Mira servers by sending a quick HTTP GET to the API.
+/// HTTP always works (port 80, nginx) — no ISP UDP blocking issues.
+/// Returns the fastest endpoint for WireGuard connection.
 /// </summary>
 public static class SmartRouter
 {
-    // Probe endpoint: probe TCP 80 (always open) but return 51820 for WireGuard
-    private static readonly (string name, string endpoint, int probePort, int wgPort)[] _pool =
+    private static readonly (string name, string apiBase, string wgEndpoint)[] _pool =
     [
-        ("Nuremberg",   "178.104.251.30", 80,  51820),
-        ("Falkenstein", "116.203.0.0",    80,  51820),  // placeholder
-        ("Singapore",   "159.223.0.0",    80,  51820),  // placeholder
+        ("Nuremberg", "http://178.104.251.30/v1/stats", "178.104.251.30:51820"),
     ];
 
-    public static async Task<(string name, string endpoint, int rttMs)> PickBestAsync()
+    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(5) };
+
+    /// <summary>
+    /// Probes each server via HTTP GET and returns the fastest.
+    /// If the probe fails (rttMs == MaxValue), returns null.
+    /// </summary>
+    public static async Task<(string name, string endpoint, int rttMs)?> PickBestAsync()
     {
-        var tasks = _pool.Select(async s =>
+        (string name, string endpoint, int rttMs)? best = null;
+
+        foreach (var s in _pool)
         {
             var sw = Stopwatch.StartNew();
             try
             {
-                using var tcp = new TcpClient();
-                var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                await tcp.ConnectAsync(s.name, s.probePort, cts.Token);
+                var resp = await _http.GetAsync(s.apiBase);
                 sw.Stop();
-                return (s.name, $"{s.endpoint}:{s.wgPort}", rttMs: (int)sw.ElapsedMilliseconds);
+                if (resp.IsSuccessStatusCode)
+                {
+                    var rtt = (int)sw.ElapsedMilliseconds;
+                    if (best == null || rtt < best.Value.rttMs)
+                        best = (s.name, s.wgEndpoint, rtt);
+                }
             }
             catch
             {
-                return (s.name, $"{s.endpoint}:{s.wgPort}", rttMs: int.MaxValue);
+                // server unreachable — skip
             }
-        });
-        var results = await Task.WhenAll(tasks);
-        return results.OrderBy(r => r.rttMs).First();
+        }
+
+        return best;
     }
 }
