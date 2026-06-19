@@ -1,0 +1,2 @@
+-keep class com.vualet.mira.** { *; }
+-dontwarn com.amneziawg.**
