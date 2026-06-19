@@ -68,7 +68,8 @@ func (t *Tunnel) Stop() {
 func (t *Tunnel) Stats() map[string]interface{} {
     r := map[string]interface{}{"connected": false, "endpoint": t.cfg.Endpoint, "uptime_seconds": int64(time.Since(t.started).Seconds())}
     if t.dev == nil { return r }
-    lines := strings.Split(t.dev.IpcGet(), "\n")
+    ipcOut, _ := t.dev.IpcGet()
+    lines := strings.Split(ipcOut, "\n")
     var rx, tx uint64; var lh int64
     for _, l := range lines {
         if v, ok := strings.CutPrefix(l, "rx_bytes="); ok { rx, _ = strconv.ParseUint(v, 10, 64) }

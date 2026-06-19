@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace MiraVpn;

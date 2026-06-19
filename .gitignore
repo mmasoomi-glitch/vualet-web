@@ -44,3 +44,9 @@ windows/MiraVpn/bin/
 windows/MiraVpn/publish/
 windows/install-mira-vpn.ps1
 dist/
+windows/mira-tunnel/mira-tunnel.dll
+windows/mira-tunnel/mira-tunnel.h
+windows/mira-tunnel/vendor/
+windows/mira-tunnel/go.sum
+windows/MiraVpn/Assets/mira-tunnel.dll
+windows/MiraVpn/publish/

@@ -13,7 +13,6 @@ public class TrayIcon : IDisposable
 {
     private readonly NotifyIcon _icon;
     private readonly HttpClient _api = new() { BaseAddress = new("http://178.104.251.30/v1/") };
-    private readonly SmartRouter _router = new();
     private string? _currentPubKey;
     private bool _connected;
 
@@ -55,29 +54,25 @@ public class TrayIcon : IDisposable
         _icon.Text = "Mira VPN — Connecting...";
         try
         {
-            // SmartRouter: pick fastest server
-            var server = await _router.FindFastestAsync();
-            if (server == null) { _icon.Text = "Mira VPN — No servers"; SetMenuText(0, "Connect (retry)"); return; }
+            var (name, endpoint, rttMs) = await SmartRouter.PickBestAsync();
+            if (rttMs == int.MaxValue) { _icon.Text = "Mira VPN — No servers"; SetMenuText(0, "Connect (retry)"); return; }
 
-            // Generate keys
             var priv = MarshalPtr(NativeBridge.mira_genkey());
             var pub = MarshalPtr(NativeBridge.mira_pubkey(priv));
             if (string.IsNullOrEmpty(priv) || string.IsNullOrEmpty(pub)) { _icon.Text = "Mira VPN — Key error"; SetMenuText(0, "Connect (retry)"); return; }
             _currentPubKey = pub;
 
-            // Register with API
             var resp = await _api.PostAsJsonAsync("tunnel/issue-direct", new { public_key = pub, tier = "free" });
             if (!resp.IsSuccessStatusCode) { _icon.Text = "Mira VPN — Registration failed"; SetMenuText(0, "Connect (retry)"); return; }
             var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
             var cfg = json.GetProperty("config").GetString()!.Replace("FILL_ME", priv)
-                         .Replace("178.104.251.30:51820", $"{server.IP}:51820");
+                         .Replace("178.104.251.30:51820", $"{endpoint}:51820");
 
-            // Start tunnel via our own DLL
             int result = NativeBridge.mira_start(cfg);
             if (result != 0) { _icon.Text = $"Mira VPN — Error ({result})"; SetMenuText(0, "Connect (retry)"); await RemovePeer(); return; }
 
             _connected = true;
-            _icon.Text = $"Mira VPN — Connected ({server.IP}, {server.RttMs}ms)";
+            _icon.Text = $"Mira VPN — Connected ({name}, {rttMs}ms)";
             SetMenuText(0, "Disconnect");
         }
         catch (Exception ex) { Debug.WriteLine($"Mira: {ex.Message}"); _icon.Text = "Mira VPN — Failed"; SetMenuText(0, "Connect (retry)"); }
