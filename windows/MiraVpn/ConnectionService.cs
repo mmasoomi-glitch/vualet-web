@@ -23,8 +23,6 @@ public class ConnectionService : IDisposable
     public event Action? ExitRequested;
     public event Action<string, string, ToolTipIcon>? BalloonRequested;
 
-    public void RaiseExitRequested() => ExitRequested?.Invoke();
-
     public ConnectionState CurrentState { get; private set; } = ConnectionState.Disconnected;
     public bool IsConnected => _connected;
     public bool IsConnecting => _connecting;
@@ -37,34 +35,34 @@ public class ConnectionService : IDisposable
         _statusTimer.AutoReset = true;
     }
 
-    /// <summary>Fire-and-forget entry point called from UI handlers.</summary>
-    public void Connect() { _ = ConnectAsync(); }
+    public void Connect()
+    {
+        _ = ConnectAsync();
+    }
 
     private async Task ConnectAsync()
     {
         if (_connecting || _connected) return;
-        _cts?.Dispose();
         _cts = new CancellationTokenSource();
-        var token = _cts.Token;
+        var ct = _cts.Token;
         _connecting = true;
-        SetState(ConnectionState.Probing, "Probing servers…"); EmitLog("Probing servers…");
+
+        SetState(ConnectionState.Probing, "Probing servers..."); EmitLog("Probing servers...");
         try
         {
-            token.ThrowIfCancellationRequested();
-
+            ct.ThrowIfCancellationRequested();
             _router.OnProbeResult = EmitLog;
             var server = await _router.FindFastestAsync();
-            token.ThrowIfCancellationRequested();
-
             if (server == null)
             {
                 SetState(ConnectionState.Error, "No servers reachable");
                 EmitLog("x No servers reachable");
-                Balloon("Could not connect", "Could not reach Mira servers. Check your internet connection.", ToolTipIcon.Error);
+                BalloonRequested?.Invoke("Could not connect", "Could not reach Mira servers. Check your internet connection.", ToolTipIcon.Error);
                 _connecting = false; return;
             }
             EmitLog($"OK Found {server.Name} ({server.RttMs}ms)");
-            SetState(ConnectionState.Connecting, $"Connecting to {server.Name}…");
+            ct.ThrowIfCancellationRequested();
+            SetState(ConnectionState.Connecting, $"Connecting to {server.Name}...");
 
             var priv = MarshalPtr(NativeBridge.mira_genkey());
             var pub = MarshalPtr(NativeBridge.mira_pubkey(priv));
@@ -74,24 +72,20 @@ public class ConnectionService : IDisposable
             }
             _currentPrivKey = priv; _currentPubKey = pub;
 
-            token.ThrowIfCancellationRequested();
-
-            var resp = await _http.PostAsJsonAsync("tunnel/issue-direct", new { public_key = pub, tier = "free" });
-            token.ThrowIfCancellationRequested();
-
+            ct.ThrowIfCancellationRequested();
+            var resp = await _http.PostAsJsonAsync("tunnel/issue-direct", new { public_key = pub, tier = "free" }, ct);
             if (!resp.IsSuccessStatusCode)
             {
                 SetState(ConnectionState.Error, "Server registration failed");
                 EmitLog($"x Registration failed (HTTP {resp.StatusCode})"); _connecting = false; return;
             }
-            var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-            token.ThrowIfCancellationRequested();
-
+            var json = await resp.Content.ReadFromJsonAsync<JsonElement>(ct);
             var cfg = json.GetProperty("config").GetString()!
                 .Replace("FILL_ME", priv)
                 .Replace("178.104.251.30:51820", $"{server.IP}:51820");
 
-            EmitLog($"Starting tunnel to {server.IP}:51820…");
+            ct.ThrowIfCancellationRequested();
+            EmitLog($"Starting tunnel to {server.IP}:51820...");
             CleanupStaleWintun();
             int result = NativeBridge.mira_start(cfg);
             Logger.Info("Connection", $"mira_start returned {result}");
@@ -100,11 +94,11 @@ public class ConnectionService : IDisposable
                 string reason = result switch
                 {
                     -1 => "Network driver failed. Run as Administrator.",
-                    -2 => "IP assignment failed (netsh error). Try reconnecting — this usually clears itself.",
+                    -2 => "IP assignment failed (netsh error). Try reconnecting -- this usually clears itself.",
                     _ => $"Tunnel error (code {result})"
                 };
                 SetState(ConnectionState.Error, reason); EmitLog($"x {reason}");
-                Balloon("Could not connect", reason, ToolTipIcon.Error);
+                BalloonRequested?.Invoke("Could not connect", reason, ToolTipIcon.Error);
                 await RemovePeer(); _connecting = false; return;
             }
 
@@ -112,19 +106,20 @@ public class ConnectionService : IDisposable
             _connectedEndpoint = server.IP; _connectedRtt = server.RttMs; _connectedServerName = server.Name;
             SetState(ConnectionState.Connected, $"Connected ({server.Name}, {server.RttMs}ms)");
             EmitLog($"OK Connected ({server.Name}, {server.RttMs}ms)");
-            Balloon("Mira VPN", $"Connected to {server.Name} ({server.RttMs}ms)", ToolTipIcon.Info);
+            BalloonRequested?.Invoke("Mira VPN", $"Connected to {server.Name} ({server.RttMs}ms)", ToolTipIcon.Info);
             _statusTimer.Start();
         }
         catch (OperationCanceledException)
         {
-            EmitLog("Connection cancelled");
-            SetState(ConnectionState.Disconnected, "Disconnected");
+            EmitLog("OK Connection cancelled");
             _connecting = false;
         }
         catch (Exception ex)
         {
-            Logger.Error("ConnectionService", $"Connect: {ex.Message}");
-            SetState(ConnectionState.Error, ex.Message); EmitLog($"x {ex.Message}"); _connecting = false;
+            Logger.Error("TrayIcon", $"Connect: {ex.Message}");
+            SetState(ConnectionState.Error, ex.Message);
+            EmitLog($"x {ex.Message}");
+            _connecting = false;
         }
     }
 
@@ -132,18 +127,21 @@ public class ConnectionService : IDisposable
     {
         _cts?.Cancel();
         if (!_connected && !_connecting) return;
-        SetState(ConnectionState.Disconnecting, "Disconnecting…"); EmitLog("Disconnecting…"); _statusTimer.Stop();
+        SetState(ConnectionState.Disconnecting, "Disconnecting..."); EmitLog("Disconnecting...");
+        _statusTimer.Stop();
         try { NativeBridge.mira_stop(); await RemovePeer(); }
-        catch (Exception ex) { Logger.Error("ConnectionService", $"Disconnect: {ex.Message}"); }
+        catch (Exception ex) { Logger.Error("TrayIcon", $"Disconnect: {ex.Message}"); }
         _connected = _connecting = false; _connectedEndpoint = null; _connectedRtt = 0;
-        SetState(ConnectionState.Disconnected, "Disconnected"); EmitLog("OK Disconnected");
-        Balloon("Mira VPN", "Disconnected", ToolTipIcon.Info);
+        SetState(ConnectionState.Disconnected, "Disconnected");
+        EmitLog("OK Disconnected");
+        BalloonRequested?.Invoke("Mira VPN", "Disconnected", ToolTipIcon.Info);
     }
 
     private async Task RemovePeer()
     {
         if (_currentPubKey == null) return;
-        try { await _http.PostAsJsonAsync("tunnel/remove", new { public_key = _currentPubKey }); } catch { }
+        try { await _http.PostAsJsonAsync("tunnel/remove", new { public_key = _currentPubKey }); }
+        catch { }
         _currentPrivKey = _currentPubKey = null;
     }
 
@@ -153,14 +151,15 @@ public class ConnectionService : IDisposable
         try
         {
             var ptr = NativeBridge.mira_stats();
-            var s = Marshal.PtrToStringAnsi(ptr); NativeBridge.mira_free(ptr);
+            var s = Marshal.PtrToStringAnsi(ptr);
+            NativeBridge.mira_free(ptr);
             var stats = JsonSerializer.Deserialize<TunnelStats>(s);
             if (stats != null && !stats.connected)
             {
                 _connected = false;
                 SetState(ConnectionState.Disconnected, "Disconnected (tunnel lost)");
                 EmitLog("x Tunnel lost");
-                Balloon("Mira VPN", "Connection lost", ToolTipIcon.Warning);
+                BalloonRequested?.Invoke("Mira VPN", "Connection lost", ToolTipIcon.Warning);
             }
             else if (stats != null && stats.connected)
             {
@@ -173,29 +172,16 @@ public class ConnectionService : IDisposable
     private void SetState(ConnectionState s, string msg)
     {
         CurrentState = s;
-        Logger.Info("ConnectionService", $"State -> {s}: {msg}");
+        Logger.Info("TrayIcon", $"State -> {s}: {msg}");
         StateChanged?.Invoke(s, msg);
     }
 
-    private void EmitLog(string msg) { Logger.Info("Connection", msg); LogMessage?.Invoke(msg); }
-
-    private void Balloon(string title, string text, ToolTipIcon icon)
+    private void EmitLog(string msg)
     {
-        BalloonRequested?.Invoke(title, text, icon);
+        Logger.Info("Connection", msg);
+        LogMessage?.Invoke(msg);
     }
 
-    private static string MarshalPtr(IntPtr ptr)
-    {
-        if (ptr == IntPtr.Zero) return "";
-        var s = Marshal.PtrToStringAnsi(ptr); NativeBridge.mira_free(ptr); return s ?? "";
-    }
-
-    /// <summary>
-    /// Before calling mira_start, check for a stale wintun service entry.
-    /// If wintun is registered but stopped with ERROR_GEN_FAILURE (31), the .sys
-    /// file is missing or corrupt. wintun.dll will TerminateProcess if it tries to
-    /// start a broken service. Deleting the entry lets wintun.dll reinstall cleanly.
-    /// </summary>
     private static void CleanupStaleWintun()
     {
         try
@@ -206,26 +192,35 @@ public class ConnectionService : IDisposable
             var output = query.StandardOutput.ReadToEnd();
             query.WaitForExit(3000);
 
-            // WIN32_EXIT_CODE 31 (0x1f) = ERROR_GEN_FAILURE = driver file missing/corrupt
             bool isStopped = output.Contains("STOPPED");
             bool hasError31 = output.Contains(" 31 ") || output.Contains("(0x1f)");
 
             if (isStopped && hasError31)
             {
-                Logger.Info("Wintun", "Stale wintun service (error 31) detected — deleting for clean reinstall");
+                Logger.Info("Wintun", "Stale wintun service (error 31) detected -- deleting for clean reinstall");
                 using var del = Process.Start(new ProcessStartInfo("sc.exe", "delete wintun")
                     { UseShellExecute = false, CreateNoWindow = true });
                 del?.WaitForExit(3000);
-                System.Threading.Thread.Sleep(500); // Give SCM time to update
-                Logger.Info("Wintun", "Stale service deleted — wintun.dll will reinstall driver on next CreateAdapter call");
+                System.Threading.Thread.Sleep(500);
+                Logger.Info("Wintun", "Stale service deleted -- wintun.dll will reinstall driver on next CreateAdapter call");
             }
             else if (isStopped)
             {
-                Logger.Info("Wintun", $"wintun service stopped (not error 31) — skipping delete. Output: {output.Trim()}");
+                Logger.Info("Wintun", $"wintun service stopped (not error 31) -- skipping delete. Output: {output.Trim()}");
             }
         }
         catch (Exception ex) { Logger.Error("Wintun", $"CleanupStaleWintun: {ex.Message}"); }
     }
+
+    private static string MarshalPtr(IntPtr ptr)
+    {
+        if (ptr == IntPtr.Zero) return "";
+        var s = Marshal.PtrToStringAnsi(ptr);
+        NativeBridge.mira_free(ptr);
+        return s ?? "";
+    }
+
+    public void RaiseExitRequested() => ExitRequested?.Invoke();
 
     public void Dispose()
     {

@@ -21,6 +21,17 @@ public class TrayIcon : IDisposable
 
     public ConnectionService Service => _svc;
 
+    // Forwarded events for external subscribers (MainWindow, App)
+    public event Action<ConnectionState, string>? StateChanged;
+    public event Action<string>? LogMessage;
+    public event Action<ulong, ulong>? StatsUpdated;
+    public event Action? ExitRequested;
+
+    // Forwarded properties
+    public bool IsConnected => _svc.IsConnected;
+    public string ConnectedEndpoint => _svc.ConnectedEndpoint;
+    public long ConnectedRtt => _svc.ConnectedRtt;
+
     public TrayIcon()
     {
         _svc = new ConnectionService();
@@ -34,19 +45,28 @@ public class TrayIcon : IDisposable
         _icon.DoubleClick += (_, _) => ShowMainWindow();
 
         // Reflect connection state in the tray icon text and menu
-        _svc.StateChanged += (_, msg) =>
+        _svc.StateChanged += (state, msg) =>
         {
             if (_icon.ContextMenuStrip?.Items[0] is ToolStripMenuItem si)
                 si.Text = "Status: " + msg;
             _icon.Text = $"Mira VPN — {msg}"[..Math.Min(63, $"Mira VPN — {msg}".Length)];
+            StateChanged?.Invoke(state, msg);
         };
 
         // Forward balloon requests from the service to the tray icon
         _svc.BalloonRequested += (title, text, icon) => _icon.ShowBalloonTip(3000, title, text, icon);
+
+        // Forward log messages, stats, and exit to external subscribers
+        _svc.LogMessage += msg => LogMessage?.Invoke(msg);
+        _svc.StatsUpdated += (rx, tx) => StatsUpdated?.Invoke(rx, tx);
+        _svc.ExitRequested += () => ExitRequested?.Invoke();
     }
 
     public void Show() { _icon.Visible = true; }
     public void SetMainWindow(MainWindow w) { _mainWindow = w; }
+
+    public void Connect() => _svc.Connect();
+    public async Task Disconnect() => await _svc.Disconnect();
 
     private ContextMenuStrip BuildMenu()
     {
