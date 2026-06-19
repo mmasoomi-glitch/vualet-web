@@ -1,5 +1,10 @@
+using System.Diagnostics;
 using System.Drawing;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Windows.Forms;
 
 namespace MiraVpn;
@@ -7,32 +12,25 @@ namespace MiraVpn;
 public class TrayIcon : IDisposable
 {
     private readonly NotifyIcon _icon;
+    private readonly HttpClient _api = new() { BaseAddress = new("http://178.104.251.30/v1/") };
+    private readonly SmartRouter _router = new();
+    private string? _currentPubKey;
+    private bool _connected;
 
     public event Action? ExitRequested;
 
     public TrayIcon()
     {
-        _icon = new NotifyIcon
-        {
-            Icon = LoadIcon(),
-            Text = "Mira VPN — Disconnected",
-            Visible = true
-        };
+        _icon = new NotifyIcon { Icon = LoadIcon(), Text = "Mira VPN — Disconnected", Visible = true };
         _icon.ContextMenuStrip = BuildMenu();
         _icon.DoubleClick += (_, _) => Toggle();
     }
 
     private static Icon LoadIcon()
     {
-        try
-        {
-            using var s = Assembly.GetExecutingAssembly()
-                .GetManifestResourceStream("MiraVpn.Resources.mira-icon-32.png");
-            if (s == null) return SystemIcons.Shield;
-            using var bmp = new Bitmap(s);
-            return Icon.FromHandle(bmp.GetHicon());
-        }
-        catch { return SystemIcons.Shield; }
+        try { using var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("MiraVpn.Resources.mira-icon-32.png"); if (s != null) { using var bmp = new Bitmap(s); return Icon.FromHandle(bmp.GetHicon()); } }
+        catch { }
+        return SystemIcons.Shield;
     }
 
     private ContextMenuStrip BuildMenu()
@@ -41,44 +39,69 @@ public class TrayIcon : IDisposable
         m.Items.Add("Connect", null, (_, _) => Toggle());
         m.Items.Add("Disconnect", null, (_, _) => Toggle());
         m.Items.Add(new ToolStripSeparator());
-        m.Items.Add("Exit Mira VPN", null, (_, _) => { ExitRequested?.Invoke(); });
+        m.Items.Add("Exit Mira VPN", null, (_, _) => { _ = Disconnect(); ExitRequested?.Invoke(); });
         return m;
     }
 
     private async void Toggle()
     {
-        if (NativeTunnel.IsConnected)
-        {
-            NativeTunnel.Disconnect();
-            _icon.Text = "Mira VPN — Disconnected";
-            UpdateMenu(0, "Connect");
-        }
-        else
-        {
-            UpdateMenu(0, "Connecting...");
-            _icon.Text = "Mira VPN — Connecting...";
-            try
-            {
-                var best = await SmartRouter.PickBestAsync();
-                var ip = await NativeTunnel.Connect(best.endpoint);
-                _icon.Text = $"Mira VPN — Connected ({best.name}, {best.rttMs}ms)";
-                UpdateMenu(0, "Disconnect");
-            }
-            catch (Exception ex)
-            {
-                _icon.Text = "Mira VPN — Connection failed";
-                _icon.ShowBalloonTip(3000, "Mira VPN", $"Connection failed: {ex.Message}", ToolTipIcon.Error);
-                UpdateMenu(0, "Connect (retry)");
-            }
-        }
+        if (_connected) { await Disconnect(); return; }
+        await Connect();
     }
 
-    private void UpdateMenu(int idx, string text)
+    private async Task Connect()
     {
-        var items = _icon.ContextMenuStrip?.Items;
-        if (items != null && items.Count > idx)
-            items[idx]!.Text = text;
+        SetMenuText(0, "Connecting...");
+        _icon.Text = "Mira VPN — Connecting...";
+        try
+        {
+            // SmartRouter: pick fastest server
+            var server = await _router.FindFastestAsync();
+            if (server == null) { _icon.Text = "Mira VPN — No servers"; SetMenuText(0, "Connect (retry)"); return; }
+
+            // Generate keys
+            var priv = MarshalPtr(NativeBridge.mira_genkey());
+            var pub = MarshalPtr(NativeBridge.mira_pubkey(priv));
+            if (string.IsNullOrEmpty(priv) || string.IsNullOrEmpty(pub)) { _icon.Text = "Mira VPN — Key error"; SetMenuText(0, "Connect (retry)"); return; }
+            _currentPubKey = pub;
+
+            // Register with API
+            var resp = await _api.PostAsJsonAsync("tunnel/issue-direct", new { public_key = pub, tier = "free" });
+            if (!resp.IsSuccessStatusCode) { _icon.Text = "Mira VPN — Registration failed"; SetMenuText(0, "Connect (retry)"); return; }
+            var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+            var cfg = json.GetProperty("config").GetString()!.Replace("FILL_ME", priv)
+                         .Replace("178.104.251.30:51820", $"{server.IP}:51820");
+
+            // Start tunnel via our own DLL
+            int result = NativeBridge.mira_start(cfg);
+            if (result != 0) { _icon.Text = $"Mira VPN — Error ({result})"; SetMenuText(0, "Connect (retry)"); await RemovePeer(); return; }
+
+            _connected = true;
+            _icon.Text = $"Mira VPN — Connected ({server.IP}, {server.RttMs}ms)";
+            SetMenuText(0, "Disconnect");
+        }
+        catch (Exception ex) { Debug.WriteLine($"Mira: {ex.Message}"); _icon.Text = "Mira VPN — Failed"; SetMenuText(0, "Connect (retry)"); }
     }
 
-    public void Dispose() => _icon.Dispose();
+    private async Task Disconnect()
+    {
+        NativeBridge.mira_stop();
+        await RemovePeer();
+        _connected = false;
+        _icon.Text = "Mira VPN — Disconnected";
+        SetMenuText(0, "Connect");
+    }
+
+    private async Task RemovePeer()
+    {
+        if (_currentPubKey == null) return;
+        try { await _api.PostAsJsonAsync("tunnel/remove", new { public_key = _currentPubKey }); } catch { }
+        _currentPubKey = null;
+    }
+
+    private void SetMenuText(int idx, string text) { var items = _icon.ContextMenuStrip?.Items; if (items != null && items.Count > idx) items[idx]!.Text = text; }
+
+    private static string MarshalPtr(IntPtr ptr) { if (ptr == IntPtr.Zero) return ""; var s = Marshal.PtrToStringAnsi(ptr); NativeBridge.mira_free(ptr); return s ?? ""; }
+
+    public void Dispose() { if (_connected) _ = Disconnect(); _icon.Visible = false; _icon.Dispose(); }
 }

@@ -14,10 +14,10 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <DebugType>embedded</DebugType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources\mira-icon-32.png" />
-    <EmbeddedResource Include="Resources\wintun.dll" />
-    <EmbeddedResource Include="Resources\wireguard.msi" />
+    <EmbeddedResource Include="Assets\mira-tunnel.dll" />
+    <EmbeddedResource Include="Assets\wintun.dll" />
   </ItemGroup>
 </Project>
