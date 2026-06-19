@@ -1,15 +1,62 @@
 <Window x:Class="MiraVpn.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Mira VPN" Height="200" Width="400"
-        WindowStyle="ToolWindow" ShowInTaskbar="False"
+        Title="Mira VPN" Height="480" Width="520"
+        MinHeight="450" MinWidth="420"
         WindowStartupLocation="CenterScreen"
-        Background="#FFF8F0">
-    <Grid Margin="20">
-        <StackPanel VerticalAlignment="Center" TextBlock.TextAlignment="Center">
-            <TextBlock Text="Mira VPN" FontSize="22" FontWeight="SemiBold" Foreground="#2A1F2D" />
-            <TextBlock Text="Running in your system tray" FontSize="13" Foreground="#524A55" Margin="0,8,0,0" />
-            <TextBlock Text="Right-click the tray icon to connect or disconnect." FontSize="12" Foreground="#8C8190" Margin="0,4,0,0" />
+        Background="#FFF8F0"
+        ResizeMode="CanResize"
+        ShowInTaskbar="True"
+        WindowStyle="SingleBorderWindow">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+            <Border Width="40" Height="40" CornerRadius="10" Margin="0,0,12,0">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Offset="0" Color="#F8A5A0"/><GradientStop Offset="0.55" Color="#C7B8F0"/><GradientStop Offset="1" Color="#6366F1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <TextBlock Text="M" Foreground="White" FontSize="22" FontWeight="Bold" FontFamily="Georgia" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock Text="Mira VPN" FontFamily="Segoe UI" FontSize="22" FontWeight="SemiBold" Foreground="#2A1F2D" VerticalAlignment="Center"/>
         </StackPanel>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,16">
+            <Ellipse x:Name="StateDot" Width="12" Height="12" Fill="#8C8190" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <TextBlock x:Name="StateText" Text="Disconnected" FontFamily="Segoe UI" FontSize="15" FontWeight="SemiBold" Foreground="#2A1F2D" VerticalAlignment="Center"/>
+        </StackPanel>
+        <StackPanel Grid.Row="2" Margin="0,0,0,16">
+            <TextBlock x:Name="ServerText" Text="Server: —" FontFamily="Segoe UI" FontSize="13" Foreground="#524A55" Margin="0,0,0,4"/>
+            <TextBlock x:Name="LatencyText" Text="Latency: —" FontFamily="Segoe UI" FontSize="13" Foreground="#524A55" Margin="0,0,0,4"/>
+            <TextBlock x:Name="StatsText" Text="Up: —  Down: —" FontFamily="Segoe UI" FontSize="13" Foreground="#8C8190"/>
+        </StackPanel>
+        <Button x:Name="ActionButton" Grid.Row="3" Content="Connect" Click="ActionButton_Click" Margin="0,0,0,20" HorizontalAlignment="Stretch" Height="48" FontSize="16" Foreground="White" FontWeight="SemiBold" BorderThickness="0">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" Background="#F8A5A0" CornerRadius="999">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Button.Template>
+        </Button>
+        <Border Grid.Row="4" Background="#1A1525" CornerRadius="10" Padding="12" MinHeight="100">
+            <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="Activity Log" FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold" Foreground="#C7B8F0" Margin="0,0,0,8"/>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="LogPanel"/>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+        <CheckBox x:Name="AutoConnectCheck" Grid.Row="5" Content="Auto-connect on startup"
+                  FontFamily="Segoe UI" FontSize="12" Foreground="#524A55"
+                  Margin="0,16,0,0" Checked="AutoConnect_Changed" Unchecked="AutoConnect_Changed"/>
     </Grid>
 </Window>

@@ -3,48 +3,44 @@ using System.Net.Http;
 
 namespace MiraVpn;
 
-/// <summary>
-/// Measures RTT to Mira servers by sending a quick HTTP GET to the API.
-/// HTTP always works (port 80, nginx) — no ISP UDP blocking issues.
-/// Returns the fastest endpoint for WireGuard connection.
-/// </summary>
-public static class SmartRouter
+public class SmartRouter
 {
-    private static readonly (string name, string apiBase, string wgEndpoint)[] _pool =
+    private static readonly (string Name, string ApiBase, string WgEndpoint)[] _pool =
     [
-        ("Nuremberg", "http://178.104.251.30/v1/stats", "178.104.251.30:51820"),
+        ("Nuremberg", "http://178.104.251.30/", "178.104.251.30:51820"),
     ];
 
-    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(5) };
+    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(2) };
+    public Action<string>? OnProbeResult;
 
-    /// <summary>
-    /// Probes each server via HTTP GET and returns the fastest.
-    /// If the probe fails (rttMs == MaxValue), returns null.
-    /// </summary>
-    public static async Task<(string name, string endpoint, int rttMs)?> PickBestAsync()
+    public async Task<ServerProbe?> FindFastestAsync()
     {
-        (string name, string endpoint, int rttMs)? best = null;
-
+        ServerProbe? best = null;
         foreach (var s in _pool)
         {
+            OnProbeResult?.Invoke($"Probing {s.Name} ({s.WgEndpoint})...");
             var sw = Stopwatch.StartNew();
             try
             {
-                var resp = await _http.GetAsync(s.apiBase);
+                var resp = await _http.GetAsync(s.ApiBase);
                 sw.Stop();
                 if (resp.IsSuccessStatusCode)
                 {
-                    var rtt = (int)sw.ElapsedMilliseconds;
-                    if (best == null || rtt < best.Value.rttMs)
-                        best = (s.name, s.wgEndpoint, rtt);
+                    OnProbeResult?.Invoke($"  {s.Name} OK ({sw.ElapsedMilliseconds}ms)");
+                    if (best == null || sw.ElapsedMilliseconds < best.RttMs)
+                        best = new ServerProbe { IP = s.WgEndpoint.Split(':')[0], WgEndpointFull = s.WgEndpoint, Name = s.Name, RttMs = sw.ElapsedMilliseconds };
                 }
             }
-            catch
-            {
-                // server unreachable — skip
-            }
+            catch { OnProbeResult?.Invoke($"  {s.Name}: unreachable"); }
         }
-
         return best;
     }
+}
+
+public class ServerProbe
+{
+    public string IP { get; set; } = "";
+    public string WgEndpointFull { get; set; } = "";
+    public string Name { get; set; } = "";
+    public long RttMs { get; set; }
 }
