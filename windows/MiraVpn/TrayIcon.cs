@@ -11,7 +11,10 @@ public class TrayIcon : IDisposable
 {
     private readonly NotifyIcon _icon;
     private readonly HttpClient _http = new() { BaseAddress = new("http://178.104.251.30/v1/") };
-    private readonly string _wgExe = @"C:\Program Files\WireGuard\wireguard.exe";
+    private string _wgExe => Path.Combine(_wgDir, "wireguard.exe");
+    private string _wgDir => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Mira VPN", "WireGuard");
     private const string TunnelName = "MiraVPN";
     private bool _connected;
 
@@ -46,45 +49,70 @@ public class TrayIcon : IDisposable
         if (_connected) Disconnect(); else Connect();
     }
 
+    // --- silent WireGuard bootstrap ---
+
+    private bool EnsureWireGuard()
+    {
+        if (File.Exists(_wgExe)) return true;
+        SetState("Installing WireGuard...");
+        try
+        {
+            Directory.CreateDirectory(_wgDir);
+            var msi = Path.Combine(Path.GetTempPath(), "wireguard-installer.msi");
+            if (!File.Exists(msi) || new FileInfo(msi).Length < 1_000_000)
+            {
+                using var client = new HttpClient();
+                var data = client.GetByteArrayAsync("https://download.wireguard.com/windows-client/wireguard-installer.exe").Result;
+                File.WriteAllBytes(msi, data);
+            }
+            // msiexec /i with /quiet — fully silent, no UI, no reboot
+            var psi = new ProcessStartInfo("msiexec.exe", $"/i \"{msi}\" /quiet /norestart DO_NOT_LAUNCH=1")
+            {
+                UseShellExecute = true,
+                Verb = "runas",
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            var p = Process.Start(psi)!;
+            p.WaitForExit(120_000);
+            if (File.Exists(_wgExe)) return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("WireGuard silent install failed: " + ex.Message);
+        }
+        SetState("Setup failed");
+        return false;
+    }
+
+    // --- connect / disconnect ---
+
     private async void Connect()
     {
         SetState("Connecting...");
         try
         {
-            var wgPath = FindWireGuard();
-            if (wgPath == null)
+            if (!EnsureWireGuard())
             {
-                MessageBox.Show("WireGuard is not installed.\n\nPlease install from https://www.wireguard.com/install/",
-                    "Mira VPN", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                SetState("Disconnected");
+                _icon.Text = "Mira VPN - setup failed";
+                SetState("Setup failed - try again");
                 return;
             }
 
-            var priv = RunWg(wgPath, "genkey");
-            var pub = RunWg(wgPath, "pubkey", priv);
-            if (string.IsNullOrEmpty(priv) || string.IsNullOrEmpty(pub))
-            {
-                SetState("Keygen failed");
-                return;
-            }
+            var priv = RunWg("genkey");
+            var pub = RunWg("pubkey", priv);
+            if (string.IsNullOrEmpty(priv) || string.IsNullOrEmpty(pub)) { SetState("Keygen failed"); return; }
 
             var resp = await _http.PostAsJsonAsync("tunnel/issue", new { public_key = pub.Trim(), tier = "free" });
-            if (!resp.IsSuccessStatusCode)
-            {
-                SetState("Registration failed");
-                return;
-            }
+            if (!resp.IsSuccessStatusCode) { SetState("Registration failed"); return; }
             var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
             var ip = json.GetProperty("ip").GetString()!;
-            var config = json.GetProperty("config").GetString()!;
-            config = config.Replace("FILL_ME", priv.Trim());
+            var config = json.GetProperty("config").GetString()!.Replace("FILL_ME", priv.Trim());
 
             var tmp = Path.GetTempFileName() + ".conf";
             File.WriteAllText(tmp, config);
-            RunWg(wgPath, "/installtunnelservice \"" + tmp + "\"");
+            RunWg("/installtunnelservice \"" + tmp + "\"");
             File.Delete(tmp);
-
-            RunWg(wgPath, "/activate \"" + TunnelName + "\"");
+            RunWg("/activate \"" + TunnelName + "\"");
 
             _connected = true;
             _icon.Text = "Mira VPN - Connected (" + ip + ")";
@@ -92,38 +120,23 @@ public class TrayIcon : IDisposable
         }
         catch (Exception ex)
         {
-            MessageBox.Show("Connection failed: " + ex.Message, "Mira VPN", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            SetState("Disconnected");
+            Debug.WriteLine("Mira connect failed: " + ex.Message);
+            SetState("Connection failed");
         }
     }
 
     private void Disconnect()
     {
-        try
-        {
-            var wg = FindWireGuard();
-            if (wg != null) { RunWg(wg, "/uninstalltunnelservice \"" + TunnelName + "\""); }
-        }
+        try { if (File.Exists(_wgExe)) RunWg("/uninstalltunnelservice \"" + TunnelName + "\""); }
         catch { }
         _connected = false;
         _icon.Text = "Mira VPN - disconnected";
         SetState("Disconnected");
     }
 
-    private string? FindWireGuard()
+    private string RunWg(string args, string? stdin = null)
     {
-        if (File.Exists(_wgExe)) return _wgExe;
-        foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
-        {
-            var full = Path.Combine(dir.Trim(), "wireguard.exe");
-            if (File.Exists(full)) return full;
-        }
-        return null;
-    }
-
-    private static string RunWg(string exe, string args, string? stdin = null)
-    {
-        var psi = new ProcessStartInfo(exe, args)
+        var psi = new ProcessStartInfo(_wgExe, args)
         {
             RedirectStandardOutput = true,
             RedirectStandardInput = stdin != null,
