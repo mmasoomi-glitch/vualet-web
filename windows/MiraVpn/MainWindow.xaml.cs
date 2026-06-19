@@ -2,12 +2,15 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace MiraVpn;
 
 public partial class MainWindow : Window
 {
     private readonly TrayIcon _tray;
+    private readonly DispatcherTimer _connTimer;
+    private DateTime _connStartTime;
     private ConnectionState _state = ConnectionState.Disconnected;
 
     public ObservableCollection<LogEntry> LogEntries { get; } = new();
@@ -19,7 +22,13 @@ public partial class MainWindow : Window
         _tray = tray;
         _tray.Service.StateChanged += OnStateChanged;
         _tray.Service.LogMessage += OnLogMessage;
-        _tray.Service.StatsUpdated += OnStatsUpdated;
+        _tray.StatsUpdated += OnStatsUpdated;
+
+        _connTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Normal,
+            (_, _) => { ConnTimerText.Text = "Connected: " + (DateTime.Now - _connStartTime).ToString(@"hh\:mm\:ss"); },
+            Dispatcher);
+        _connTimer.IsEnabled = false;
+
         var prefs = Prefs.Load();
         AutoConnectCheck.IsChecked = prefs.AutoConnect;
         UpdateUI(ConnectionState.Disconnected, "Disconnected");
@@ -31,8 +40,19 @@ public partial class MainWindow : Window
     private void OnLogMessage(string message)
     { Dispatcher.Invoke(() => AddLogEntry(message)); }
 
-    private void OnStatsUpdated(ulong rx, ulong tx)
-    { Dispatcher.Invoke(() => { StatsText.Text = $"Up: {Fmt(tx)}  Down: {Fmt(rx)}"; }); }
+    private void OnStatsUpdated(ulong rx, ulong tx, long handshakeSec)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            StatsText.Text = $"Up: {Fmt(tx)}  Down: {Fmt(rx)}";
+            long age = _tray.Service.LastHandshakeAge;
+            HandshakeText.Text = $"Handshake: {age}s ago";
+            if (age > 120)
+                HandshakeText.Foreground = (System.Windows.Media.Brush)FindResource("DotErrorBrush");
+            else
+                HandshakeText.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(140, 129, 144)); // #8C8190
+        });
+    }
 
     private void UpdateUI(ConnectionState state, string message)
     {
@@ -43,6 +63,7 @@ public partial class MainWindow : Window
             ConnectionState.Probing or ConnectionState.Connecting => (System.Windows.Media.Brush)FindResource("DotProbingBrush"),
             ConnectionState.Connected => (System.Windows.Media.Brush)FindResource("DotConnectedBrush"),
             ConnectionState.Error => (System.Windows.Media.Brush)FindResource("DotErrorBrush"),
+            ConnectionState.Reconnecting => (System.Windows.Media.Brush)FindResource("DotProbingBrush"),
             _ => (System.Windows.Media.Brush)FindResource("DotDisconnectedBrush")
         };
         StateText.Text = message;
@@ -54,27 +75,37 @@ public partial class MainWindow : Window
                 ActionButton.Content = state == ConnectionState.Error ? "Retry" : "Connect";
                 ActionButton.IsEnabled = true;
                 if (ActionButton.Template.FindName("border", ActionButton) is Border b) b.Background = (System.Windows.Media.Brush)FindResource("BtnGradientBrush");
+                _connTimer.IsEnabled = false;
+                ConnTimerText.Text = "Connected: —";
                 break;
             case ConnectionState.Probing:
             case ConnectionState.Connecting:
                 ActionButton.Content = state == ConnectionState.Probing ? "Probing..." : "Connecting...";
                 ActionButton.IsEnabled = false;
                 break;
+            case ConnectionState.Reconnecting:
+                ActionButton.Content = "Reconnecting...";
+                ActionButton.IsEnabled = false;
+                break;
             case ConnectionState.Connected:
                 ActionButton.Content = "Disconnect";
                 ActionButton.IsEnabled = true;
                 if (ActionButton.Template.FindName("border", ActionButton) is Border b2) b2.Background = (System.Windows.Media.Brush)FindResource("BtnConnectedBrush");
-                ServerText.Text = $"Server: {_tray.Service.ConnectedEndpoint}";
+                ServerText.Text = $"Server: {_tray.Service.ConnectedServerName} ({_tray.Service.ConnectedEndpoint})";
                 LatencyText.Text = $"Latency: {_tray.Service.ConnectedRtt}ms";
+                _connStartTime = DateTime.Now;
+                _connTimer.IsEnabled = true;
                 break;
             case ConnectionState.Disconnecting:
                 ActionButton.Content = "Disconnecting...";
                 ActionButton.IsEnabled = false;
+                _connTimer.IsEnabled = false;
+                ConnTimerText.Text = "Connected: —";
                 break;
         }
 
         if (state != ConnectionState.Connected)
-        { ServerText.Text = "Server: —"; LatencyText.Text = "Latency: —"; StatsText.Text = "Up: —  Down: —"; }
+        { ServerText.Text = "Server: —"; LatencyText.Text = "Latency: —"; StatsText.Text = "Up: —  Down: —"; HandshakeText.Text = "Handshake: —"; }
     }
 
     private void AddLogEntry(string message)

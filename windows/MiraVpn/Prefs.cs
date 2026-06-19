@@ -9,6 +9,7 @@ public class Prefs
     public bool AutoStart { get; set; } = true;
     public bool AutoConnect { get; set; } = false;
     public bool Notifications { get; set; } = true;
+    public bool KillSwitchEnabled { get; set; } = false;
     public string Email { get; set; } = "";
     public bool FirstRunComplete { get; set; }
 

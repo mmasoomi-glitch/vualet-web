@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows.Forms;
@@ -14,12 +15,14 @@ public class ConnectionService : IDisposable
     private readonly System.Timers.Timer _statusTimer = new(AppConfig.STATUS_INTERVAL_MS);
     private CancellationTokenSource? _cts;
     private bool _connected, _connecting;
+    private int _reconnectAttempts;
+    private bool _userDisconnected, _isReconnecting, _wasConnected;
     private string? _currentPrivKey, _currentPubKey, _connectedEndpoint, _connectedServerName;
     private long _connectedRtt;
 
     public event Action<ConnectionState, string>? StateChanged;
     public event Action<string>? LogMessage;
-    public event Action<ulong, ulong>? StatsUpdated;
+    public event Action<ulong, ulong, long>? StatsUpdated;
     public event Action? ExitRequested;
     public event Action<string, string, ToolTipIcon>? BalloonRequested;
 
@@ -27,16 +30,23 @@ public class ConnectionService : IDisposable
     public bool IsConnected => _connected;
     public bool IsConnecting => _connecting;
     public string ConnectedEndpoint => _connectedEndpoint ?? "";
+    public string ConnectedServerName => _connectedServerName ?? "";
     public long ConnectedRtt => _connectedRtt;
+    public long LastHandshakeAge { get; private set; }
 
     public ConnectionService()
     {
         _statusTimer.Elapsed += (_, _) => UpdateStatusFromTunnel();
         _statusTimer.AutoReset = true;
+        NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
+        NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
     }
 
     public void Connect()
     {
+        _userDisconnected = false;
+        _isReconnecting = false;
+        _reconnectAttempts = 0;
         _ = ConnectAsync();
     }
 
@@ -103,10 +113,12 @@ public class ConnectionService : IDisposable
             }
 
             _connected = true; _connecting = false;
+            _reconnectAttempts = 0; _isReconnecting = false;
             _connectedEndpoint = server.IP; _connectedRtt = server.RttMs; _connectedServerName = server.Name;
             SetState(ConnectionState.Connected, $"Connected ({server.Name}, {server.RttMs}ms)");
             EmitLog($"OK Connected ({server.Name}, {server.RttMs}ms)");
             BalloonRequested?.Invoke("Mira VPN", $"Connected to {server.Name} ({server.RttMs}ms)", ToolTipIcon.Info);
+            DnsGuard.Enable(new[] { AppConfig.DNS_PRIMARY, AppConfig.DNS_SECONDARY });
             _statusTimer.Start();
         }
         catch (OperationCanceledException)
@@ -120,15 +132,20 @@ public class ConnectionService : IDisposable
             SetState(ConnectionState.Error, ex.Message);
             EmitLog($"x {ex.Message}");
             _connecting = false;
+            if (!_userDisconnected && !_isReconnecting)
+                _ = ReconnectAsync();
         }
     }
 
     public async Task Disconnect()
     {
+        _userDisconnected = true;
+        _isReconnecting = false;
         _cts?.Cancel();
         if (!_connected && !_connecting) return;
         SetState(ConnectionState.Disconnecting, "Disconnecting..."); EmitLog("Disconnecting...");
         _statusTimer.Stop();
+        DnsGuard.Disable();
         try { NativeBridge.mira_stop(); await RemovePeer(); }
         catch (Exception ex) { Logger.Error("TrayIcon", $"Disconnect: {ex.Message}"); }
         _connected = _connecting = false; _connectedEndpoint = null; _connectedRtt = 0;
@@ -160,10 +177,29 @@ public class ConnectionService : IDisposable
                 SetState(ConnectionState.Disconnected, "Disconnected (tunnel lost)");
                 EmitLog("x Tunnel lost");
                 BalloonRequested?.Invoke("Mira VPN", "Connection lost", ToolTipIcon.Warning);
+                if (!_userDisconnected && !_isReconnecting)
+                    _ = ReconnectAsync();
             }
             else if (stats != null && stats.connected)
             {
-                StatsUpdated?.Invoke(stats.rx_bytes, stats.tx_bytes);
+                long age = stats.last_handshake_sec > 0
+                    ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() - stats.last_handshake_sec
+                    : 0;
+                LastHandshakeAge = age;
+                StatsUpdated?.Invoke(stats.rx_bytes, stats.tx_bytes, stats.last_handshake_sec);
+
+                // Detect stale tunnel: no handshake in 180s (WireGuard standard interval)
+                if (stats.last_handshake_sec > 0 && age > AppConfig.STALE_HANDSHAKE_SEC)
+                {
+                    EmitLog($"x Tunnel stale (no handshake for {age}s) - reconnecting");
+                    _connected = false;
+                    _statusTimer.Stop();
+                    try { NativeBridge.mira_stop(); } catch { }
+                    DnsGuard.Disable();
+                    if (!_userDisconnected && !_isReconnecting)
+                        _ = ReconnectAsync();
+                    return;
+                }
             }
         }
         catch { }
@@ -218,6 +254,73 @@ public class ConnectionService : IDisposable
         var s = Marshal.PtrToStringAnsi(ptr);
         NativeBridge.mira_free(ptr);
         return s ?? "";
+    }
+
+    private async Task ReconnectAsync()
+    {
+        if (_isReconnecting) return;
+        _isReconnecting = true;
+        try
+        {
+            while (_reconnectAttempts < AppConfig.RECONNECT_MAX_ATTEMPTS)
+            {
+                if (_userDisconnected) break;
+                _reconnectAttempts++;
+                var delayMs = Math.Min(
+                    AppConfig.RECONNECT_BASE_DELAY_MS * (1 << (_reconnectAttempts - 1)),
+                    AppConfig.RECONNECT_MAX_DELAY_MS);
+                SetState(ConnectionState.Connecting, $"Reconnecting... attempt {_reconnectAttempts}");
+                EmitLog($"Reconnecting... attempt {_reconnectAttempts}/{AppConfig.RECONNECT_MAX_ATTEMPTS}");
+                await Task.Delay(delayMs);
+                if (_userDisconnected) break;
+                await ConnectAsync();
+                if (_connected) break;
+            }
+            if (!_connected && !_userDisconnected)
+            {
+                SetState(ConnectionState.Error, "Reconnect failed after max attempts");
+                EmitLog("x Reconnect failed after max attempts");
+                BalloonRequested?.Invoke("Mira VPN", "Could not reconnect after several attempts.", ToolTipIcon.Error);
+            }
+        }
+        finally { _isReconnecting = false; }
+    }
+
+    private void OnNetworkAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e)
+    {
+        if (e.IsAvailable)
+        {
+            // Network came up
+            if (_wasConnected && !_userDisconnected)
+            {
+                EmitLog("Network restored — reconnecting...");
+                Task.Delay(AppConfig.NETWORK_RECONNECT_DELAY_MS).ContinueWith(_ =>
+                {
+                    _ = ReconnectAsync();
+                });
+            }
+        }
+        else
+        {
+            // Network went down
+            if (_connected)
+            {
+                _wasConnected = true;
+                _connected = false;
+                try { NativeBridge.mira_stop(); } catch { }
+                SetState(ConnectionState.Reconnecting, "Network lost, reconnecting...");
+                EmitLog("x Network lost — will reconnect when available");
+            }
+        }
+    }
+
+    private void OnNetworkAddressChanged(object? sender, EventArgs e)
+    {
+        // Network interface changed — if we were connected, probe for reconnection
+        if (_connected && !_userDisconnected)
+        {
+            EmitLog("Network change detected while connected");
+        }
     }
 
     public void RaiseExitRequested() => ExitRequested?.Invoke();

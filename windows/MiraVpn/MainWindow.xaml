@@ -46,7 +46,9 @@
         <StackPanel Grid.Row="2" Margin="0,0,0,16">
             <TextBlock x:Name="ServerText" Text="Server: —" FontFamily="Segoe UI" FontSize="13" Foreground="#524A55" Margin="0,0,0,4"/>
             <TextBlock x:Name="LatencyText" Text="Latency: —" FontFamily="Segoe UI" FontSize="13" Foreground="#524A55" Margin="0,0,0,4"/>
-            <TextBlock x:Name="StatsText" Text="Up: —  Down: —" FontFamily="Segoe UI" FontSize="13" Foreground="#8C8190"/>
+            <TextBlock x:Name="ConnTimerText" Text="Connected: —" FontFamily="Segoe UI" FontSize="13" Foreground="#524A55" Margin="0,0,0,4"/>
+            <TextBlock x:Name="StatsText" Text="Up: —  Down: —" FontFamily="Segoe UI" FontSize="13" Foreground="#8C8190" Margin="0,0,0,4"/>
+            <TextBlock x:Name="HandshakeText" Text="Handshake: —" FontFamily="Segoe UI" FontSize="13" Foreground="#8C8190"/>
         </StackPanel>
         <Button x:Name="ActionButton" Grid.Row="3" Content="Connect" Click="ActionButton_Click" Margin="0,0,0,20" HorizontalAlignment="Stretch" Height="48" FontSize="16" Foreground="White" FontWeight="SemiBold" BorderThickness="0">
             <Button.Template>
