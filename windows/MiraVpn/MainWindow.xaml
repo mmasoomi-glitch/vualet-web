@@ -96,8 +96,13 @@
                 </ItemsControl>
             </Grid>
         </Border>
-        <CheckBox x:Name="AutoConnectCheck" Grid.Row="5" Content="Auto-connect on startup"
-                  FontFamily="Segoe UI" FontSize="12" Foreground="#524A55"
-                  Margin="0,16,0,0" Checked="AutoConnect_Changed" Unchecked="AutoConnect_Changed"/>
+        <StackPanel Grid.Row="5" Margin="0,16,0,0">
+            <CheckBox x:Name="AutoConnectCheck" Content="Auto-connect on startup"
+                      FontFamily="Segoe UI" FontSize="12" Foreground="#524A55"
+                      Checked="AutoConnect_Changed" Unchecked="AutoConnect_Changed"/>
+            <CheckBox x:Name="KillSwitchCheck" Content="Kill Switch (block internet when VPN drops)"
+                      FontFamily="Segoe UI" FontSize="12" Foreground="#524A55"
+                      Margin="0,8,0,0" Checked="KillSwitch_Changed" Unchecked="KillSwitch_Changed"/>
+        </StackPanel>
     </Grid>
 </Window>
