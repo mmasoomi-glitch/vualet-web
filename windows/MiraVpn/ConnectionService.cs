@@ -232,6 +232,14 @@ public class ConnectionService : IDisposable
         LogMessage?.Invoke(msg);
     }
 
+    private void DisableKillSwitch()
+    {
+        if (!_killSwitchActive) return;
+        try { KillSwitch.Disable(); EmitLog("OK Kill switch disengaged"); }
+        catch (Exception ex) { Logger.Error("KillSwitch", $"Disable: {ex.Message}"); }
+        _killSwitchActive = false;
+    }
+
     private static void CleanupStaleWintun()
     {
         try
