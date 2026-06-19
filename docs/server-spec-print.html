@@ -1,0 +1,212 @@
+<!doctype html><html lang=en><head><meta charset=utf-8>
+<title>Mira VPN — Server Specification v1.0</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap');
+@page { size: A4; margin: 14mm; }
+body { font-family:'Inter',system-ui,sans-serif; color:#1a1a2e; line-height:1.6; font-size:10.5px; }
+h1 { font-size:22px; font-weight:700; color:#2A1F2D; border-bottom:3px solid #F8A5A0; padding-bottom:8px; margin:24px 0 10px; }
+h2 { font-size:15px; font-weight:600; color:#2A1F2D; background:#F2EAF0; padding:6px 12px; border-radius:6px; margin:20px 0 8px; }
+h3 { font-size:12px; font-weight:600; color:#524A55; margin:14px 0 6px; }
+code { font-family:'JetBrains Mono',monospace; background:#f5f5f5; padding:2px 5px; border-radius:3px; font-size:9.5px; }
+pre { background:#1A1525; color:#E8E0EA; padding:12px 16px; border-radius:8px; font-size:9.5px; line-height:1.5; overflow-x:auto; }
+pre code { background:none; padding:0; color:inherit; }
+table { border-collapse:collapse; width:100%; margin:10px 0; font-size:9.5px; }
+th { background:#F8A5A0; color:white; padding:6px 10px; text-align:left; font-weight:600; }
+td { padding:6px 10px; border-bottom:1px solid #E8E0EA; }
+.badge { display:inline-block; padding:2px 7px; border-radius:999px; font-size:9px; font-weight:600; }
+.cover { text-align:center; padding:60px 0; page-break-after:always; }
+.cover h1 { border:none; font-size:36px; margin:0; }
+.cover p { font-size:14px; color:#8C8190; margin:4px 0; }
+.gap { page-break-before:always; }
+.footer { margin-top:24px; padding-top:10px; border-top:1px solid #E8E0EA; font-size:8px; color:#8C8190; text-align:center; }
+</style></head><body>
+<div class=cover><h1>Mira VPN<br>Server Specification</h1><p>v1.0 · June 2026 · Vualet · Dubai</p><p>Confidential — Hetzner nbg1 · 178.104.251.30</p></div>
+
+<h1>0. Mira VPN — Brand Context</h1>
+<p>Mira is an <strong>AI-assisted VPN</strong>. She measures latency to nearby Mira servers, picks the fastest one on every connect, encrypts the connection, and gets out of the way. No country picker. No settings file. No guesswork.</p>
+<p>Four principles: <strong>She measures.</strong> <strong>She picks.</strong> <strong>She keeps you private.</strong> <strong>She pauses for you.</strong> (One toggle for banking apps; per-app Direct list for permanent exclusions.)</p>
+<p>Mira VPN is one product in the <strong>Vualet</strong> family (AI tools out of Dubai by Dr. Abdolmadjid Masoomi: Mira assistant, Veridian telephony, aFAQ OS, Primaion research). Public face: <code>vpn.mira.vualet.com</code> (DNS pending; live at <code>178.104.251.30</code>).</p>
+
+<h1>1. Objective</h1>
+<p>Define the server infrastructure to run Mira VPN at production scale — thousands of concurrent users, clear tier segmentation (free vs paid), automated abuse safeguards, infrastructure that feels fast regardless of tier. Target: Hetzner cx33 at <code>178.104.251.30</code> → future nodes behind Hetzner LB.</p>
+
+<h1>2. Live State</h1>
+<table>
+<tr><td>Server</td><td>mira-vpn-01 · Hetzner cx33 · 4 cores 8 GB 80 GB SSD 22 TB</td></tr>
+<tr><td>OS</td><td>Ubuntu 24.04 · kernel 6.8.0-111</td></tr>
+<tr><td>IP</td><td>178.104.251.30</td></tr>
+<tr><td>Disk</td><td>2.9 / 75 GB (4%)</td></tr>
+<tr><td>RAM</td><td>665 / 7800 MB (9%)</td></tr>
+<tr><td>WireGuard</td><td>wg0 · 10.66.66.0/24 · pubkey ByK5yGC96gYi0GZ/dIoyVBWZkLrCGyQH+XKtxS1UJhE= · listen 51820 · 0 peers</td></tr>
+<tr><td>Services</td><td>mira-web :3060 (100M) · mira-api :5103 (31M) · x-ui :7091 (95M) · xray :8443 (46M) · nginx :80 (10M)</td></tr>
+<tr><td>Firewall</td><td>ufw active · 22 80 443 8443 51820/udp open</td></tr>
+<tr><td>tc</td><td>NOT APPLIED — clean system</td></tr>
+</table>
+
+<h1>3. Tier Control — Traffic Shaping</h1>
+
+<h2>3.1 Tier Matrix</h2>
+<table>
+<tr><th></th><th>Free</th><th>Paid ($9.99/mo)</th></tr>
+<tr><td>Speed per IP</td><td>500 kbps</td><td>5 Mbps</td></tr>
+<tr><td>Volume</td><td>unlimited (speed-capped)</td><td>50 GB / month</td></tr>
+<tr><td>Session</td><td>2 h, then drop</td><td>unlimited</td></tr>
+<tr><td>Concurrent IPs</td><td>1</td><td>3</td></tr>
+<tr><td>Server</td><td>nearest only</td><td>smart routing</td></tr>
+</table>
+
+<h2>3.2 tc htb (Initial)</h2>
+<pre><code>#!/bin/bash
+# /opt/mira-vpn/tc-tiers.sh — idempotent, run at boot
+IFACE=enp1s0 PORT=51820
+tc qdisc del dev $IFACE root 2>/dev/null || true
+tc qdisc add dev $IFACE root handle 1: htb default 99
+tc class add dev $IFACE parent 1: classid 1:1 htb rate 1000mbit ceil 1000mbit
+tc class add dev $IFACE parent 1:1 classid 1:99 htb rate 200mbit ceil 1000mbit   # system
+tc class add dev $IFACE parent 1:1 classid 1:2  htb rate 800mbit ceil 800mbit    # vpn pool
+tc class add dev $IFACE parent 1:2 classid 1:10 htb rate 5mbit ceil 5mbit         # paid per IP
+tc class add dev $IFACE parent 1:2 classid 1:20 htb rate 500kbit ceil 500kbit     # free per IP
+tc filter add dev $IFACE protocol ip parent 1:0 prio 99 u32 match ip sport $PORT 0xffff flowid 1:20</code></pre>
+
+<h2>3.3 Per-IP MARK (Production)</h2>
+<pre><code class="language-python"># Inside tunnel-api.py add_peer():
+def apply_mark(ip, tier):
+    mark = "0x10" if tier == "paid" else "0x20"
+    subprocess.run(["iptables","-t","mangle","-A","POSTROUTING","-s",ip,"-j","MARK","--set-mark",mark], check=True)</code></pre>
+<p>Then tc filters by mark: <code>match mark 0x10 0xff</code> → paid class, <code>0x20</code> → free.</p>
+
+<h2>3.4 2-Hour Free Session Prune</h2>
+<pre><code>#!/bin/bash
+NOW=$(date +%s) MAX=7200
+wg show wg0 dump | tail -n+2 | while read pubkey _ ip _ _ _ handshake _; do
+    [ -z "$pubkey" ] && continue
+    AGE=$((NOW-handshake))
+    if iptables -t mangle -L POSTROUTING -n | grep -q "$ip.*0x20" && [ $AGE -gt $MAX ]; then
+        wg set wg0 peer "$pubkey" remove
+        iptables -t mangle -D POSTROUTING -s "$ip" -j MARK 2>/dev/null
+        echo "pruned free peer $ip (${AGE}s)"
+    fi
+done</code></pre>
+<p>Systemd timer: <code>/etc/systemd/system/mira-prune.timer</code> · OnCalendar <code>*:0/5</code> (every 5 min).</p>
+
+<h2>3.5 Volume Cap Enforcement</h2>
+<p>Parsed from <code>wg show wg0 transfer</code> every prune cycle. If per-peer received+transmitted exceeds 50 GB for paid tier, remove peer. Accumulate in SQLite <code>peers.db</code>.</p>
+
+<div class=gap></div>
+<h1>4. Nginx Rewrite & Acceleration</h1>
+
+<h2>4.1 Gzip + Cache Headers</h2>
+<pre><code>gzip on; gzip_types text/css application/javascript image/svg+xml application/json; gzip_min_length 1000;
+location /_next/static/ { expires 365d; add_header Cache-Control "public,immutable"; }
+location /mira/ { expires 7d; add_header Cache-Control "public"; }</code></pre>
+
+<h2>4.2 API Rate Limiting</h2>
+<pre><code># nginx.conf http{}
+limit_req_zone $binary_remote_addr zone=mira_api:10m rate=5r/s;
+location /v1/ { limit_req zone=mira_api burst=10 nodelay; ... }</code></pre>
+
+<h2>4.3 Timeout Tuning</h2>
+<pre><code>location /v1/ { proxy_buffering on; proxy_read_timeout 30s; proxy_connect_timeout 5s; }
+location / { proxy_read_timeout 60s; proxy_connect_timeout 10s; }</code></pre>
+
+<div class=gap></div>
+<h1>5. Kernel Tuning for Speed Perception</h1>
+<pre><code># /etc/sysctl.d/90-mira-vpn.conf
+net.core.default_qdisc = fq
+net.ipv4.tcp_congestion_control = bbr
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
+net.ipv4.tcp_rmem = 4096 87380 16777216
+net.ipv4.tcp_wmem = 4096 65536 16777216
+net.ipv4.tcp_keepalive_time = 60
+net.ipv4.tcp_keepalive_intvl = 10
+net.ipv4.tcp_keepalive_probes = 6
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_fin_timeout = 15
+net.ipv4.tcp_fastopen = 3
+fs.file-max = 2097152</code></pre>
+
+<h1>6. DNS Acceleration</h1>
+<pre><code>apt-get install -y unbound
+# /etc/unbound/unbound.conf.d/mira.conf
+server:
+    interface: 10.66.66.1
+    port: 53
+    access-control: 10.66.66.0/24 allow
+    prefetch: yes
+    cache-min-ttl: 3600
+    serve-expired: yes
+    qname-minimisation: yes
+forward-zone: name: "." forward-addr: 1.1.1.1 forward-addr: 1.0.0.1
+systemctl enable --now unbound</code></pre>
+<p>Then update WireGuard DNS to <code>10.66.66.1</code> in the API config response. Cached DNS = 0 ms for hotspot queries.</p>
+
+<h1>7. Abuse Safeguards</h1>
+
+<h2>7.1 Per-Peer Connection Limits</h2>
+<pre><code>iptables -I FORWARD -i wg0 -p tcp -m connlimit --connlimit-above 50 --connlimit-mask 32 -j REJECT --reject-with tcp-reset
+iptables -I FORWARD -i wg0 -p udp -m connlimit --connlimit-above 200 --connlimit-mask 32 -j DROP</code></pre>
+
+<h2>7.2 Registration Rate Cap (Python)</h2>
+<pre><code class="language-python">_registry = defaultdict(list)
+PEER_WINDOW = 3600; MAX = 5
+def rate_check(ip):
+    now=time.time(); _registry[ip]=[t for t in _registry[ip] if now-t<PEER_WINDOW]
+    if len(_registry[ip])>=MAX: return False
+    _registry[ip].append(now); return True</code></pre>
+<p>Return 429 Too Many Requests if exceeded.</p>
+
+<h2>7.3 Block P2P on Free Tier</h2>
+<pre><code>iptables -A FORWARD -i wg0 -m mark --mark 0x20 -p tcp -m multiport --dports 6881:6889,6969,1337,51413 -j REJECT --reject-with tcp-reset</code></pre>
+
+<h2>7.4 Anti-Spoofing</h2>
+<pre><code>iptables -A FORWARD -i wg0 -s 10.66.66.0/24 -j ACCEPT
+iptables -A FORWARD -i wg0 -j DROP</code></pre>
+
+<h1>8. Peer Database (SQLite)</h1>
+<pre><code class="language-python"># In tunnel-api.py
+conn = sqlite3.connect('/opt/mira-api/peers.db')
+conn.execute("CREATE TABLE IF NOT EXISTS peers(pubkey TEXT PRIMARY KEY, ip TEXT, tier TEXT DEFAULT 'free', registered_at TEXT, last_handshake TEXT, tx INTEGER DEFAULT 0, rx INTEGER DEFAULT 0, alive INTEGER DEFAULT 1)")</code></pre>
+
+<h1>9. Process Watchdog</h1>
+<pre><code class="language-python"># /opt/mira-vpn/watchdog.py
+while True:
+    for svc in ["mira-web","mira-api","nginx"]:
+        if subprocess.run(["systemctl","is-active",svc]).returncode:
+            subprocess.run(["systemctl","restart",svc])
+    time.sleep(60)</code></pre>
+<p>Systemd unit: <code>/etc/systemd/system/mira-watchdog.service</code></p>
+
+<div class=gap></div>
+<h1>10. Impact Summary</h1>
+<table>
+<tr><th>Before</th><th>After</th></tr>
+<tr><td>No shaping — one user saturates 143 Mbps</td><td>tc per-tier: free 500k, paid 5M, system 200M</td></tr>
+<tr><td>No peer database</td><td>SQLite peers.db tracking every issued peer</td></tr>
+<tr><td>No session limit</td><td>2-hour free prune timer</td></tr>
+<tr><td>No volume cap</td><td>iptables + wg transfer + 50 GB check</td></tr>
+<tr><td>No API rate limiting</td><td>5 r/s per IP at nginx</td></tr>
+<tr><td>No conn limits</td><td>50 TCP / 200 UDP per peer</td></tr>
+<tr><td>No DNS cache</td><td>unbound local resolver, 0 ms cache hit</td></tr>
+<tr><td>No BBR / TCP tuning</td><td>BBR + fq + buffer sizing</td></tr>
+<tr><td>No process watchdog</td><td>systemd timer auto-restarts dead services</td></tr>
+<tr><td>No anti-spoofing</td><td>iptables limits forwarding to our subnet only</td></tr>
+</table>
+
+<h1>11. Build Order</h1>
+<ol>
+<li>Kernel tuning (BBR, buffers, TCP fast open) — 5 min · highest impact</li>
+<li>tc tier shaping — 10 min</li>
+<li>nginx rate limiting + gzip + caching — 10 min</li>
+<li>Peer DB + wire into tunnel-api.py — 15 min</li>
+<li>2-hour free session prune timer — 10 min</li>
+<li>iptables MARK system (per-IP shaping) — 15 min</li>
+<li>unbound DNS — 5 min</li>
+<li>Watchdog — 10 min</li>
+<li>Connlimit + torrent + subnet filter — 5 min</li>
+<li>Volume cap check — 10 min</li>
+</ol>
+<p><strong>Total under 2 hours for the full stack.</strong></p>
+
+<div class=footer>Mira VPN Server Spec v1.0 · Vualet · Dubai · <code>178.104.251.30</code> · Confidential</div>
+</body></html>
