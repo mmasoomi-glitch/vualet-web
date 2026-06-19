@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Http;
 
 namespace MiraVpn;
@@ -15,8 +16,7 @@ public class SmartRouter
 
     public async Task<ServerProbe?> FindFastestAsync()
     {
-        ServerProbe? best = null;
-        foreach (var s in _pool)
+        var tasks = _pool.Select(async s =>
         {
             OnProbeResult?.Invoke($"Probing {s.Name} ({s.WgEndpoint})...");
             var sw = Stopwatch.StartNew();
@@ -27,12 +27,14 @@ public class SmartRouter
                 if (resp.IsSuccessStatusCode)
                 {
                     OnProbeResult?.Invoke($"  {s.Name} OK ({sw.ElapsedMilliseconds}ms)");
-                    if (best == null || sw.ElapsedMilliseconds < best.RttMs)
-                        best = new ServerProbe { IP = s.WgEndpoint.Split(':')[0], WgEndpointFull = s.WgEndpoint, Name = s.Name, RttMs = sw.ElapsedMilliseconds };
+                    return new ServerProbe { IP = s.WgEndpoint.Split(':')[0], WgEndpointFull = s.WgEndpoint, Name = s.Name, RttMs = sw.ElapsedMilliseconds };
                 }
             }
             catch { OnProbeResult?.Invoke($"  {s.Name}: unreachable"); }
-        }
-        return best;
+            return null;
+        });
+
+        var results = await Task.WhenAll(tasks);
+        return results.Where(r => r is not null).MinBy(r => r!.RttMs);
     }
 }

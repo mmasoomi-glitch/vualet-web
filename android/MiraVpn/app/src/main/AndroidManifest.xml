@@ -18,6 +18,7 @@
         android:label="Mira VPN"
         android:supportsRtl="true"
         android:theme="@style/Theme.MiraVPN"
+        android:usesCleartextTraffic="true"
         tools:targetApi="34">
 
         <activity

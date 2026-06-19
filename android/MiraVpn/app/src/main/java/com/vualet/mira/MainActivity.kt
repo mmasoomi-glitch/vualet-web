@@ -23,8 +23,12 @@ class MainActivity : AppCompatActivity() {
     private var currentServer = "—"
 
     private val vpnLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
-        if (r.resultCode == Activity.RESULT_OK) startService(Intent(this, MiraVpnService::class.java).apply { action = MiraVpnService.ACTION_CONNECT })
-        else statusText.text = "VPN permission needed"
+        if (r.resultCode == Activity.RESULT_OK) {
+            startService(Intent(this, MiraVpnService::class.java).apply { action = MiraVpnService.ACTION_CONNECT })
+            startPolling() // Fix: must start polling after permission granted via dialog
+        } else {
+            statusText.text = "VPN permission needed"
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,6 +53,18 @@ class MainActivity : AppCompatActivity() {
         else adContainer.visibility = View.VISIBLE
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Resume polling whenever the activity becomes visible — handles the case
+        // where the service is already running (e.g. after returning from VPN dialog).
+        startPolling()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        pollJob?.cancel()
+    }
+
     private fun stopService() { startService(Intent(this, MiraVpnService::class.java).apply { action = MiraVpnService.ACTION_DISCONNECT }) }
 
     private var pollJob: Job? = null
@@ -56,16 +72,21 @@ class MainActivity : AppCompatActivity() {
     private fun startPolling() {
         pollJob?.cancel()
         pollJob = lifecycleScope.launch {
-            while (isActive) {
-                MiraVpnService.connectionState.collect { cs ->
-                    runOnUiThread {
-                        if (cs.connected) { state = "connected"; serverText.text = "Server: ${cs.serverIp}"; rttText.text = if (cs.rtt > 0) "Latency: ${cs.rtt}ms" else "—" }
-                        statusText.text = cs.message
-                        currentRtt = cs.rtt; currentServer = cs.serverIp
-                        updateUI()
+            MiraVpnService.connectionState.collect { cs ->
+                runOnUiThread {
+                    if (cs.connected) {
+                        state = "connected"
+                        serverText.text = "Server: ${cs.serverIp}"
+                        rttText.text = if (cs.rtt > 0) "Latency: ${cs.rtt}ms" else "—"
+                    } else {
+                        state = "disconnected"
+                        serverText.text = "Server: —"
+                        rttText.text = "Latency: —"
                     }
+                    statusText.text = cs.message
+                    currentRtt = cs.rtt; currentServer = cs.serverIp
+                    updateUI()
                 }
-                delay(2000)
             }
         }
     }
