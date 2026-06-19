@@ -1,13 +1,21 @@
-﻿using System.Configuration;
-using System.Data;
 using System.Windows;
 
 namespace MiraVpn;
 
-/// <summary>
-/// Interaction logic for App.xaml
-/// </summary>
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
-}
+    private TrayIcon? _tray;
 
+    private void App_Startup(object sender, StartupEventArgs e)
+    {
+        _tray = new TrayIcon();
+        _tray.ExitRequested += () => Shutdown();
+        _tray.Show();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _tray?.Dispose();
+        base.OnExit(e);
+    }
+}

@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 windows/MiraVpn/obj/
+windows/MiraVpn/bin/
+windows/MiraVpn/publish/
+windows/install-mira-vpn.ps1
+dist/

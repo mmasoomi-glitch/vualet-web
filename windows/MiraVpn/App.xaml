@@ -1,9 +1,11 @@
-﻿<Application x:Class="MiraVpn.App"
+<Application x:Class="MiraVpn.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:MiraVpn"
-             StartupUri="MainWindow.xaml">
+             Startup="App_Startup"
+             ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
-         
+        <SolidColorBrush x:Key="MiraRose" Color="#F8A5A0"/>
+        <SolidColorBrush x:Key="MiraLavender" Color="#C7B8F0"/>
+        <SolidColorBrush x:Key="MiraInk" Color="#2A1F2D"/>
     </Application.Resources>
 </Application>
