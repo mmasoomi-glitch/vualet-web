@@ -14,7 +14,7 @@ public class ConnectionService : IDisposable
     private readonly SmartRouter _router = new();
     private readonly System.Timers.Timer _statusTimer = new(AppConfig.STATUS_INTERVAL_MS);
     private CancellationTokenSource? _cts;
-    private bool _connected, _connecting;
+    private bool _connected, _connecting, _killSwitchActive;
     private int _reconnectAttempts;
     private bool _userDisconnected, _isReconnecting, _wasConnected;
     private string? _currentPrivKey, _currentPubKey, _connectedEndpoint, _connectedServerName;
@@ -74,11 +74,18 @@ public class ConnectionService : IDisposable
             ct.ThrowIfCancellationRequested();
             SetState(ConnectionState.Connecting, $"Connecting to {server.Name}...");
 
+            if (Prefs.Load().KillSwitchEnabled)
+            {
+                KillSwitch.Enable(server.IP);
+                _killSwitchActive = true;
+                EmitLog("OK Kill switch engaged");
+            }
+
             var priv = MarshalPtr(NativeBridge.mira_genkey());
             var pub = MarshalPtr(NativeBridge.mira_pubkey(priv));
             if (string.IsNullOrEmpty(priv) || string.IsNullOrEmpty(pub))
             {
-                SetState(ConnectionState.Error, "Key generation failed"); _connecting = false; return;
+                SetState(ConnectionState.Error, "Key generation failed"); DisableKillSwitch(); _connecting = false; return;
             }
             _currentPrivKey = priv; _currentPubKey = pub;
 
@@ -87,7 +94,7 @@ public class ConnectionService : IDisposable
             if (!resp.IsSuccessStatusCode)
             {
                 SetState(ConnectionState.Error, "Server registration failed");
-                EmitLog($"x Registration failed (HTTP {resp.StatusCode})"); _connecting = false; return;
+                EmitLog($"x Registration failed (HTTP {resp.StatusCode})"); DisableKillSwitch(); _connecting = false; return;
             }
             var json = await resp.Content.ReadFromJsonAsync<JsonElement>(ct);
             var cfg = json.GetProperty("config").GetString()!
@@ -109,7 +116,7 @@ public class ConnectionService : IDisposable
                 };
                 SetState(ConnectionState.Error, reason); EmitLog($"x {reason}");
                 BalloonRequested?.Invoke("Could not connect", reason, ToolTipIcon.Error);
-                await RemovePeer(); _connecting = false; return;
+                DisableKillSwitch(); await RemovePeer(); _connecting = false; return;
             }
 
             _connected = true; _connecting = false;
@@ -124,6 +131,7 @@ public class ConnectionService : IDisposable
         catch (OperationCanceledException)
         {
             EmitLog("OK Connection cancelled");
+            DisableKillSwitch();
             _connecting = false;
         }
         catch (Exception ex)
@@ -131,6 +139,7 @@ public class ConnectionService : IDisposable
             Logger.Error("TrayIcon", $"Connect: {ex.Message}");
             SetState(ConnectionState.Error, ex.Message);
             EmitLog($"x {ex.Message}");
+            DisableKillSwitch();
             _connecting = false;
             if (!_userDisconnected && !_isReconnecting)
                 _ = ReconnectAsync();
