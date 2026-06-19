@@ -598,18 +598,7 @@ Output: publish/MiraVpn.exe (69 MB, single file, self-contained)
   Panel: 3x-ui :7091 (localhost only, SSH tunnel to access)
   Firewall: ufw, only 22/80/443/8443/51820 open
 
-9. WHAT NOT TO BUILD
-================================================================================
 
-  - No calculator disguise (that's a separate product, Uncle Z Calc, free
-    forever for friends — it lives in a completely different repo)
-  - No Dodo Payments (dropped — NowPayments is the single billing path)
-  - No Reality/Xray protocol (that's on the Uncle Z Android app only —
-    Mira uses WireGuard everywhere)
-  - No email address on the public site (info@vualet.com removed — phone
-    number only: +1 (603) 999-3369)
-  - No separate "spec" PDFs or documentation files in the codebase
-    (this PRD is the single source of truth)
 
 ================================================================================
 END OF PRD
