@@ -13,7 +13,7 @@ object MiraClient {
     private val jsonType = "application/json".toMediaType()
     private const val BASE = "http://178.104.251.30/v1"
 
-    data class TunnelResponse(val ip: String, val server_endpoint: String, val server_public_key: String, val config: String, val server_ip: String)
+    data class TunnelResponse(val ip: String, val server_endpoint: String, val server_public_key: String, val config: String, val server_ip: String? = null)
 
     fun issueTunnel(pubKey: String, tier: String): TunnelResponse? {
         val body = gson.toJson(mapOf("public_key" to pubKey, "tier" to tier)).toRequestBody(jsonType)
