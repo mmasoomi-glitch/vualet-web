@@ -48,6 +48,22 @@ public partial class App : System.Windows.Application
         NativeBridge.Initialize(AppDataDir);
         Logger.Info("App", "Native libraries loaded");
 
+        // Start the wintun kernel driver (required before mira_start will work).
+        // This must happen EXACTLY ONCE per session. The driver auto-unloads on exit.
+        try
+        {
+            using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("sc", "start wintun")
+            {
+                UseShellExecute = true,
+                Verb = "runas",
+                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
+                CreateNoWindow = true
+            });
+            p?.WaitForExit(5000);
+            Logger.Info("App", $"wintun driver start result: {p?.ExitCode}");
+        }
+        catch (Exception ex) { Logger.Error("App", $"wintun driver start failed: {ex.Message}"); }
+
         try
         {
             var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "";

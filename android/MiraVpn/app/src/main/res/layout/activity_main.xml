@@ -19,9 +19,11 @@
             android:background="@drawable/btn_mira_gradient" android:layout_marginBottom="24dp"/>
         <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center" android:layout_marginBottom="4dp">
-            <TextView android:id="@+id/serverText" android:text="Server: —"
+            <TextView android:id="@+id/serverText" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="Server: —"
                 android:textSize="13sp" android:textColor="#8C8190" android:layout_marginEnd="16dp"/>
-            <TextView android:id="@+id/rttText" android:text="Latency: —"
+            <TextView android:id="@+id/rttText" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="Latency: —"
                 android:textSize="13sp" android:textColor="#8C8190"/>
         </LinearLayout>
     </LinearLayout>

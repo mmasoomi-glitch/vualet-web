@@ -93,7 +93,7 @@ public class TrayIcon : IDisposable
             int result = NativeBridge.mira_start(cfg);
             if (result != 0)
             {
-                string reason = result switch { -1 => "Network driver failed. Run as Administrator.", -2 => "Another VPN may be active. Disconnect it and try again.", _ => $"Tunnel error (code {result})" };
+                string reason = result switch { -1 => "Network driver failed. Run as Administrator.", -2 => "Administrator access required. Right-click MiraVpn.exe → Run as Administrator.", _ => $"Tunnel error (code {result})" };
                 SetState(ConnectionState.Error, reason); EmitLog($"x {reason}"); Balloon("Could not connect", reason, ToolTipIcon.Error); await RemovePeer(); _connecting = false; return;
             }
 
