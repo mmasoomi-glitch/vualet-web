@@ -7,10 +7,10 @@ public class SmartRouter
 {
     private static readonly (string Name, string ApiBase, string WgEndpoint)[] _pool =
     [
-        ("Nuremberg", "http://178.104.251.30/", "178.104.251.30:51820"),
+        ("Nuremberg", AppConfig.PROBE_BASE, AppConfig.WG_ENDPOINT),
     ];
 
-    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(2) };
+    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(AppConfig.PROBE_TIMEOUT_SEC) };
     public Action<string>? OnProbeResult;
 
     public async Task<ServerProbe?> FindFastestAsync()
@@ -35,12 +35,4 @@ public class SmartRouter
         }
         return best;
     }
-}
-
-public class ServerProbe
-{
-    public string IP { get; set; } = "";
-    public string WgEndpointFull { get; set; } = "";
-    public string Name { get; set; } = "";
-    public long RttMs { get; set; }
 }

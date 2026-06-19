@@ -20,9 +20,9 @@ public enum ConnectionState { Disconnected, Probing, Connecting, Connected, Disc
 public class TrayIcon : IDisposable
 {
     private readonly NotifyIcon _icon;
-    private readonly HttpClient _http = new() { BaseAddress = new("http://178.104.251.30/v1/") };
+    private readonly HttpClient _http = new() { BaseAddress = new(AppConfig.API_BASE) };
     private readonly SmartRouter _router = new();
-    private readonly System.Timers.Timer _statusTimer = new(3000);
+    private readonly System.Timers.Timer _statusTimer = new(AppConfig.STATUS_INTERVAL_MS);
     private MainWindow? _mainWindow;
     private bool _connected, _connecting;
     private string? _currentPrivKey, _currentPubKey, _connectedEndpoint, _connectedServerName;
@@ -203,6 +203,3 @@ public class TrayIcon : IDisposable
 
     public void Dispose() { if (_connected) _ = Disconnect(); _icon.Visible = false; _icon.Dispose(); }
 }
-
-public class IssueResponse { public string? Ip { get; set; } public string? ServerEndpoint { get; set; } public string? ServerPublicKey { get; set; } public string? Config { get; set; } }
-public class TunnelStats { public bool connected { get; set; } public ulong rx_bytes { get; set; } public ulong tx_bytes { get; set; } public string? endpoint { get; set; } public long last_handshake_sec { get; set; } public long uptime_seconds { get; set; } }
