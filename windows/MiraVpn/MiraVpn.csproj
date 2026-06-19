@@ -7,9 +7,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>MiraVpn</AssemblyName>
-    <RootNamespace>MiraVpn</RootNamespace>
     <Version>2.0.0</Version>
-    <ApplicationIcon>Resources\mira-tray.ico</ApplicationIcon>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -18,8 +16,8 @@
     <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources\mira-tray.ico" />
+    <EmbeddedResource Include="Resources\mira-icon-32.png" />
     <EmbeddedResource Include="Resources\wintun.dll" />
-    <EmbeddedResource Include="Resources\wireguard.exe" />
+    <EmbeddedResource Include="Resources\wireguard.msi" />
   </ItemGroup>
 </Project>

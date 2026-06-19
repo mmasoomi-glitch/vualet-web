@@ -1,33 +1,36 @@
+using System.IO;
 using System.Windows;
 
 namespace MiraVpn;
 
-/// <summary>
-/// Entry point. Bootstraps the embedded TUN driver on first launch
-/// (extracts wintun.dll from resources — no download, no user prompt),
-/// then starts the tray icon. Exits cleanly with Dispose.
-/// </summary>
 public partial class App : System.Windows.Application
 {
+    private static readonly string _installConf = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Mira VPN", "install.conf");
+
     private TrayIcon? _tray;
 
-    private async void App_Startup(object sender, StartupEventArgs e)
+    private void App_Startup(object sender, StartupEventArgs e)
     {
-        if (!NativeTunnel.Bootstrap())
+        // If never installed, show branded graphical setup
+        if (!File.Exists(_installConf))
         {
-            MessageBox.Show(
-                "Mira VPN could not install its network driver.\n\n" +
-                "Please ensure you have Administrator privileges and try again.",
-                "Mira VPN — Setup Error",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
-            Shutdown();
+            var setup = new SetupWindow();
+            setup.Show();
             return;
         }
 
+        // Already installed — go straight to tray
+        StartTray();
+    }
+
+    private void StartTray()
+    {
         _tray = new TrayIcon();
         _tray.ExitRequested += () =>
         {
-            if (_tray.Connected) NativeTunnel.Disconnect();
+            _tray.Dispose();
             Shutdown();
         };
     }

@@ -1,16 +1,12 @@
+using System.Drawing;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace MiraVpn;
 
-/// <summary>
-/// System-tray icon with Connect/Disconnect/Exit. Double-click toggles
-/// the tunnel. All WireGuard branding is hidden — the user sees only
-/// "Mira VPN — Connected (Nuremberg, 42ms)".
-/// </summary>
 public class TrayIcon : IDisposable
 {
     private readonly NotifyIcon _icon;
-    private bool _connected;
 
     public event Action? ExitRequested;
 
@@ -18,83 +14,70 @@ public class TrayIcon : IDisposable
     {
         _icon = new NotifyIcon
         {
-            Icon = LoadTrayIcon(),
+            Icon = LoadIcon(),
             Text = "Mira VPN — Disconnected",
             Visible = true
         };
         _icon.ContextMenuStrip = BuildMenu();
         _icon.DoubleClick += (_, _) => Toggle();
-        _icon.BalloonTipTitle = "Mira VPN";
-        _icon.BalloonTipText = "Mira VPN is running in the system tray. Right-click to connect.";
-        _icon.BalloonTipIcon = ToolTipIcon.Info;
-        _icon.ShowBalloonTip(5000);
     }
 
-    public bool Connected => _connected;
-
-    private static Icon LoadTrayIcon()
+    private static Icon LoadIcon()
     {
         try
         {
-            using var stream = System.Reflection.Assembly.GetExecutingAssembly()
-                .GetManifestResourceStream("MiraVpn.Resources.mira-tray.ico");
-            if (stream != null) return new Icon(stream);
+            using var s = Assembly.GetExecutingAssembly()
+                .GetManifestResourceStream("MiraVpn.Resources.mira-icon-32.png");
+            if (s == null) return SystemIcons.Shield;
+            using var bmp = new Bitmap(s);
+            return Icon.FromHandle(bmp.GetHicon());
         }
-        catch { }
-        return SystemIcons.Shield; // fallback
+        catch { return SystemIcons.Shield; }
     }
 
     private ContextMenuStrip BuildMenu()
     {
-        var menu = new ContextMenuStrip();
-        var connectItem = new ToolStripMenuItem("Connect", null, (_, _) => Toggle()) { Font = new System.Drawing.Font(menu.Font!, System.Drawing.FontStyle.Bold) };
-        var disconnectItem = new ToolStripMenuItem("Disconnect", null, (_, _) => Toggle());
-        menu.Items.Add(connectItem);
-        menu.Items.Add(disconnectItem);
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("Exit Mira VPN", null, (_, _) => { Dispose(); ExitRequested?.Invoke(); });
-        return menu;
+        var m = new ContextMenuStrip();
+        m.Items.Add("Connect", null, (_, _) => Toggle());
+        m.Items.Add("Disconnect", null, (_, _) => Toggle());
+        m.Items.Add(new ToolStripSeparator());
+        m.Items.Add("Exit Mira VPN", null, (_, _) => { ExitRequested?.Invoke(); });
+        return m;
     }
 
     private async void Toggle()
     {
-        if (_connected)
+        if (NativeTunnel.IsConnected)
         {
             NativeTunnel.Disconnect();
-            _connected = false;
             _icon.Text = "Mira VPN — Disconnected";
-            UpdateMenu("Connect", "Disconnect");
+            UpdateMenu(0, "Connect");
         }
         else
         {
-            UpdateMenu("Connecting...", "Disconnect");
+            UpdateMenu(0, "Connecting...");
             _icon.Text = "Mira VPN — Connecting...";
             try
             {
-                var ip = await NativeTunnel.Connect();
-                _connected = true;
-                var label = NativeTunnel.Endpoint ?? "Mira server";
-                var rttStr = SmartRouter.PickBestAsync().Result.rttMs > 0
-                    ? $" ({SmartRouter.PickBestAsync().Result.rttMs}ms)"
-                    : "";
-                _icon.Text = $"Mira VPN — Connected ({label}{rttStr})";
-                UpdateMenu("Disconnect", "Connect");
+                var best = await SmartRouter.PickBestAsync();
+                var ip = await NativeTunnel.Connect(best.endpoint);
+                _icon.Text = $"Mira VPN — Connected ({best.name}, {best.rttMs}ms)";
+                UpdateMenu(0, "Disconnect");
             }
             catch (Exception ex)
             {
                 _icon.Text = "Mira VPN — Connection failed";
-                UpdateMenu("Connect (retry)", "Disconnect");
                 _icon.ShowBalloonTip(3000, "Mira VPN", $"Connection failed: {ex.Message}", ToolTipIcon.Error);
+                UpdateMenu(0, "Connect (retry)");
             }
         }
     }
 
-    private void UpdateMenu(string item0, string item1)
+    private void UpdateMenu(int idx, string text)
     {
         var items = _icon.ContextMenuStrip?.Items;
-        if (items == null || items.Count < 2) return;
-        items[0]!.Text = item0;
-        items[1]!.Text = item1;
+        if (items != null && items.Count > idx)
+            items[idx]!.Text = text;
     }
 
     public void Dispose() => _icon.Dispose();

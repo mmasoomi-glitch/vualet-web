@@ -1,0 +1,15 @@
+<Window x:Class="MiraVpn.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Mira VPN" Height="200" Width="400"
+        WindowStyle="ToolWindow" ShowInTaskbar="False"
+        WindowStartupLocation="CenterScreen"
+        Background="#FFF8F0">
+    <Grid Margin="20">
+        <StackPanel VerticalAlignment="Center" TextBlock.TextAlignment="Center">
+            <TextBlock Text="Mira VPN" FontSize="22" FontWeight="SemiBold" Foreground="#2A1F2D" />
+            <TextBlock Text="Running in your system tray" FontSize="13" Foreground="#524A55" Margin="0,8,0,0" />
+            <TextBlock Text="Right-click the tray icon to connect or disconnect." FontSize="12" Foreground="#8C8190" Margin="0,4,0,0" />
+        </StackPanel>
+    </Grid>
+</Window>
