@@ -1,13 +1,6 @@
-// Create a NowPayments invoice for a Mira VPN monthly subscription and return
-// the hosted-checkout URL.
-//
-// NowPayments API doc:
-//   https://documenter.getpostman.com/view/7907941/2s93JusNJt
-// Endpoint we hit:
-//   POST https://api.nowpayments.io/v1/invoice
-// We are intentionally NOT picking the pay_currency here — the hosted page
-// lets the customer choose USDT-TRC20, BTC, Monero, etc. That keeps us out
-// of the "which coin should I pay with" support load.
+// Mira VPN checkout — NowPayments invoice (crypto + card, all-in-one).
+// Customer picks their currency on the hosted page; we just set the USD price.
+// Doc: https://documenter.getpostman.com/view/7907941/2s93JusNJt
 
 import { NextResponse } from "next/server";
 
@@ -48,8 +41,8 @@ export async function POST(req: Request) {
       order_id: body.email,                            // we identify the buyer by email
       order_description: "Mira VPN — monthly subscription",
       ipn_callback_url: `${origin}/api/webhooks/nowpayments`,
-      success_url: `${origin}/mira-vpn/checkout/success`,
-      cancel_url: `${origin}/mira-vpn/checkout`,
+      success_url: `${origin}/vpn/checkout/success`,
+      cancel_url: `${origin}/vpn/checkout`,
       is_fixed_rate: true,
       is_fee_paid_by_user: true,
     }),
