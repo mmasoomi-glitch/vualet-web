@@ -1,21 +1,15 @@
-using System.Diagnostics;
-using System.IO;
-using System.Net.Http;
-using System.Net.Http.Json;
-using System.Text.Json;
 using System.Windows.Forms;
 
 namespace MiraVpn;
 
+/// <summary>
+/// System-tray icon with Connect/Disconnect/Exit. Double-click toggles
+/// the tunnel. All WireGuard branding is hidden — the user sees only
+/// "Mira VPN — Connected (Nuremberg, 42ms)".
+/// </summary>
 public class TrayIcon : IDisposable
 {
     private readonly NotifyIcon _icon;
-    private readonly HttpClient _http = new() { BaseAddress = new("http://178.104.251.30/v1/") };
-    private string _wgExe => Path.Combine(_wgDir, "wireguard.exe");
-    private string _wgDir => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Mira VPN", "WireGuard");
-    private const string TunnelName = "MiraVPN";
     private bool _connected;
 
     public event Action? ExitRequested;
@@ -24,137 +18,83 @@ public class TrayIcon : IDisposable
     {
         _icon = new NotifyIcon
         {
-            Icon = SystemIcons.Shield,
-            Text = "Mira VPN - disconnected",
+            Icon = LoadTrayIcon(),
+            Text = "Mira VPN — Disconnected",
             Visible = true
         };
         _icon.ContextMenuStrip = BuildMenu();
         _icon.DoubleClick += (_, _) => Toggle();
+        _icon.BalloonTipTitle = "Mira VPN";
+        _icon.BalloonTipText = "Mira VPN is running in the system tray. Right-click to connect.";
+        _icon.BalloonTipIcon = ToolTipIcon.Info;
+        _icon.ShowBalloonTip(5000);
     }
 
-    public void Show() { _icon.Visible = true; }
+    public bool Connected => _connected;
+
+    private static Icon LoadTrayIcon()
+    {
+        try
+        {
+            using var stream = System.Reflection.Assembly.GetExecutingAssembly()
+                .GetManifestResourceStream("MiraVpn.Resources.mira-tray.ico");
+            if (stream != null) return new Icon(stream);
+        }
+        catch { }
+        return SystemIcons.Shield; // fallback
+    }
 
     private ContextMenuStrip BuildMenu()
     {
         var menu = new ContextMenuStrip();
-        menu.Items.Add("Connect", null, (_, _) => Connect());
-        menu.Items.Add("Disconnect", null, (_, _) => Disconnect());
+        var connectItem = new ToolStripMenuItem("Connect", null, (_, _) => Toggle()) { Font = new System.Drawing.Font(menu.Font!, System.Drawing.FontStyle.Bold) };
+        var disconnectItem = new ToolStripMenuItem("Disconnect", null, (_, _) => Toggle());
+        menu.Items.Add(connectItem);
+        menu.Items.Add(disconnectItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("Exit", null, (_, _) => { Disconnect(); ExitRequested?.Invoke(); });
+        menu.Items.Add("Exit Mira VPN", null, (_, _) => { Dispose(); ExitRequested?.Invoke(); });
         return menu;
     }
 
-    private void Toggle()
+    private async void Toggle()
     {
-        if (_connected) Disconnect(); else Connect();
-    }
-
-    // --- silent WireGuard bootstrap ---
-
-    private bool EnsureWireGuard()
-    {
-        if (File.Exists(_wgExe)) return true;
-        SetState("Installing WireGuard...");
-        try
+        if (_connected)
         {
-            Directory.CreateDirectory(_wgDir);
-            var msi = Path.Combine(Path.GetTempPath(), "wireguard-installer.msi");
-            if (!File.Exists(msi) || new FileInfo(msi).Length < 1_000_000)
+            NativeTunnel.Disconnect();
+            _connected = false;
+            _icon.Text = "Mira VPN — Disconnected";
+            UpdateMenu("Connect", "Disconnect");
+        }
+        else
+        {
+            UpdateMenu("Connecting...", "Disconnect");
+            _icon.Text = "Mira VPN — Connecting...";
+            try
             {
-                using var client = new HttpClient();
-                var data = client.GetByteArrayAsync("https://download.wireguard.com/windows-client/wireguard-installer.exe").Result;
-                File.WriteAllBytes(msi, data);
+                var ip = await NativeTunnel.Connect();
+                _connected = true;
+                var label = NativeTunnel.Endpoint ?? "Mira server";
+                var rttStr = SmartRouter.PickBestAsync().Result.rttMs > 0
+                    ? $" ({SmartRouter.PickBestAsync().Result.rttMs}ms)"
+                    : "";
+                _icon.Text = $"Mira VPN — Connected ({label}{rttStr})";
+                UpdateMenu("Disconnect", "Connect");
             }
-            // msiexec /i with /quiet — fully silent, no UI, no reboot
-            var psi = new ProcessStartInfo("msiexec.exe", $"/i \"{msi}\" /quiet /norestart DO_NOT_LAUNCH=1")
+            catch (Exception ex)
             {
-                UseShellExecute = true,
-                Verb = "runas",
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-            var p = Process.Start(psi)!;
-            p.WaitForExit(120_000);
-            if (File.Exists(_wgExe)) return true;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine("WireGuard silent install failed: " + ex.Message);
-        }
-        SetState("Setup failed");
-        return false;
-    }
-
-    // --- connect / disconnect ---
-
-    private async void Connect()
-    {
-        SetState("Connecting...");
-        try
-        {
-            if (!EnsureWireGuard())
-            {
-                _icon.Text = "Mira VPN - setup failed";
-                SetState("Setup failed - try again");
-                return;
+                _icon.Text = "Mira VPN — Connection failed";
+                UpdateMenu("Connect (retry)", "Disconnect");
+                _icon.ShowBalloonTip(3000, "Mira VPN", $"Connection failed: {ex.Message}", ToolTipIcon.Error);
             }
-
-            var priv = RunWg("genkey");
-            var pub = RunWg("pubkey", priv);
-            if (string.IsNullOrEmpty(priv) || string.IsNullOrEmpty(pub)) { SetState("Keygen failed"); return; }
-
-            var resp = await _http.PostAsJsonAsync("tunnel/issue", new { public_key = pub.Trim(), tier = "free" });
-            if (!resp.IsSuccessStatusCode) { SetState("Registration failed"); return; }
-            var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-            var ip = json.GetProperty("ip").GetString()!;
-            var config = json.GetProperty("config").GetString()!.Replace("FILL_ME", priv.Trim());
-
-            var tmp = Path.GetTempFileName() + ".conf";
-            File.WriteAllText(tmp, config);
-            RunWg("/installtunnelservice \"" + tmp + "\"");
-            File.Delete(tmp);
-            RunWg("/activate \"" + TunnelName + "\"");
-
-            _connected = true;
-            _icon.Text = "Mira VPN - Connected (" + ip + ")";
-            SetState("Connected (" + ip + ")");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine("Mira connect failed: " + ex.Message);
-            SetState("Connection failed");
         }
     }
 
-    private void Disconnect()
-    {
-        try { if (File.Exists(_wgExe)) RunWg("/uninstalltunnelservice \"" + TunnelName + "\""); }
-        catch { }
-        _connected = false;
-        _icon.Text = "Mira VPN - disconnected";
-        SetState("Disconnected");
-    }
-
-    private string RunWg(string args, string? stdin = null)
-    {
-        var psi = new ProcessStartInfo(_wgExe, args)
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardInput = stdin != null,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        using var p = Process.Start(psi)!;
-        if (stdin != null) { p.StandardInput.Write(stdin); p.StandardInput.Close(); }
-        var output = p.StandardOutput.ReadToEnd();
-        p.WaitForExit(5000);
-        return output;
-    }
-
-    private void SetState(string state)
+    private void UpdateMenu(string item0, string item1)
     {
         var items = _icon.ContextMenuStrip?.Items;
-        if (items != null && items.Count > 0 && items[0] is ToolStripMenuItem c)
-            c.Text = "Status: " + state;
+        if (items == null || items.Count < 2) return;
+        items[0]!.Text = item0;
+        items[1]!.Text = item1;
     }
 
     public void Dispose() => _icon.Dispose();

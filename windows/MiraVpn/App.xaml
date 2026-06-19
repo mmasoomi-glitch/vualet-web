@@ -4,8 +4,17 @@
              Startup="App_Startup"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
-        <SolidColorBrush x:Key="MiraRose" Color="#F8A5A0"/>
-        <SolidColorBrush x:Key="MiraLavender" Color="#C7B8F0"/>
-        <SolidColorBrush x:Key="MiraInk" Color="#2A1F2D"/>
+        <SolidColorBrush x:Key="Rose" Color="#F8A5A0" />
+        <SolidColorBrush x:Key="Lavender" Color="#C7B8F0" />
+        <SolidColorBrush x:Key="Aether" Color="#6366F1" />
+        <SolidColorBrush x:Key="Cream" Color="#FFF8F0" />
+        <SolidColorBrush x:Key="Ink" Color="#2A1F2D" />
+        <SolidColorBrush x:Key="Graphite" Color="#524A55" />
+        <SolidColorBrush x:Key="Slate" Color="#8C8190" />
+        <LinearGradientBrush x:Key="Gradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Offset="0" Color="#F8A5A0" />
+            <GradientStop Offset="0.55" Color="#C7B8F0" />
+            <GradientStop Offset="1" Color="#6366F1" />
+        </LinearGradientBrush>
     </Application.Resources>
 </Application>
