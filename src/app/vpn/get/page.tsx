@@ -15,6 +15,13 @@ export default function VpnGetPage() {
 
         <p style={{ fontSize: 13, color: "var(--mira-slate)", marginTop: 20 }}>iOS coming to TestFlight soon.</p>
 
+        <div style={{ marginTop: 30, background: "var(--mira-canvas)", border: "1px solid var(--mira-fog)", borderRadius: "var(--mira-radius-lg)", padding: 24, maxWidth: 500, margin: "30px auto 0" }}>
+          <p className="display" style={{ fontSize: 20, fontWeight: 400, margin: "0 0 6px" }}>Windows</p>
+          <p style={{ fontSize: 14, color: "var(--mira-graphite)", marginBottom: 14 }}>One-click PowerShell installer. Auto-installs WireGuard, generates keys, registers with Mira server.</p>
+          <a className="btn-mira-soft" href="/mira-windows-setup.ps1" style={{ display: "inline-block", textAlign: "center", fontSize: 14 }}>Download installer.ps1 →</a>
+          <p style={{ fontSize: 11, color: "var(--mira-slate)", marginTop: 8 }}>Right-click → Run with PowerShell (Admin required)</p>
+        </div>
+
         <hr style={{ margin: "40px auto", border: "none", borderTop: "1px solid var(--mira-fog)", maxWidth: 200 }} />
 
         <div style={{ textAlign: "left", maxWidth: 500, margin: "0 auto" }}>

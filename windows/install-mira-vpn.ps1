@@ -1,16 +1,14 @@
-# Mira VPN for Windows — one-click installer
-# Prerequisite: WireGuard must be installed (the script checks + installs via winget)
+# Mira VPN for Windows -- one-click installer
 # Run as Administrator (required for tunnel service registration)
 
 param([switch]$Uninstall)
 
 $ErrorActionPreference = "Stop"
-$API = "http://178.104.251.30:5103"
+$API = "http://178.104.251.30/v1"
 $WG_PATH = "C:\Program Files\WireGuard\wireguard.exe"
 $CONF_NAME = "MiraVPN"
-$CONF_PATH = "C:\Program Files\WireGuard\Configurations\$CONF_NAME.conf.dpapi"
-$SHORTCUT = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Mira VPN.lnk"
-$DESKTOP = "$env:USERPROFILE\Desktop\Mira VPN.lnk"
+$SHORTCUT = [Environment]::GetFolderPath("StartMenu") + "\Programs\Mira VPN.lnk"
+$DESKTOP = [Environment]::GetFolderPath("Desktop") + "\Mira VPN.lnk"
 
 function Require-Admin {
     if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
@@ -21,7 +19,7 @@ function Require-Admin {
 
 function Ensure-WireGuard {
     if (Test-Path $WG_PATH) {
-        Write-Host "[✓] WireGuard found" -ForegroundColor Green
+        Write-Host "[OK] WireGuard found" -ForegroundColor Green
         return
     }
     Write-Host "[...] Installing WireGuard..." -ForegroundColor Yellow
@@ -29,11 +27,12 @@ function Ensure-WireGuard {
     Invoke-WebRequest "https://download.wireguard.com/windows-client/wireguard-installer.exe" -OutFile $msi
     Start-Process -Wait -FilePath msiexec.exe -ArgumentList "/i `"$msi`" /quiet /norestart"
     Remove-Item $msi
-    if (-not (Test-Path $WG_PATH)) {
-        Write-Host "[!] WireGuard install failed. Install manually: https://www.wireguard.com/install/" -ForegroundColor Red
-        exit 1
+    if (Test-Path $WG_PATH) {
+        Write-Host "[OK] WireGuard installed" -ForegroundColor Green
+        return
     }
-    Write-Host "[✓] WireGuard installed" -ForegroundColor Green
+    Write-Host "[FAIL] WireGuard install failed. Install manually: https://www.wireguard.com/install/" -ForegroundColor Red
+    exit 1
 }
 
 function Connect-Mira {
@@ -41,27 +40,32 @@ function Connect-Mira {
     $priv = & $WG_PATH genkey 2>$null
     $pub  = & $WG_PATH pubkey 2>$null
     if (-not $priv -or -not $pub) {
-        Write-Host "[!] WireGuard keygen failed. Is WireGuard installed at $WG_PATH ?" -ForegroundColor Red
+        Write-Host "[FAIL] Keygen failed. Is WireGuard at $WG_PATH?" -ForegroundColor Red
         exit 1
     }
+    Write-Host "[OK] Keys generated" -ForegroundColor Green
 
-    Write-Host "[...] Registering with Mira server at $API..." -ForegroundColor Yellow
+    Write-Host "[...] Registering with Mira server..." -ForegroundColor Yellow
     $body = @{public_key=$pub; tier="free"} | ConvertTo-Json
-    $resp = Invoke-RestMethod -Uri "$API/v1/tunnel/issue" -Method Post -Body $body -ContentType "application/json" -ErrorAction Stop
-    Write-Host "[✓] Server assigned IP: $($resp.ip)" -ForegroundColor Green
+    $resp = Invoke-RestMethod -Uri "$API/tunnel/issue" -Method Post -Body $body -ContentType "application/json" -ErrorAction Stop
+    if (-not $resp.ip) {
+        Write-Host "[FAIL] Server rejected registration: $($resp.error)" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "[OK] Server assigned IP: $($resp.ip)" -ForegroundColor Green
 
     $config = $resp.config -replace "FILL_ME", $priv
-    $tmp = [System.IO.Path]::GetTempFileName()
+    $tmp = [System.IO.Path]::GetTempFileName() + ".conf"
     [System.IO.File]::WriteAllText($tmp, $config)
 
-    Write-Host "[...] Importing tunnel configuration..." -ForegroundColor Yellow
+    Write-Host "[...] Importing tunnel config..." -ForegroundColor Yellow
     $p = Start-Process -FilePath $WG_PATH -ArgumentList "/installtunnelservice `"$tmp`"" -PassThru -Wait -WindowStyle Hidden
     Remove-Item $tmp
     if ($p.ExitCode -ne 0) {
-        Write-Host "[!] Tunnel install failed (exit $($p.ExitCode)). Run as Administrator." -ForegroundColor Red
+        Write-Host "[FAIL] Tunnel install failed (exit $($p.ExitCode)). Must run as Administrator." -ForegroundColor Red
         exit 1
     }
-    Write-Host "[✓] Tunnel imported as '$CONF_NAME'" -ForegroundColor Green
+    Write-Host "[OK] Tunnel imported" -ForegroundColor Green
 
     # Create shortcuts
     $ws = New-Object -ComObject WScript.Shell
@@ -71,28 +75,28 @@ function Connect-Mira {
         $lnk.Arguments = "/activate `"$CONF_NAME`""
         $lnk.WorkingDirectory = "C:\Program Files\WireGuard"
         $lnk.IconLocation = "C:\Program Files\WireGuard\wireguard.exe,0"
-        $lnk.Description = "Mira VPN — tap to connect"
+        $lnk.Description = "Mira VPN -- tap to connect"
         $lnk.Save()
     }
-    Write-Host "[✓] Shortcuts created (Start Menu + Desktop)" -ForegroundColor Green
+    Write-Host "[OK] Shortcuts created (Start Menu + Desktop)" -ForegroundColor Green
     Write-Host ""
     Write-Host "==============================================" -ForegroundColor Cyan
     Write-Host "  Mira VPN is ready." -ForegroundColor Cyan
-    Write-Host "  Double-click 'Mira VPN' on your desktop or" -ForegroundColor Cyan
+    Write-Host "  Double-click 'Mira VPN' on your Desktop or" -ForegroundColor Cyan
     Write-Host "  Start Menu to connect." -ForegroundColor Cyan
-    Write-Host "  Or open the WireGuard tray icon and click Activate." -ForegroundColor Cyan
+    Write-Host "  Or open WireGuard tray icon and click Activate." -ForegroundColor Cyan
     Write-Host "==============================================" -ForegroundColor Cyan
 }
 
 function Disconnect-Mira {
     $p = Start-Process -FilePath $WG_PATH -ArgumentList "/uninstalltunnelservice `"$CONF_NAME`"" -PassThru -Wait -WindowStyle Hidden
-    if ($p.ExitCode -ne 0) {
-        Write-Host "[!] Could not deactivate (exit $($p.ExitCode))" -ForegroundColor Red
+    if ($p.ExitCode -eq 0) {
+        Write-Host "[OK] Tunnel removed" -ForegroundColor Green
     } else {
-        Write-Host "[✓] Tunnel removed" -ForegroundColor Green
+        Write-Host "[WARN] Could not deactivate" -ForegroundColor Yellow
     }
     Remove-Item $SHORTCUT, $DESKTOP -Force -ErrorAction SilentlyContinue
-    Write-Host "[✓] Shortcuts removed" -ForegroundColor Green
+    Write-Host "[OK] Shortcuts removed" -ForegroundColor Green
 }
 
 Require-Admin

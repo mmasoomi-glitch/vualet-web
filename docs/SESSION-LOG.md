@@ -36,6 +36,14 @@ from stepping on each other's commits.
   are tolerated (separate files only — don't both edit the same doc).
 - Never push to another agent's branch. If you have additions for it, open
   a PR into their branch and tag them.
+- **DELIVER RULE: test every artifact before handing it to the user.**
+  PowerShell scripts must pass `Parser::ParseFile` before telling the user
+  to run them. Deployable files (`.ps1`, configs, APKs) must be verified
+  via `curl -o /dev/null -w '%{http_code}'` from the public URL they ship
+  from. If the user hits a parse error on something you gave them, that is
+  a Claude failure, not a user error. Parse-check and download-check before
+  reporting success. (Added 2026-06-19 after Unicode em-dash corruption in
+  the Windows PS1 deliverable.)
 
 ---
 
