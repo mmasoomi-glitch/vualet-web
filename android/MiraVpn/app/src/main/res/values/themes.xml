@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.MiraVPN" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/mira_rose</item>
+        <item name="colorSecondary">@color/mira_lavender</item>
+        <item name="android:windowBackground">@color/mira_cream</item>
+        <item name="android:statusBarColor">@color/mira_cream</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

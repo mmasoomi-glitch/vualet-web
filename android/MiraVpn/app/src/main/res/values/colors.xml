@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="mira_rose">#F8A5A0</color>
+    <color name="mira_lavender">#C7B8F0</color>
+    <color name="mira_aether">#6366F1</color>
+    <color name="mira_cream">#FFF8F0</color>
+    <color name="mira_onyx">#1A1525</color>
+    <color name="mira_ink">#2A1F2D</color>
+    <color name="mira_graphite">#524A55</color>
+    <color name="mira_slate">#8C8190</color>
+</resources>

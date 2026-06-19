@@ -39,3 +39,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+windows/MiraVpn/obj/
+windows/MiraVpn/bin/
+windows/MiraVpn/publish/
+windows/install-mira-vpn.ps1
+dist/
+windows/mira-tunnel/mira-tunnel.dll
+windows/mira-tunnel/mira-tunnel.h
+windows/mira-tunnel/vendor/
+windows/mira-tunnel/go.sum
+windows/MiraVpn/Assets/mira-tunnel.dll
+windows/MiraVpn/publish/
+android/MiraVpn/app/build/
+android/MiraVpn/.gradle/
+android/MiraVpn/gradlew
+android/MiraVpn/gradlew.bat
+android/MiraVpn/gradle/wrapper/gradle-wrapper.jar
+android/MiraVpn/local.properties
+android/MiraVpn/gradle/wrapper/gradle-wrapper.properties

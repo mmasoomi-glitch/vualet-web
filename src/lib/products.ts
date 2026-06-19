@@ -8,6 +8,8 @@ export type Product = {
   bullets: string[];
   startingPriceUsd: number;
   comingSoon?: boolean;
+  kind?: "internal" | "external";
+  externalUrl?: string;
 };
 
 export const PRODUCTS: Product[] = [
@@ -126,5 +128,23 @@ export const PRODUCTS: Product[] = [
     ],
     startingPriceUsd: 8,
     comingSoon: true,
+  },
+  {
+    slug: "vpn",
+    glyph: "V",
+    name: "Mira VPN — Private Connection",
+    category: "Automation",
+    tagline: "Smart, private internet. Mira picks the fastest server, every time.",
+    description:
+      "An always-on privacy layer for your phone. Mira measures the latency to nearby servers and connects you to the fastest one — no list to scroll, no country to pick. Free tier for everyday messaging, paid tier when you want smooth video. Pay with crypto or card via NowPayments.",
+    bullets: [
+      "Free forever — 500 kbps, ad-supported, 2-hour sessions",
+      "$9.99 / mo — 5 Mbps, no ads, smart server selection, up to 3 devices",
+      "Banking-friendly Pause: keep your bank app outside the VPN",
+      "Android + iOS — global coverage",
+    ],
+    startingPriceUsd: 9,
+    kind: "external" as const,
+    externalUrl: "https://vpn.mira.vualet.com",
   },
 ];

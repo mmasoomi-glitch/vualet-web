@@ -1,0 +1,247 @@
+<!doctype html><html lang=en><head><meta charset=utf-8>
+<title>Mira VPN — Client Specification v1.0</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono&display=swap');
+  @page { size: A4; margin: 15mm; }
+  body { font-family: 'Inter', system-ui, sans-serif; color: #1a1a2e; line-height: 1.65; font-size: 11px; }
+  h1 { font-size: 24px; font-weight: 700; color: #2A1F2D; border-bottom: 3px solid #F8A5A0; padding-bottom: 8px; margin: 24px 0 12px; }
+  h2 { font-size: 16px; font-weight: 600; color: #2A1F2D; background: #F2EAF0; padding: 6px 12px; border-radius: 6px; margin: 20px 0 10px; }
+  h3 { font-size: 13px; font-weight: 600; color: #524A55; margin: 14px 0 6px; }
+  code { font-family: 'JetBrains Mono', monospace; background: #f5f5f5; padding: 2px 5px; border-radius: 3px; font-size: 10px; }
+  pre { background: #1A1525; color: #E8E0EA; padding: 12px 16px; border-radius: 8px; font-size: 10px; line-height: 1.5; overflow-x: auto; }
+  pre code { background: none; padding: 0; color: inherit; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 10px; }
+  th { background: #F8A5A0; color: white; padding: 7px 10px; text-align: left; font-weight: 600; }
+  td { padding: 7px 10px; border-bottom: 1px solid #E8E0EA; }
+  a { color: #6366F1; }
+  .cover { text-align: center; padding: 80px 0; page-break-after: always; border-bottom: none; }
+  .cover h1 { border: none; font-size: 38px; margin: 0; }
+  .cover p { font-size: 14px; color: #8C8190; margin: 6px 0; }
+  ul { padding-left: 20px; } li { margin: 3px 0; }
+  .gap { page-break-before: always; }
+  .footer { margin-top: 30px; padding-top: 12px; border-top: 1px solid #E8E0EA; font-size: 9px; color: #8C8190; text-align: center; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; }
+  .badge-green { background: #E8F5E9; color: #388E3C; }
+  .badge-amber { background: #FFF8E1; color: #F57F17; }
+  strong { color: #2A1F2D; }
+</style></head><body>
+
+<div class=cover>
+<h1>Mira VPN<br>Client Specification</h1>
+<p>v1.0 — Production Reference — June 2026</p>
+<p>Vualet · Dubai, UAE · Confidential</p>
+</div>
+
+<h1>1. Server & API</h1>
+
+<h2>1.1 WireGuard Endpoint</h2>
+<table>
+<tr><th>Field</th><th>Value</th></tr>
+<tr><td>Server Address</td><td><strong>178.104.251.30</strong></td></tr>
+<tr><td>Protocol</td><td>WireGuard (Curve25519 + ChaCha20-Poly1305)</td></tr>
+<tr><td>UDP Port</td><td><strong>51820</strong></td></tr>
+<tr><td>Server Public Key</td><td><code>ByK5yGC96gYi0GZ/dIoyVBWZkLrCGyQH+XKtxS1UJhE=</code></td></tr>
+<tr><td>Client Subnet</td><td>10.66.66.0/24 (clients assigned .2–.254)</td></tr>
+<tr><td>DNS</td><td>1.1.1.1, 1.0.0.1</td></tr>
+<tr><td>MTU</td><td>1420</td></tr>
+<tr><td>Keepalive</td><td>25 seconds</td></tr>
+</table>
+
+<h2>1.2 Registration API</h2>
+<table>
+<tr><th>Field</th><th>Value</th></tr>
+<tr><td>Method</td><td>POST</td></tr>
+<tr><td>URL</td><td><code>http://178.104.251.30/v1/tunnel/issue</code></td></tr>
+<tr><td>Content-Type</td><td>application/json</td></tr>
+</table>
+
+<p><strong>Request body:</strong></p>
+<pre><code>{
+  "public_key": "&lt;client WireGuard pubkey, base64, 44 chars&gt;",
+  "tier": "free"
+}</code></pre>
+
+<p><strong>Response 200:</strong></p>
+<pre><code>{
+  "ip": "10.66.66.2",
+  "server_endpoint": "178.104.251.30:51820",
+  "server_public_key": "ByK5yGC96gYi0GZ/dIoyVBWZkLrCGyQH+XKtxS1UJhE=",
+  "config": "[Interface]\nPrivateKey = FILL_ME\nAddress = 10.66.66.2/32\nDNS = 1.1.1.1, 1.0.0.1\nMTU = 1420\n\n[Peer]\nPublicKey = ByK5yGC96gYi0GZ/...\nEndpoint = 178.104.251.30:51820\nAllowedIPs = 0.0.0.0/0, ::/0\nPersistentKeepalive = 25\n"
+}</code></pre>
+
+<p><strong>Response 400:</strong> <code>{"error":"public_key required"}</code></p>
+
+<div class=gap></div>
+
+<h1>2. Platform TUN Specs</h1>
+
+<h2>2.1 Windows</h2>
+<ul>
+<li>Ship <code>wireguard-installer.exe</code> as embedded resource</li>
+<li>Extract to <code>%LOCALAPPDATA%\Mira VPN\WireGuard\</code></li>
+<li>Silent install: <code>msiexec /i wireguard.msi /quiet /norestart DO_NOT_LAUNCH=1</code></li>
+<li>Drive tunnel via <code>wireguard.exe /installtunnelservice</code> / <code>/activate</code></li>
+<li>No user prompts beyond mandatory Windows UAC</li>
+</ul>
+
+<h2>2.2 Android</h2>
+<ul>
+<li>Extend <code>VpnService</code></li>
+<li><code>Builder.addRoute("0.0.0.0",0)</code> + <code>.addDisallowedApplication(packageName)</code></li>
+<li><code>foregroundServiceType="specialUse"</code> with <code>PROPERTY_SPECIAL_USE_FGS_SUBTYPE="vpn"</code></li>
+<li>No <code>maxSdkVersion</code> cap on <code>FOREGROUND_SERVICE_SPECIAL_USE</code></li>
+<li>WireGuard-Go or Xray Reality (see <code>mmasoomi-glitch/uncle-z-calc</code>)</li>
+</ul>
+
+<h2>2.3 iOS / macOS</h2>
+<ul>
+<li><code>NEPacketTunnelProvider</code> + <code>WireGuardKit</code> (Swift Package)</li>
+<li>App Group: <code>group.com.vualet.mira</code></li>
+<li>Bundle ID: <code>com.vualet.mira.PacketTunnel</code></li>
+<li><code>ITSAppUsesNonExemptEncryption = false</code> (standard crypto only)</li>
+<li><code>PrivacyInfo.xcprivacy</code> required (UserDefaults CA92.1, FileTimestamp C617.1)</li>
+</ul>
+
+<h2>2.4 Linux</h2>
+<ul>
+<li><code>wg genkey</code> / <code>wg pubkey</code> → POST to API → <code>wg-quick up mira</code></li>
+<li>API config output is already wg-quick compatible</li>
+</ul>
+
+<div class=gap></div>
+
+<h1>3. Payment — NowPayments</h1>
+
+<table>
+<tr><th>Field</th><th>Value</th></tr>
+<tr><td>API Key</td><td><code>J5SAFWA-8174JB1-HNKYGFG-HT5F869</code></td></tr>
+<tr><td>IPN Secret</td><td>Set in NowPayments dashboard</td></tr>
+<tr><td>Invoice Endpoint</td><td><code>POST https://api.nowpayments.io/v1/invoice</code></td></tr>
+<tr><td>IPN Callback</td><td><code>POST /api/webhooks/nowpayments</code> (HMAC-SHA512 verified)</td></tr>
+<tr><td>Price</td><td>$9.99 USD / month</td></tr>
+<tr><td>Accepted</td><td>200+ coins (USDT-TRC20, BTC, ETH, XMR) + card (Visa/MC)</td></tr>
+</table>
+
+<p><strong>Checkout flow:</strong> Client POSTs <code>{email,plan}</code> to <code>/api/vpn/checkout/crypto</code>
+→ receives <code>{redirectUrl}</code> → redirects to NowPayments hosted page → user pays →
+IPN fires → backend mints permit → permit emailed to user.</p>
+
+<div class=gap></div>
+
+<h1>4. Brand — Design System</h1>
+
+<h2>4.1 Colors</h2>
+<table>
+<tr><th>Token</th><th>Hex</th><th>Role</th></tr>
+<tr><td>mira-rose</td><td><code>#F8A5A0</code></td><td>Primary</td></tr>
+<tr><td>mira-rose-deep</td><td><code>#E68A85</code></td><td>Hover/active</td></tr>
+<tr><td>mira-petal</td><td><code>#FFDCE0</code></td><td>Soft bg</td></tr>
+<tr><td>mira-lavender</td><td><code>#C7B8F0</code></td><td>Calm accent</td></tr>
+<tr><td>mira-lavender-deep</td><td><code>#A595E8</code></td><td>Focus</td></tr>
+<tr><td>aether</td><td><code>#6366F1</code></td><td>AI core</td></tr>
+<tr><td>mira-cream</td><td><code>#FFF8F0</code></td><td>Light bg</td></tr>
+<tr><td>mira-canvas</td><td><code>#FEFAF6</code></td><td>Card surface</td></tr>
+<tr><td>mira-onyx</td><td><code>#1A1525</code></td><td>Dark bg</td></tr>
+<tr><td>mira-ink</td><td><code>#2A1F2D</code></td><td>Primary text</td></tr>
+<tr><td>mira-graphite</td><td><code>#524A55</code></td><td>Secondary text</td></tr>
+<tr><td>mira-slate</td><td><code>#8C8190</code></td><td>Muted</td></tr>
+<tr><td>mira-fog</td><td><code>#E8E0EA</code></td><td>Borders</td></tr>
+</table>
+
+<h2>4.2 Gradient</h2>
+<pre><code>background: linear-gradient(135deg, #F8A5A0 0%, #C7B8F0 55%, #6366F1 100%);</code></pre>
+
+<h2>4.3 Typography</h2>
+<table>
+<tr><th>Role</th><th>Font</th><th>Weight</th></tr>
+<tr><td>Display / Headings</td><td>Fraunces (serif)</td><td>300–400</td></tr>
+<tr><td>UI / Body</td><td>Inter (sans-serif)</td><td>400–600</td></tr>
+<tr><td>Code</td><td>JetBrains Mono / Consolas</td><td>400</td></tr>
+</table>
+
+<h2>4.4 Radii & Shadows</h2>
+<table>
+<tr><th>Token</th><th>Value</th></tr>
+<tr><td>radius-sm</td><td>10px</td></tr>
+<tr><td>radius-md</td><td>16px</td></tr>
+<tr><td>radius-lg</td><td>24px</td></tr>
+<tr><td>radius-full (pills)</td><td>999px</td></tr>
+<tr><td>shadow-sm</td><td><code>0 1px 3px rgba(248,165,160,0.12)</code></td></tr>
+<tr><td>shadow-md</td><td><code>0 4px 16px rgba(199,184,240,0.18)</code></td></tr>
+<tr><td>shadow-lg</td><td><code>0 16px 48px rgba(199,184,240,0.25)</code></td></tr>
+</table>
+
+<h2>4.5 Buttons</h2>
+<p><strong>Primary</strong> (<code>.btn-mira</code>): gradient pill, white text, pill shape.</p>
+<p><strong>Secondary</strong> (<code>.btn-mira-soft</code>): transparent bg, 2px solid rose border, ink text.</p>
+
+<div class=gap></div>
+
+<h1>5. Logo Assets</h1>
+<table>
+<tr><th>File</th><th>URL</th></tr>
+<tr><td>Primary mark (color)</td><td><a href="http://178.104.251.30/mira/mira-logo-color.svg">/mira/mira-logo-color.svg</a></td></tr>
+<tr><td>White variant</td><td><a href="http://178.104.251.30/mira/mira-logo-white.svg">/mira/mira-logo-white.svg</a></td></tr>
+<tr><td>Mono (currentColor)</td><td><a href="http://178.104.251.30/mira/mira-logo-mono.svg">/mira/mira-logo-mono.svg</a></td></tr>
+<tr><td>Wordmark (mark + MIRA)</td><td><a href="http://178.104.251.30/mira/mira-wordmark-color.svg">/mira/mira-wordmark-color.svg</a></td></tr>
+<tr><td>Wordmark white</td><td><a href="http://178.104.251.30/mira/mira-wordmark-white.svg">/mira/mira-wordmark-white.svg</a></td></tr>
+<tr><td>Raster 512px</td><td><a href="http://178.104.251.30/mira/mira-logo-color-512.png">/mira/mira-logo-color-512.png</a></td></tr>
+<tr><td>Raster 256px</td><td><a href="http://178.104.251.30/mira/mira-logo-color-256.png">/mira/mira-logo-color-256.png</a></td></tr>
+</table>
+<p>All SVGs are scalable, transparent backgrounds. All assets live on the deployed server and in the GitHub repo at <code>public/mira/</code>.</p>
+
+<div class=gap></div>
+
+<h1>6. Product Tiers</h1>
+<table>
+<tr><th></th><th>Free</th><th>Paid</th></tr>
+<tr><td>Price</td><td>$0 forever</td><td>$9.99 / month</td></tr>
+<tr><td>Speed</td><td>500 kbps</td><td>5 Mbps</td></tr>
+<tr><td>Session</td><td>2 hours, then reconnect</td><td>unlimited</td></tr>
+<tr><td>Volume</td><td>unlimited (speed-capped)</td><td>50 GB / month</td></tr>
+<tr><td>Devices</td><td>1</td><td>3</td></tr>
+<tr><td>Ads</td><td>yes</td><td>no</td></tr>
+<tr><td>Server</td><td>nearest only</td><td>smart routing</td></tr>
+<tr><td>Banking Pause</td><td>yes</td><td>yes</td></tr>
+</table>
+
+<div class=gap></div>
+
+<h1>7. Key Gotchas</h1>
+<ol>
+<li><strong>Traffic loop on Android:</strong> <code>Builder.addDisallowedApplication(packageName)</code> is mandatory. Without it, VPN app outbound traffic loops through its own tunnel and no packets reach the server. Tested + confirmed.</li>
+<li><strong>Foreground Service on Android 14+:</strong> <code>specialUse</code> not <code>vpn</code>. No <code>maxSdkVersion</code> cap.</li>
+<li><strong>WireGuard key format:</strong> 44-char base64, not base64url. No <code>-</code> or <code>_</code>.</li>
+<li><strong>iOS Privacy Manifest:</strong> <code>PrivacyInfo.xcprivacy</code> mandatory since iOS 17. App Store rejects without it.</li>
+<li><strong>iOS encryption declaration:</strong> <code>ITSAppUsesNonExemptEncryption = false</code>. WireGuard only uses standard Curve25519 + ChaCha20.</li>
+<li><strong>Windows UAC:</strong> unavoidable for any kernel TUN driver. NordVPN and Psiphon have the exact same popup.</li>
+<li><strong>NowPayments IPN signature:</strong> HMAC-SHA512 over raw JSON body, verified constant-time. Header: <code>x-nowpayments-sig</code>.</li>
+<li><strong>Rate limiting:</strong> <code>/tunnel/issue</code> has no rate limit yet. Add via nginx <code>limit_req_zone</code> at scale.</li>
+</ol>
+
+<div class=gap></div>
+
+<h1>8. Reference Repos</h1>
+<table>
+<tr><th>What</th><th>Repo</th><th>Branch</th></tr>
+<tr><td>Web frontend (Next.js)</td><td><code>mmasoomi-glitch/vualet-web</code></td><td><code>feature/mira-vpn-storefront</code></td></tr>
+<tr><td>Android (VLESS+Reality, tested)</td><td><code>mmasoomi-glitch/uncle-z-calc</code></td><td><code>main</code></td></tr>
+<tr><td>Windows (WPF tray + PS1)</td><td><code>mmasoomi-glitch/vualet-web</code></td><td><code>windows/MiraVpn/</code></td></tr>
+</table>
+
+<div class=gap></div>
+
+<h1>9. Live URLs</h1>
+<table>
+<tr><th>Page</th><th>Status</th><th>URL</th></tr>
+<tr><td>VPN landing</td><td><span class="badge badge-green">200</span></td><td><code>http://178.104.251.30/vpn</code></td></tr>
+<tr><td>Download page</td><td><span class="badge badge-green">200</span></td><td><code>http://178.104.251.30/vpn/get</code></td></tr>
+<tr><td>Checkout</td><td><span class="badge badge-green">200</span></td><td><code>http://178.104.251.30/vpn/checkout</code></td></tr>
+<tr><td>Windows .exe</td><td><span class="badge badge-green">200</span></td><td><code>http://178.104.251.30/vpn/MiraVpn.exe</code></td></tr>
+<tr><td>Blog (30 posts)</td><td><span class="badge badge-green">200</span></td><td><code>http://178.104.251.30/blog</code></td></tr>
+<tr><td>Vualet brand</td><td><span class="badge badge-green">200</span></td><td><code>http://178.104.251.30/vualet</code></td></tr>
+<tr><td>Tunnel API</td><td><span class="badge badge-green">200</span></td><td><code>http://178.104.251.30/v1/tunnel/issue</code></td></tr>
+</table>
+
+<div class=footer>Mira VPN Client Spec v1.0 · Vualet · Dubai, UAE · <code>178.104.251.30</code></div>
+</body></html>
