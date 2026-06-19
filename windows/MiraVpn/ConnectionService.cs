@@ -151,13 +151,18 @@ public class ConnectionService : IDisposable
         _userDisconnected = true;
         _isReconnecting = false;
         _cts?.Cancel();
-        if (!_connected && !_connecting) return;
+        if (!_connected && !_connecting)
+        {
+            DisableKillSwitch();
+            return;
+        }
         SetState(ConnectionState.Disconnecting, "Disconnecting..."); EmitLog("Disconnecting...");
         _statusTimer.Stop();
         DnsGuard.Disable();
         try { NativeBridge.mira_stop(); await RemovePeer(); }
         catch (Exception ex) { Logger.Error("TrayIcon", $"Disconnect: {ex.Message}"); }
         _connected = _connecting = false; _connectedEndpoint = null; _connectedRtt = 0;
+        DisableKillSwitch();
         SetState(ConnectionState.Disconnected, "Disconnected");
         EmitLog("OK Disconnected");
         BalloonRequested?.Invoke("Mira VPN", "Disconnected", ToolTipIcon.Info);
