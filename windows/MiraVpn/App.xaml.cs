@@ -73,7 +73,7 @@ public partial class App : System.Windows.Application
         catch (Exception ex) { Logger.Error("App", $"Firewall setup failed: {ex.Message}"); }
 
         _tray = new TrayIcon();
-        _tray.ExitRequested += () => { _tray.Dispose(); Shutdown(); };
+        _tray.Service.ExitRequested += () => { _tray.Dispose(); Shutdown(); };
         _tray.Show();
         Logger.Info("App", "Tray icon created");
 
@@ -96,7 +96,7 @@ public partial class App : System.Windows.Application
         if (prefs.AutoConnect)
         {
             Logger.Info("App", "Auto-connect enabled — starting connection");
-            _mainWindow.Dispatcher.Invoke(() => _tray.Connect());
+            _mainWindow.Dispatcher.Invoke(() => _tray.Service.Connect());
         }
     }
 

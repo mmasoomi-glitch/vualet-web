@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -8,23 +9,17 @@ public partial class MainWindow : Window
 {
     private readonly TrayIcon _tray;
     private ConnectionState _state = ConnectionState.Disconnected;
-    private static System.Windows.Media.Brush _logNormal = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xC7, 0xB8, 0xF0));
-    private static System.Windows.Media.Brush _logSuccess = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xA5, 0xE8, 0xA5));
-    private static System.Windows.Media.Brush _logError = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xF8, 0xA5, 0xA0));
-    private static System.Windows.Media.Brush _dotDisconnected = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x8C, 0x81, 0x90));
-    private static System.Windows.Media.Brush _dotProbing = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xF8, 0xC5, 0x4A));
-    private static System.Windows.Media.Brush _dotConnected = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x4E, 0xC9, 0xB0));
-    private static System.Windows.Media.Brush _dotError = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE6, 0x8A, 0x85));
-    private static System.Windows.Media.Brush _btnGradient = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xF8, 0xA5, 0xA0));
-    private static System.Windows.Media.Brush _btnConnected = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1A, 0x15, 0x25));
+
+    public ObservableCollection<LogEntry> LogEntries { get; } = new();
 
     public MainWindow(TrayIcon tray)
     {
         InitializeComponent();
+        DataContext = this;
         _tray = tray;
-        _tray.StateChanged += OnStateChanged;
-        _tray.LogMessage += OnLogMessage;
-        _tray.StatsUpdated += OnStatsUpdated;
+        _tray.Service.StateChanged += OnStateChanged;
+        _tray.Service.LogMessage += OnLogMessage;
+        _tray.Service.StatsUpdated += OnStatsUpdated;
         var prefs = Prefs.Load();
         AutoConnectCheck.IsChecked = prefs.AutoConnect;
         UpdateUI(ConnectionState.Disconnected, "Disconnected");
@@ -44,11 +39,11 @@ public partial class MainWindow : Window
         _state = state;
         StateDot.Fill = state switch
         {
-            ConnectionState.Disconnected or ConnectionState.Disconnecting => _dotDisconnected,
-            ConnectionState.Probing or ConnectionState.Connecting => _dotProbing,
-            ConnectionState.Connected => _dotConnected,
-            ConnectionState.Error => _dotError,
-            _ => _dotDisconnected
+            ConnectionState.Disconnected or ConnectionState.Disconnecting => (System.Windows.Media.Brush)FindResource("DotDisconnectedBrush"),
+            ConnectionState.Probing or ConnectionState.Connecting => (System.Windows.Media.Brush)FindResource("DotProbingBrush"),
+            ConnectionState.Connected => (System.Windows.Media.Brush)FindResource("DotConnectedBrush"),
+            ConnectionState.Error => (System.Windows.Media.Brush)FindResource("DotErrorBrush"),
+            _ => (System.Windows.Media.Brush)FindResource("DotDisconnectedBrush")
         };
         StateText.Text = message;
 
@@ -58,7 +53,7 @@ public partial class MainWindow : Window
             case ConnectionState.Error:
                 ActionButton.Content = state == ConnectionState.Error ? "Retry" : "Connect";
                 ActionButton.IsEnabled = true;
-                if (ActionButton.Template.FindName("border", ActionButton) is Border b) b.Background = _btnGradient;
+                if (ActionButton.Template.FindName("border", ActionButton) is Border b) b.Background = (System.Windows.Media.Brush)FindResource("BtnGradientBrush");
                 break;
             case ConnectionState.Probing:
             case ConnectionState.Connecting:
@@ -68,9 +63,9 @@ public partial class MainWindow : Window
             case ConnectionState.Connected:
                 ActionButton.Content = "Disconnect";
                 ActionButton.IsEnabled = true;
-                if (ActionButton.Template.FindName("border", ActionButton) is Border b2) b2.Background = _btnConnected;
-                ServerText.Text = $"Server: {_tray.ConnectedEndpoint}";
-                LatencyText.Text = $"Latency: {_tray.ConnectedRtt}ms";
+                if (ActionButton.Template.FindName("border", ActionButton) is Border b2) b2.Background = (System.Windows.Media.Brush)FindResource("BtnConnectedBrush");
+                ServerText.Text = $"Server: {_tray.Service.ConnectedEndpoint}";
+                LatencyText.Text = $"Latency: {_tray.Service.ConnectedRtt}ms";
                 break;
             case ConnectionState.Disconnecting:
                 ActionButton.Content = "Disconnecting...";
@@ -85,18 +80,11 @@ public partial class MainWindow : Window
     private void AddLogEntry(string message)
     {
         var timestamp = DateTime.Now.ToString("HH:mm:ss");
-        System.Windows.Media.Brush color = _logNormal;
-        if (message.StartsWith("OK")) color = _logSuccess;
-        else if (message.StartsWith("x")) color = _logError;
-        var entry = new TextBlock
-        {
-            Text = $"{timestamp}  {message}",
-            FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New"),
-            FontSize = 11, Foreground = color, Margin = new Thickness(0, 2, 0, 2),
-            TextWrapping = TextWrapping.Wrap
-        };
-        LogPanel.Children.Insert(0, entry);
-        while (LogPanel.Children.Count > 10) LogPanel.Children.RemoveAt(LogPanel.Children.Count - 1);
+        string colorKey = "normal";
+        if (message.StartsWith("OK")) colorKey = "success";
+        else if (message.StartsWith("x")) colorKey = "error";
+        LogEntries.Insert(0, new LogEntry(timestamp, message, colorKey));
+        while (LogEntries.Count > 10) LogEntries.RemoveAt(LogEntries.Count - 1);
     }
 
     private void ActionButton_Click(object sender, RoutedEventArgs e)
@@ -104,8 +92,8 @@ public partial class MainWindow : Window
         switch (_state)
         {
             case ConnectionState.Disconnected:
-            case ConnectionState.Error: _tray.Connect(); break;
-            case ConnectionState.Connected: _ = _tray.Disconnect(); break;
+            case ConnectionState.Error: _tray.Service.Connect(); break;
+            case ConnectionState.Connected: _ = _tray.Service.Disconnect(); break;
         }
     }
 

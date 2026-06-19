@@ -16,6 +16,7 @@ public class SmartRouter
 
     public async Task<ServerProbe?> FindFastestAsync()
     {
+        // Probe all servers in parallel via Task.WhenAll — returns the lowest-RTT result
         var tasks = _pool.Select(async s =>
         {
             OnProbeResult?.Invoke($"Probing {s.Name} ({s.WgEndpoint})...");
@@ -32,7 +33,7 @@ public class SmartRouter
             }
             catch { OnProbeResult?.Invoke($"  {s.Name}: unreachable"); }
             return null;
-        });
+        }).ToArray();
 
         var results = await Task.WhenAll(tasks);
         return results.Where(r => r is not null).MinBy(r => r!.RttMs);

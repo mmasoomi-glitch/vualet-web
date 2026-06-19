@@ -8,6 +8,17 @@
         ResizeMode="CanResize"
         ShowInTaskbar="True"
         WindowStyle="SingleBorderWindow">
+    <Window.Resources>
+        <SolidColorBrush x:Key="LogNormalBrush" Color="#C7B8F0"/>
+        <SolidColorBrush x:Key="LogSuccessBrush" Color="#A5E8A5"/>
+        <SolidColorBrush x:Key="LogErrorBrush" Color="#F8A5A0"/>
+        <SolidColorBrush x:Key="DotDisconnectedBrush" Color="#8C8190"/>
+        <SolidColorBrush x:Key="DotProbingBrush" Color="#F8C54A"/>
+        <SolidColorBrush x:Key="DotConnectedBrush" Color="#4EC9B0"/>
+        <SolidColorBrush x:Key="DotErrorBrush" Color="#E68A85"/>
+        <SolidColorBrush x:Key="BtnGradientBrush" Color="#F8A5A0"/>
+        <SolidColorBrush x:Key="BtnConnectedBrush" Color="#1A1525"/>
+    </Window.Resources>
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -29,7 +40,7 @@
             <TextBlock Text="Mira VPN" FontFamily="Segoe UI" FontSize="22" FontWeight="SemiBold" Foreground="#2A1F2D" VerticalAlignment="Center"/>
         </StackPanel>
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,16">
-            <Ellipse x:Name="StateDot" Width="12" Height="12" Fill="#8C8190" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <Ellipse x:Name="StateDot" Width="12" Height="12" Fill="{StaticResource DotDisconnectedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
             <TextBlock x:Name="StateText" Text="Disconnected" FontFamily="Segoe UI" FontSize="15" FontWeight="SemiBold" Foreground="#2A1F2D" VerticalAlignment="Center"/>
         </StackPanel>
         <StackPanel Grid.Row="2" Margin="0,0,0,16">
@@ -40,7 +51,7 @@
         <Button x:Name="ActionButton" Grid.Row="3" Content="Connect" Click="ActionButton_Click" Margin="0,0,0,20" HorizontalAlignment="Stretch" Height="48" FontSize="16" Foreground="White" FontWeight="SemiBold" BorderThickness="0">
             <Button.Template>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="border" Background="#F8A5A0" CornerRadius="999">
+                    <Border x:Name="border" Background="{StaticResource BtnGradientBrush}" CornerRadius="999">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                 </ControlTemplate>
@@ -50,9 +61,37 @@
             <Grid>
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Text="Activity Log" FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold" Foreground="#C7B8F0" Margin="0,0,0,8"/>
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                    <StackPanel x:Name="LogPanel"/>
-                </ScrollViewer>
+                <ItemsControl x:Name="LogItemsControl" Grid.Row="1" ItemsSource="{Binding LogEntries}">
+                    <ItemsControl.Template>
+                        <ControlTemplate TargetType="ItemsControl">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ItemsPresenter/>
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ItemsControl.Template>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayText}"
+                                       FontFamily="Consolas, Courier New"
+                                       FontSize="11" Margin="0,2,0,2"
+                                       TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ColorKey}" Value="success">
+                                                <Setter Property="Foreground" Value="{StaticResource LogSuccessBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ColorKey}" Value="error">
+                                                <Setter Property="Foreground" Value="{StaticResource LogErrorBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                        <Setter Property="Foreground" Value="{StaticResource LogNormalBrush}"/>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </Grid>
         </Border>
         <CheckBox x:Name="AutoConnectCheck" Grid.Row="5" Content="Auto-connect on startup"

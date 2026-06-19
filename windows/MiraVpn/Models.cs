@@ -10,3 +10,8 @@ public class ServerProbe
     public string Name { get; set; } = "";
     public long RttMs { get; set; }
 }
+
+public record LogEntry(string Timestamp, string Message, string ColorKey)
+{
+    public string DisplayText => $"{Timestamp}  {Message}";
+}
