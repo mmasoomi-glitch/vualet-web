@@ -1,6 +1,8 @@
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using System.Diagnostics;
+using System.Security.Principal;
 using System.Windows;
 
 namespace MiraVpn;
@@ -18,6 +20,21 @@ public partial class App : System.Windows.Application
 
     private void App_Startup(object sender, StartupEventArgs e)
     {
+        // Self-elevate: if not running as Administrator, relaunch with runas
+        var identity  = WindowsIdentity.GetCurrent();
+        var principal = new WindowsPrincipal(identity);
+        if (!principal.IsInRole(WindowsBuiltInRole.Administrator))
+        {
+            var psi = new ProcessStartInfo(Process.GetCurrentProcess().MainModule!.FileName)
+            {
+                Verb           = "runas",
+                UseShellExecute = true
+            };
+            try { Process.Start(psi); }
+            catch { /* user cancelled UAC — just exit silently */ }
+            Environment.Exit(0);
+            return;
+        }
         _mutex = new Mutex(true, @"Global\MiraVpn_SingleInstance", out bool createdNew);
         if (!createdNew)
         {
@@ -47,22 +64,6 @@ public partial class App : System.Windows.Application
 
         NativeBridge.Initialize(AppDataDir);
         Logger.Info("App", "Native libraries loaded");
-
-        // Start the wintun kernel driver (required before mira_start will work).
-        // This must happen EXACTLY ONCE per session. The driver auto-unloads on exit.
-        try
-        {
-            using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("sc", "start wintun")
-            {
-                UseShellExecute = true,
-                Verb = "runas",
-                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
-                CreateNoWindow = true
-            });
-            p?.WaitForExit(5000);
-            Logger.Info("App", $"wintun driver start result: {p?.ExitCode}");
-        }
-        catch (Exception ex) { Logger.Error("App", $"wintun driver start failed: {ex.Message}"); }
 
         try
         {

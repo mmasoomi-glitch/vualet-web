@@ -90,10 +90,12 @@ public class TrayIcon : IDisposable
             var cfg = json.GetProperty("config").GetString()!.Replace("FILL_ME", priv).Replace("178.104.251.30:51820", $"{server.IP}:51820");
 
             EmitLog($"Starting tunnel to {server.IP}:51820…");
+            CleanupStaleWintun();
             int result = NativeBridge.mira_start(cfg);
+            Logger.Info("Connection", $"mira_start returned {result}");
             if (result != 0)
             {
-                string reason = result switch { -1 => "Network driver failed. Run as Administrator.", -2 => "Administrator access required. Right-click MiraVpn.exe → Run as Administrator.", _ => $"Tunnel error (code {result})" };
+                string reason = result switch { -1 => "Network driver failed. Run as Administrator.", -2 => "IP assignment failed (netsh error). Try reconnecting — this usually clears itself.", _ => $"Tunnel error (code {result})" };
                 SetState(ConnectionState.Error, reason); EmitLog($"x {reason}"); Balloon("Could not connect", reason, ToolTipIcon.Error); await RemovePeer(); _connecting = false; return;
             }
 
@@ -137,6 +139,43 @@ public class TrayIcon : IDisposable
     {
         if (_mainWindow == null) return;
         _mainWindow.Dispatcher.Invoke(() => { _mainWindow.Show(); _mainWindow.WindowState = WindowState.Normal; _mainWindow.Activate(); });
+    }
+
+    /// <summary>
+    /// Before calling mira_start, check for a stale wintun service entry.
+    /// If wintun is registered but stopped with ERROR_GEN_FAILURE (31), the .sys
+    /// file is missing or corrupt. wintun.dll will TerminateProcess if it tries to
+    /// start a broken service. Deleting the entry lets wintun.dll reinstall cleanly.
+    /// </summary>
+    private static void CleanupStaleWintun()
+    {
+        try
+        {
+            using var query = Process.Start(new ProcessStartInfo("sc.exe", "query wintun")
+                { RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true });
+            if (query == null) return;
+            var output = query.StandardOutput.ReadToEnd();
+            query.WaitForExit(3000);
+
+            // WIN32_EXIT_CODE 31 (0x1f) = ERROR_GEN_FAILURE = driver file missing/corrupt
+            bool isStopped = output.Contains("STOPPED");
+            bool hasError31 = output.Contains(" 31 ") || output.Contains("(0x1f)");
+
+            if (isStopped && hasError31)
+            {
+                Logger.Info("Wintun", "Stale wintun service (error 31) detected — deleting for clean reinstall");
+                using var del = Process.Start(new ProcessStartInfo("sc.exe", "delete wintun")
+                    { UseShellExecute = false, CreateNoWindow = true });
+                del?.WaitForExit(3000);
+                System.Threading.Thread.Sleep(500); // Give SCM time to update
+                Logger.Info("Wintun", "Stale service deleted — wintun.dll will reinstall driver on next CreateAdapter call");
+            }
+            else if (isStopped)
+            {
+                Logger.Info("Wintun", $"wintun service stopped (not error 31) — skipping delete. Output: {output.Trim()}");
+            }
+        }
+        catch (Exception ex) { Logger.Error("Wintun", $"CleanupStaleWintun: {ex.Message}"); }
     }
 
     private void Uninstall()
