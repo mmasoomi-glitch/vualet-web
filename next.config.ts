@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 import path from "node:path";
 
 const nextConfig: NextConfig = {
-  // Hosted on Vercel (native Next.js runtime) — no standalone/Docker output needed.
   reactStrictMode: true,
+  output: "standalone",
   turbopack: {
     root: path.join(__dirname),
   },

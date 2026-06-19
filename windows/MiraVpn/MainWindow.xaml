@@ -1,0 +1,108 @@
+<Window x:Class="MiraVpn.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Mira VPN" Height="480" Width="520"
+        MinHeight="450" MinWidth="420"
+        WindowStartupLocation="CenterScreen"
+        Background="#FFF8F0"
+        ResizeMode="CanResize"
+        ShowInTaskbar="True"
+        WindowStyle="SingleBorderWindow">
+    <Window.Resources>
+        <SolidColorBrush x:Key="LogNormalBrush" Color="#C7B8F0"/>
+        <SolidColorBrush x:Key="LogSuccessBrush" Color="#A5E8A5"/>
+        <SolidColorBrush x:Key="LogErrorBrush" Color="#F8A5A0"/>
+        <SolidColorBrush x:Key="DotDisconnectedBrush" Color="#8C8190"/>
+        <SolidColorBrush x:Key="DotProbingBrush" Color="#F8C54A"/>
+        <SolidColorBrush x:Key="DotConnectedBrush" Color="#4EC9B0"/>
+        <SolidColorBrush x:Key="DotErrorBrush" Color="#E68A85"/>
+        <SolidColorBrush x:Key="BtnGradientBrush" Color="#F8A5A0"/>
+        <SolidColorBrush x:Key="BtnConnectedBrush" Color="#1A1525"/>
+    </Window.Resources>
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+            <Border Width="40" Height="40" CornerRadius="10" Margin="0,0,12,0">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Offset="0" Color="#F8A5A0"/><GradientStop Offset="0.55" Color="#C7B8F0"/><GradientStop Offset="1" Color="#6366F1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <TextBlock Text="M" Foreground="White" FontSize="22" FontWeight="Bold" FontFamily="Georgia" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock Text="Mira VPN" FontFamily="Segoe UI" FontSize="22" FontWeight="SemiBold" Foreground="#2A1F2D" VerticalAlignment="Center"/>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,16">
+            <Ellipse x:Name="StateDot" Width="12" Height="12" Fill="{StaticResource DotDisconnectedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <TextBlock x:Name="StateText" Text="Disconnected" FontFamily="Segoe UI" FontSize="15" FontWeight="SemiBold" Foreground="#2A1F2D" VerticalAlignment="Center"/>
+        </StackPanel>
+        <StackPanel Grid.Row="2" Margin="0,0,0,16">
+            <TextBlock x:Name="ServerText" Text="Server: —" FontFamily="Segoe UI" FontSize="13" Foreground="#524A55" Margin="0,0,0,4"/>
+            <TextBlock x:Name="LatencyText" Text="Latency: —" FontFamily="Segoe UI" FontSize="13" Foreground="#524A55" Margin="0,0,0,4"/>
+            <TextBlock x:Name="ConnTimerText" Text="Connected: —" FontFamily="Segoe UI" FontSize="13" Foreground="#524A55" Margin="0,0,0,4"/>
+            <TextBlock x:Name="StatsText" Text="Up: —  Down: —" FontFamily="Segoe UI" FontSize="13" Foreground="#8C8190" Margin="0,0,0,4"/>
+            <TextBlock x:Name="HandshakeText" Text="Handshake: —" FontFamily="Segoe UI" FontSize="13" Foreground="#8C8190"/>
+        </StackPanel>
+        <Button x:Name="ActionButton" Grid.Row="3" Content="Connect" Click="ActionButton_Click" Margin="0,0,0,20" HorizontalAlignment="Stretch" Height="48" FontSize="16" Foreground="White" FontWeight="SemiBold" BorderThickness="0">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" Background="{StaticResource BtnGradientBrush}" CornerRadius="999">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Button.Template>
+        </Button>
+        <Border Grid.Row="4" Background="#1A1525" CornerRadius="10" Padding="12" MinHeight="100">
+            <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="Activity Log" FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold" Foreground="#C7B8F0" Margin="0,0,0,8"/>
+                <ItemsControl x:Name="LogItemsControl" Grid.Row="1" ItemsSource="{Binding LogEntries}">
+                    <ItemsControl.Template>
+                        <ControlTemplate TargetType="ItemsControl">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ItemsPresenter/>
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ItemsControl.Template>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayText}"
+                                       FontFamily="Consolas, Courier New"
+                                       FontSize="11" Margin="0,2,0,2"
+                                       TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ColorKey}" Value="success">
+                                                <Setter Property="Foreground" Value="{StaticResource LogSuccessBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ColorKey}" Value="error">
+                                                <Setter Property="Foreground" Value="{StaticResource LogErrorBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                        <Setter Property="Foreground" Value="{StaticResource LogNormalBrush}"/>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </Border>
+        <StackPanel Grid.Row="5" Margin="0,16,0,0">
+            <CheckBox x:Name="AutoConnectCheck" Content="Auto-connect on startup"
+                      FontFamily="Segoe UI" FontSize="12" Foreground="#524A55"
+                      Checked="AutoConnect_Changed" Unchecked="AutoConnect_Changed"/>
+            <CheckBox x:Name="KillSwitchCheck" Content="Kill Switch (block internet when VPN drops)"
+                      FontFamily="Segoe UI" FontSize="12" Foreground="#524A55"
+                      Margin="0,8,0,0" Checked="KillSwitch_Changed" Unchecked="KillSwitch_Changed"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,605 @@
+================================================================================
+MIRA VPN — PRODUCT REQUIREMENTS DOCUMENT v2.0
+Full-stack specification for an LLM to build verbatim
+================================================================================
+
+1. WHAT THIS IS
+================================================================================
+
+Mira VPN is a consumer VPN product. One-click connect. One-click disconnect.
+In-house WireGuard driver baked in. No external driver install. No manual
+config. No country picker. No dropdown. No settings file.
+
+Two tiers:
+  Free — 500 kbps, ad-supported, 2-hour session, 1 device
+  Paid — 5 Mbps, no ads, 50 GB/month, 3 devices, $9.99/mo
+
+Payment: NowPayments (crypto + card, 200+ coins)
+Backend: Hetzner (auto-scaled, load-balanced, WireGuard native)
+AI: DeepSeek API for customer service Q&A + ticket processing only
+
+2. BRAND NARRATIVE
+================================================================================
+
+Mira VPN is operated by Vualet (Dubai, UAE, founded by Dr. Abdolmadjid
+Masoomi). The product positioning:
+
+  Mira VPN — AI-assisted private connection.
+
+  Tap Connect. Mira picks the fastest server for your current network.
+  Tap Disconnect. Done.
+
+  No country list. No settings. No guesswork.
+
+The AI piece: on the CLIENT side only, a SmartRouter pings 3 nearest
+Mira servers, measures real RTT, picks the winner. That is the full
+extent of "AI" in the VPN product itself. No AI in the tunnel, no AI
+on the server, no AI in the encryption.
+
+DeepSeek is used ONLY for customer-facing support: account-aware Q&A,
+ticket processing, billing questions. It runs as a separate chatbot
+on the web dashboard, not inside the VPN client.
+
+3. DESIGN SYSTEM (mira.css — VERBATIM TOKENS)
+================================================================================
+
+Colors:
+  --mira-rose:          #F8A5A0   (primary)
+  --mira-rose-deep:     #E68A85   (hover/active)
+  --mira-petal:         #FFDCE0   (soft backgrounds)
+  --mira-lavender:      #C7B8F0   (calm accent)
+  --mira-lavender-deep: #A595E8   (focus)
+  --aether:             #6366F1   (AI accent)
+  --mira-cream:         #FFF8F0   (light background)
+  --mira-canvas:        #FEFAF6   (card surface)
+  --mira-onyx:          #1A1525   (dark background)
+  --mira-ink:           #2A1F2D   (text)
+  --mira-graphite:      #524A55   (secondary text)
+  --mira-slate:         #8C8190   (muted)
+  --mira-fog:           #E8E0EA   (borders)
+  --mira-frost:         #F2EAF0   (soft surfaces)
+
+Gradient:
+  linear-gradient(135deg, #F8A5A0 0%, #C7B8F0 55%, #6366F1 100%)
+
+Typography:
+  Display: Fraunces (300-400 weight)
+  UI:      Inter (400-600 weight)
+  Mono:    JetBrains Mono (400 weight)
+
+Radii: 10px(sm) 16px(md) 24px(lg) 999px(pill)
+
+Shadows:
+  sm: 0 1px 3px rgba(248,165,160,0.12)
+  md: 0 4px 16px rgba(199,184,240,0.18), 0 2px 4px rgba(42,31,45,0.04)
+  lg: 0 16px 48px rgba(199,184,240,0.25), 0 4px 12px rgba(42,31,45,0.08)
+
+Button-primary (.btn-mira):
+  background: the gradient above; color: white; padding: 14px 28px;
+  border-radius: 999px; font-weight: 500; border: none; cursor: pointer;
+
+Button-secondary (.btn-mira-soft):
+  background: transparent; border: 2px solid #F8A5A0; color: #2A1F2D;
+  padding: 14px 28px; border-radius: 999px; font-weight: 500;
+
+Logo assets (SVG, transparent):
+  /mira/mira-logo-color.svg       — primary mark (rose-lavender-aether)
+  /mira/mira-logo-white.svg       — white (dark backgrounds)
+  /mira/mira-logo-mono.svg        — single-color (uses currentColor)
+  /mira/mira-wordmark-color.svg   — mark + "MIRA" text
+  /mira/mira-wordmark-white.svg   — mark + "MIRA" text (dark)
+  /mira/mira-logo-color-512.png   — raster fallback 512px
+  /mira/mira-logo-color-256.png   — raster fallback 256px
+
+All assets downloadable from http://178.104.251.30/mira/ (live Hetzner box).
+
+4. WIREGUARD SERVER API (REPLACE WITH ACTUAL ENDPOINT)
+================================================================================
+
+The API that issued WireGuard configs lives at:
+
+  Base:  http://178.104.251.30/v1
+  POST  /tunnel/issue
+    Body:    {"public_key":"<44-char base64 WireGuard pubkey>","tier":"free|paid"}
+    Returns: {"ip":"10.66.66.X","server_endpoint":"178.104.251.30:51820",
+              "server_public_key":"ByK5yGC96gYi0GZ/...",
+              "config":"[Interface]\nPrivateKey = FILL_ME\n..."}
+
+The returned "config" field is a wg-quick-compatible WireGuard config.
+Replace "FILL_ME" with the client's actual private key, write to a temp
+file, install via wireguard.exe /installtunnelservice.
+
+WireGuard server details:
+  Address:   178.104.251.30
+  UDP port:  51820
+  Pubkey:    ByK5yGC96gYi0GZ/dIoyVBWZkLrCGyQH+XKtxS1UJhE=
+  Subnet:    10.66.66.0/24
+  DNS:       1.1.1.1, 1.0.0.1
+  MTU:       1420
+  Keepalive: 25s
+
+5. WINDOWS CLIENT — CURRENT CODE DUMP
+================================================================================
+
+5.1 Project file (MiraVpn.csproj)
+--------------------------------------------------------------------------------
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>MiraVpn</AssemblyName>
+    <Version>1.0.0</Version>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+</Project>
+
+5.2 App.xaml
+--------------------------------------------------------------------------------
+<Application x:Class="MiraVpn.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Startup="App_Startup"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <SolidColorBrush x:Key="MiraRose" Color="#F8A5A0"/>
+        <SolidColorBrush x:Key="MiraLavender" Color="#C7B8F0"/>
+        <SolidColorBrush x:Key="MiraInk" Color="#2A1F2D"/>
+    </Application.Resources>
+</Application>
+
+5.3 App.xaml.cs
+--------------------------------------------------------------------------------
+using System.Windows;
+
+namespace MiraVpn;
+
+public partial class App : System.Windows.Application
+{
+    private TrayIcon? _tray;
+
+    private void App_Startup(object sender, StartupEventArgs e)
+    {
+        _tray = new TrayIcon();
+        _tray.ExitRequested += () => Shutdown();
+        _tray.Show();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _tray?.Dispose();
+        base.OnExit(e);
+    }
+}
+
+5.4 MainWindow.xaml
+--------------------------------------------------------------------------------
+<Window x:Class="MiraVpn.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Mira VPN" Height="200" Width="400"
+        WindowStyle="ToolWindow" ShowInTaskbar="False"
+        WindowStartupLocation="CenterScreen"
+        Background="#FFF8F0">
+    <Grid Margin="20">
+        <StackPanel VerticalAlignment="Center" TextBlock.TextAlignment="Center">
+            <TextBlock Text="Mira VPN" FontSize="22" FontWeight="SemiBold" Foreground="#2A1F2D" FontFamily="Segoe UI" />
+            <TextBlock Text="Running in system tray" FontSize="13" Foreground="#524A55" Margin="0,8,0,0" />
+            <TextBlock Text="Right-click the tray icon to connect or disconnect." FontSize="12" Foreground="#8C8190" Margin="0,4,0,0" />
+        </StackPanel>
+    </Grid>
+</Window>
+
+5.5 MainWindow.xaml.cs
+--------------------------------------------------------------------------------
+using System.Windows;
+namespace MiraVpn;
+public partial class MainWindow : Window
+{
+    public MainWindow() { InitializeComponent(); }
+    protected override void OnStateChanged(EventArgs e) { base.OnStateChanged(e); if (WindowState == WindowState.Minimized) Hide(); }
+}
+
+5.6 TrayIcon.cs
+--------------------------------------------------------------------------------
+using System.Diagnostics;
+using System.IO;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Windows.Forms;
+
+namespace MiraVpn;
+
+public class TrayIcon : IDisposable
+{
+    private readonly NotifyIcon _icon;
+    private readonly HttpClient _http = new() { BaseAddress = new("http://178.104.251.30/v1/") };
+    private string _wgExe => Path.Combine(_wgDir, "wireguard.exe");
+    private string _wgDir => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Mira VPN", "WireGuard");
+    private const string TunnelName = "MiraVPN";
+    private bool _connected;
+
+    public event Action? ExitRequested;
+
+    public TrayIcon()
+    {
+        _icon = new NotifyIcon
+        {
+            Icon = SystemIcons.Shield,
+            Text = "Mira VPN - disconnected",
+            Visible = true
+        };
+        _icon.ContextMenuStrip = BuildMenu();
+        _icon.DoubleClick += (_, _) => Toggle();
+    }
+
+    public void Show() { _icon.Visible = true; }
+
+    private ContextMenuStrip BuildMenu()
+    {
+        var menu = new ContextMenuStrip();
+        menu.Items.Add("Connect", null, (_, _) => Connect());
+        menu.Items.Add("Disconnect", null, (_, _) => Disconnect());
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("Exit", null, (_, _) => { Disconnect(); ExitRequested?.Invoke(); });
+        return menu;
+    }
+
+    private void Toggle()
+    {
+        if (_connected) Disconnect(); else Connect();
+    }
+
+    private bool EnsureWireGuard()
+    {
+        if (File.Exists(_wgExe)) return true;
+        SetState("Installing WireGuard...");
+        try
+        {
+            Directory.CreateDirectory(_wgDir);
+            var msi = Path.Combine(Path.GetTempPath(), "wireguard-installer.msi");
+            if (!File.Exists(msi) || new FileInfo(msi).Length < 1_000_000)
+            {
+                using var client = new HttpClient();
+                var data = client.GetByteArrayAsync(
+                    "https://download.wireguard.com/windows-client/wireguard-installer.exe").Result;
+                File.WriteAllBytes(msi, data);
+            }
+            var psi = new ProcessStartInfo("msiexec.exe",
+                $"/i \"{msi}\" /quiet /norestart DO_NOT_LAUNCH=1")
+            {
+                UseShellExecute = true,
+                Verb = "runas",
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            var p = Process.Start(psi)!;
+            p.WaitForExit(120_000);
+            if (File.Exists(_wgExe)) return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("WireGuard silent install failed: " + ex.Message);
+        }
+        SetState("Setup failed");
+        return false;
+    }
+
+    private async void Connect()
+    {
+        SetState("Connecting...");
+        try
+        {
+            if (!EnsureWireGuard())
+            {
+                _icon.Text = "Mira VPN - setup failed";
+                SetState("Setup failed - try again");
+                return;
+            }
+
+            var priv = RunWg("genkey");
+            var pub = RunWg("pubkey", priv);
+            if (string.IsNullOrEmpty(priv) || string.IsNullOrEmpty(pub))
+            { SetState("Keygen failed"); return; }
+
+            var resp = await _http.PostAsJsonAsync("tunnel/issue",
+                new { public_key = pub.Trim(), tier = "free" });
+            if (!resp.IsSuccessStatusCode) { SetState("Registration failed"); return; }
+            var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+            var ip = json.GetProperty("ip").GetString()!;
+            var config = json.GetProperty("config").GetString()!
+                .Replace("FILL_ME", priv.Trim());
+
+            var tmp = Path.GetTempFileName() + ".conf";
+            File.WriteAllText(tmp, config);
+            RunWg("/installtunnelservice \"" + tmp + "\"");
+            File.Delete(tmp);
+            RunWg("/activate \"" + TunnelName + "\"");
+
+            _connected = true;
+            _icon.Text = "Mira VPN - Connected (" + ip + ")";
+            SetState("Connected (" + ip + ")");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("Mira connect failed: " + ex.Message);
+            SetState("Connection failed");
+        }
+    }
+
+    private void Disconnect()
+    {
+        try { if (File.Exists(_wgExe)) RunWg("/uninstalltunnelservice \"" + TunnelName + "\""); }
+        catch { }
+        _connected = false;
+        _icon.Text = "Mira VPN - disconnected";
+        SetState("Disconnected");
+    }
+
+    private string RunWg(string args, string? stdin = null)
+    {
+        var psi = new ProcessStartInfo(_wgExe, args)
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardInput = stdin != null,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        using var p = Process.Start(psi)!;
+        if (stdin != null) { p.StandardInput.Write(stdin); p.StandardInput.Close(); }
+        var output = p.StandardOutput.ReadToEnd();
+        p.WaitForExit(5000);
+        return output;
+    }
+
+    private void SetState(string state)
+    {
+        var items = _icon.ContextMenuStrip?.Items;
+        if (items != null && items.Count > 0 && items[0] is ToolStripMenuItem c)
+            c.Text = "Status: " + state;
+    }
+
+    public void Dispose() => _icon.Dispose();
+}
+
+5.7 Graphical Setup (Setup.ps1 — PowerShell GUI installer)
+--------------------------------------------------------------------------------
+# Mira VPN Windows Setup
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$form = New-Object System.Windows.Forms.Form
+$form.Text = "Mira VPN Setup"
+$form.Size = New-Object System.Drawing.Size(520, 400)
+$form.StartPosition = "CenterScreen"
+$form.FormBorderStyle = "FixedDialog"
+$form.MaximizeBox = $false
+$form.BackColor = [System.Drawing.Color]::FromArgb(255,248,240)
+
+$title = New-Object System.Windows.Forms.Label
+$title.Text = "Mira VPN"
+$title.Font = New-Object System.Drawing.Font("Segoe UI", 18, [System.Drawing.FontStyle]::Bold)
+$title.ForeColor = [System.Drawing.Color]::FromArgb(42,31,45)
+$title.AutoSize = $true
+$title.Location = New-Object System.Drawing.Point(30, 24)
+$form.Controls.Add($title)
+
+$sub = New-Object System.Windows.Forms.Label
+$sub.Text = "Smart, private connection. One click after install."
+$sub.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+$sub.ForeColor = [System.Drawing.Color]::FromArgb(82,74,85)
+$sub.AutoSize = $true
+$sub.Location = New-Object System.Drawing.Point(30, 56)
+$form.Controls.Add($sub)
+
+$ll = New-Object System.Windows.Forms.Label
+$ll.Text = "Install location:"
+$ll.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+$ll.AutoSize = $true
+$ll.Location = New-Object System.Drawing.Point(30, 100)
+$form.Controls.Add($ll)
+
+$locBox = New-Object System.Windows.Forms.TextBox
+$locBox.Text = [Environment]::GetFolderPath("LocalApplicationData") + "\Mira VPN"
+$locBox.Width = 380
+$locBox.Location = New-Object System.Drawing.Point(30, 124)
+$form.Controls.Add($locBox)
+
+$browse = New-Object System.Windows.Forms.Button
+$browse.Text = "Browse..."
+$browse.Width = 90
+$browse.Location = New-Object System.Drawing.Point(416, 122)
+$browse.Add_Click({
+    $fb = New-Object System.Windows.Forms.FolderBrowserDialog
+    if ($fb.ShowDialog() -eq "OK") { $locBox.Text = $fb.SelectedPath }
+})
+$form.Controls.Add($browse)
+
+$status = New-Object System.Windows.Forms.RichTextBox
+$status.Size = New-Object System.Drawing.Size(450, 90)
+$status.Location = New-Object System.Drawing.Point(30, 170)
+$status.ReadOnly = $true
+$status.BackColor = [System.Drawing.Color]::FromArgb(42,31,45)
+$status.ForeColor = [System.Drawing.Color]::FromArgb(248,165,160)
+$status.Font = New-Object System.Drawing.Font("Consolas", 9)
+$form.Controls.Add($status)
+
+function Log($msg) {
+    $status.AppendText("  " + $msg + "`n")
+    $status.ScrollToCaret()
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
+$install = New-Object System.Windows.Forms.Button
+$install.Text = "Install"
+$install.Width = 120; $install.Height = 36
+$install.Location = New-Object System.Drawing.Point(370, 280)
+$install.BackColor = [System.Drawing.Color]::FromArgb(248,165,160)
+$install.FlatStyle = "Flat"; $install.FlatAppearance.BorderSize = 0
+$install.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+$install.ForeColor = [System.Drawing.Color]::White
+$install.Add_Click({
+    $install.Enabled = $false; $target = $locBox.Text
+    Log "Installing to: $target"
+    try {
+        New-Item -ItemType Directory -Force -Path $target | Out-Null
+        Log "[OK] Directory created"
+        $exe = "$target\MiraVpn.exe"
+        Log "[...] Downloading Mira VPN (71 MB)..."
+        Invoke-WebRequest "http://178.104.251.30/vpn/MiraVpn.exe" -OutFile $exe
+        Log "[OK] Downloaded"
+        $ws = New-Object -ComObject WScript.Shell
+        $sd = [Environment]::GetFolderPath("StartMenu") + "\Programs"
+        $l1 = $ws.CreateShortcut("$sd\Mira VPN.lnk")
+        $l1.TargetPath = $exe; $l1.WorkingDirectory = $target
+        $l1.Description = "Mira VPN"; $l1.Save()
+        $l2 = $ws.CreateShortcut([Environment]::GetFolderPath("Desktop") + "\Mira VPN.lnk")
+        $l2.TargetPath = $exe; $l2.WorkingDirectory = $target
+        $l2.Description = "Mira VPN"; $l2.Save()
+        Log "[OK] Shortcuts created"
+        Start-Process $exe
+        Log "[OK] Launched - check system tray"
+        Start-Sleep -Seconds 3; $form.Close()
+    } catch { Log "[FAIL] $_"; $install.Enabled = $true }
+})
+$form.Controls.Add($install)
+
+$cancel = New-Object System.Windows.Forms.Button
+$cancel.Text = "Cancel"; $cancel.Width = 100; $cancel.Height = 36
+$cancel.Location = New-Object System.Drawing.Point(260, 280)
+$cancel.FlatStyle = "Flat"
+$cancel.Add_Click({ $form.Close() })
+$form.Controls.Add($cancel)
+
+$form.ShowDialog() | Out-Null
+
+5.8 Build command
+--------------------------------------------------------------------------------
+cd windows/MiraVpn
+dotnet publish -c Release -o publish --self-contained -r win-x64 \
+  -p:PublishSingleFile=true \
+  -p:IncludeNativeLibrariesForSelfExtract=true \
+  -p:EnableCompressionInSingleFile=true
+
+Output: publish/MiraVpn.exe (69 MB, single file, self-contained)
+
+6. WHAT THE BIG LLM MUST BUILD
+================================================================================
+
+6.1 Tier-1: Complete the Windows client
+  - Replace the Shield system icon with the real Mira logo as .ico
+  - Add SmartRouter: on Connect, ping 3 server IPs, measure RTT, pick winner
+  - Add a settings window: auto-start, notifications on/off, about
+  - Add a Connect/Disconnect toggle button in the tray (one-click)
+  - Add "Mira VPN — Connected (Frankfurt, 42ms)" tooltip text
+
+6.2 Tier-1: Android client
+  - Kotlin, min SDK 24, target SDK 34
+  - applicationId: com.vualet.mira
+  - Extend VpnService, use WireGuard-Go (not Xray Reality)
+  - Builder.addDisallowedApplication(packageName) mandatory
+  - Foreground service: specialUse + PROPERTY_SPECIAL_USE_FGS_SUBTYPE vpn
+  - No maxSdkVersion cap on FOREGROUND_SERVICE_SPECIAL_USE
+  - Connect button on main screen. That's it. One button.
+  - SmartRouter pings 3 servers, picks fastest
+  - AdMob banner on free tier only (bottom of screen, disappears on paid)
+  - Play Billing subscription for paid tier (not crypto in-app)
+  - Sideload APK via mira.vualet.com/get for crypto path
+
+6.3 Tier-1: iOS client
+  - Swift 5.10+, SwiftUI, iOS 17+
+  - NEPacketTunnelProvider + WireGuardKit (SPM)
+  - Bundle: com.vualet.mira, PacketTunnel: com.vualet.mira.PacketTunnel
+  - App Group: group.com.vualet.mira
+  - PrivacyInfo.xcprivacy (CA92.1, C617.1)
+  - ITSAppUsesNonExemptEncryption = false
+  - StoreKit 2 for subscriptions
+  - App Store listing: category Tools, no "bypass/censorship/firewall" terms
+  - One Connect button. One Disconnect button.
+
+6.4 Tier-2: Server auto-scale + load balancing
+  - kube-hetzner (K3s on Hetzner Cloud)
+  - Cluster Autoscaler: min 1 node, max 10 nodes (cpx21, fsn1)
+  - Each node runs WireGuard + the tunnel API
+  - Hetzner Load Balancer ($5/mo) fronts all nodes on :51820
+  - Private networking between nodes (no public IPv4 per node — saves cost)
+  - Bastion host with NAT for worker internet access
+  - Shared peer database (Postgres on the bastion, or Redis)
+  - Health check: every 30s, remove unhealthy nodes from LB
+  - No max concurrent users — horizontal scale is the cap. At 20 nodes =
+    20 × 1 Gbps = 20 Gbps aggregate.
+
+6.5 Tier-2: Admin dashboard
+  - Next.js page at /admin/health (inside the existing vualet-web)
+  - Shows: live concurrent users, total GB today, CPU/RAM per node,
+    active paid subscriptions, revenue this month, top 5 peers by bytes
+  - Server list: node name, IP, uptime, load, WireGuard peer count,
+    remove/reboot buttons
+  - Permit mint form: friend name, days → permit string + WhatsApp button
+  - Permit audit log: who, when, expiry, status
+  - NowPayments pending payments queue with Approve/Reject buttons
+  - Basic auth gate (env vars MIRA_ADMIN_USER / MIRA_ADMIN_PASS)
+
+6.6 Tier-2: DeepSeek AI support assistant
+  - DeepSeek API endpoint: https://api.deepseek.com/v1/chat/completions
+  - API key from env DEEPSEEK_API_KEY (never hardcoded)
+  - New Next.js API route: /api/support/chat
+  - Receives: { message, account_id?, email? }
+  - System prompt: "You are Mira, the AI assistant for Mira VPN by Vualet.
+    You help customers with connection issues, billing questions, account
+    setup, and troubleshooting. Be warm, brief, and accurate. If you cannot
+    resolve the issue, escalate: 'I'll create a ticket for you. Someone
+    from Vualet will follow up within 24 hours.'"
+  - Account-aware: if account_id is provided, query the peers database to
+    check if the user is connected, what server they're on, bytes used.
+  - Ticket creation: if escalated, write to SQLite tickets table:
+    (id, email, subject, body, status, created_at, resolved_at)
+  - Ticket queue on /admin/tickets: list, filter by status, resolve button
+  - Chat widget on /vpn/support — a small floating button bottom-right
+
+6.7 Tier-3: Country-specific routing (sanctioned regions)
+  - Detect user country by the peer's source IP on registration
+  - If country is in a list (IR, SY, KP, CU, etc.), route through a
+    server in a neutral jurisdiction (CH, SG, AE)
+  - The SmartRouter already picks the fastest — just restrict the
+    candidate server pool for sanctioned-IP peers
+  - No mention of "bypass" or "evade" anywhere — the code just picks a
+    different server
+
+7. ENVIRONMENT VARIABLES (never commit these)
+================================================================================
+
+  NOWPAYMENTS_API_KEY        — NowPayments invoice creation
+  NOWPAYMENTS_IPN_SECRET     — HMAC-SHA512 webhook verification
+  DEEPSEEK_API_KEY           — AI customer support
+  MIRA_ADMIN_USER            — Basic auth user for /admin
+  MIRA_ADMIN_PASS            — Basic auth password for /admin
+  HETZNER_API_TOKEN          — hcloud CLI for auto-scale provisioning
+  WIREGUARD_SERVER_PRIVATE   — the wg0 private key (rotate on deploy)
+
+8. LIVE INFRASTRUCTURE (as of 2026-06-19)
+================================================================================
+
+  Hetzner cx33, 4 cores, 8 GB, 80 GB, 22 TB egress, €8.49/mo
+  IP: 178.104.251.30
+  WireGuard: :51820, subnet 10.66.66.0/24
+  Web: nginx → Next.js :3060 (/vpn, /vualet, /blog)
+  API: nginx → Flask :5103 (/v1/tunnel/issue)
+  Panel: 3x-ui :7091 (localhost only, SSH tunnel to access)
+  Firewall: ufw, only 22/80/443/8443/51820 open
+
+
+
+================================================================================
+END OF PRD
+================================================================================
