@@ -19,7 +19,7 @@ internal static class NativeBridge
         if (_init) return;
         SetDllDirectory(dllDir);
         var dll = Path.Combine(dllDir, "mira-tunnel.dll");
-        if (!File.Exists(dll)) throw new FileNotFoundException("mira-tunnel.dll not found. Run build script first.", dll);
+        if (!File.Exists(dll)) throw new FileNotFoundException("mira-tunnel.dll not found.", dll);
         if (LoadLibrary(dll) == IntPtr.Zero)
             throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to load mira-tunnel.dll");
         _init = true;
@@ -42,4 +42,21 @@ internal static class NativeBridge
 
     [DllImport("mira-tunnel.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern void mira_free(IntPtr ptr);
+
+    // Added in v2 DLL: returns last error string from Go. Falls back gracefully if DLL is old.
+    [DllImport("mira-tunnel.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr mira_last_error();
+
+    public static string TryGetLastError()
+    {
+        try
+        {
+            var ptr = mira_last_error();
+            if (ptr == IntPtr.Zero) return "";
+            var s = Marshal.PtrToStringAnsi(ptr) ?? "";
+            mira_free(ptr);
+            return s;
+        }
+        catch { return ""; }
+    }
 }

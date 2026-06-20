@@ -4,6 +4,7 @@ using System.Threading;
 using System.Diagnostics;
 using System.Security.Principal;
 using System.Windows;
+using MessageBox = System.Windows.MessageBox;
 
 namespace MiraVpn;
 
@@ -15,41 +16,38 @@ public partial class App : System.Windows.Application
 
     public static readonly string AppDataDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Mira VPN");
+
+    // Kept for SetupWindow compat (SetupWindow is never shown in v2, but still compiles)
     public static readonly string InstallMarkerPath = Path.Combine(AppDataDir, "install.conf");
     public static bool IsInstalled => File.Exists(InstallMarkerPath);
 
     private void App_Startup(object sender, StartupEventArgs e)
     {
-        // Self-elevate: if not running as Administrator, relaunch with runas
-        var identity  = WindowsIdentity.GetCurrent();
-        var principal = new WindowsPrincipal(identity);
+        var principal = new WindowsPrincipal(WindowsIdentity.GetCurrent());
         if (!principal.IsInRole(WindowsBuiltInRole.Administrator))
         {
-            var psi = new ProcessStartInfo(Process.GetCurrentProcess().MainModule!.FileName)
-            {
-                Verb           = "runas",
-                UseShellExecute = true
-            };
-            try { Process.Start(psi); }
-            catch { /* user cancelled UAC — just exit silently */ }
+            try { Process.Start(new ProcessStartInfo(
+                Process.GetCurrentProcess().MainModule!.FileName)
+                { Verb = "runas", UseShellExecute = true }); }
+            catch { }
             Environment.Exit(0);
             return;
         }
+
         _mutex = new Mutex(true, @"Global\MiraVpn_SingleInstance", out bool createdNew);
         if (!createdNew)
         {
-            System.Windows.MessageBox.Show("Mira VPN is already running in your system tray.\n\nRight-click the tray icon to control it.",
-                "Mira VPN", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            MessageBox.Show("Mira VPN is already running in your system tray.",
+                "Mira VPN", MessageBoxButton.OK, MessageBoxImage.Information);
             Environment.Exit(0);
             return;
         }
 
         Directory.CreateDirectory(AppDataDir);
         Directory.CreateDirectory(Path.Combine(AppDataDir, "logs"));
-        Directory.CreateDirectory(Path.Combine(AppDataDir, "Assets"));
 
         Logger.Initialize();
-        Logger.Info("App", "Mira VPN starting up");
+        Logger.Info("App", "Mira VPN v2 starting");
 
         var asm = Assembly.GetExecutingAssembly();
         foreach (var name in new[] { "mira-tunnel.dll", "wintun.dll" })
@@ -65,44 +63,20 @@ public partial class App : System.Windows.Application
         NativeBridge.Initialize(AppDataDir);
         Logger.Info("App", "Native libraries loaded");
 
-        try
-        {
-            var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "";
-            if (!string.IsNullOrEmpty(exePath)) { FirewallHelper.EnsureRules(exePath); Logger.Info("App", "Firewall rules verified"); }
-        }
-        catch (Exception ex) { Logger.Error("App", $"Firewall setup failed: {ex.Message}"); }
-
         _tray = new TrayIcon();
         _tray.Service.ExitRequested += () => { _tray.Dispose(); Shutdown(); };
         _tray.Show();
-        Logger.Info("App", "Tray icon created");
 
         _mainWindow = new MainWindow(_tray);
         _tray.SetMainWindow(_mainWindow);
-
-        if (!IsInstalled)
-        {
-            Logger.Info("App", "First launch — showing setup wizard");
-            var wizard = new SetupWindow();
-            wizard.ShowDialog();
-            File.WriteAllText(InstallMarkerPath, $"Installed: {DateTime.UtcNow:O}");
-            Logger.Info("App", "Installation marked complete");
-        }
-
         _mainWindow.Show();
-        Logger.Info("App", "Main window displayed");
 
-        var prefs = Prefs.Load();
-        if (prefs.AutoConnect)
-        {
-            Logger.Info("App", "Auto-connect enabled — starting connection");
-            _mainWindow.Dispatcher.Invoke(() => _tray.Service.Connect());
-        }
+        Logger.Info("App", "Ready");
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
-        Logger.Info("App", "Mira VPN shutting down");
+        Logger.Info("App", "Shutting down");
         _tray?.Dispose();
         base.OnExit(e);
     }
