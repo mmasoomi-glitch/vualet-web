@@ -157,6 +157,18 @@ export default function ShapeYourMira() {
     setDone(true);
   }
 
+  function skip() {
+    // Never block onboarding on this form: hand over an empty setup so the
+    // bot greets first and asks who she should be, capturing the reply as
+    // the persona in chat.
+    try {
+      localStorage.setItem("mira_setup", JSON.stringify({}));
+    } catch {
+      /* ignore */
+    }
+    window.location.href = "/mira/plans";
+  }
+
   /* ---------- confirmation screen ---------- */
   if (done) {
     return (
@@ -357,6 +369,13 @@ export default function ShapeYourMira() {
               ← Cancel
             </Link>
           )}
+          <button
+            type="button"
+            onClick={skip}
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13.5, color: "var(--mira-slate)", textDecoration: "underline", textUnderlineOffset: 3 }}
+          >
+            Skip — let her ask me
+          </button>
           {step < STEPS.length - 1 ? (
             <button type="button" onClick={next} disabled={!canAdvance} className="btn-mira" style={{ opacity: canAdvance ? 1 : 0.5, cursor: canAdvance ? "pointer" : "not-allowed" }}>
               Continue →

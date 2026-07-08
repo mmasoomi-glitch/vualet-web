@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dodo, productIdFor, isPaidPlan, appUrl, paymentsConfigured } from "@/lib/dodo";
 import { putConnect, type ConnectRecord } from "@/lib/store";
+import { mintConnectToken } from "@/lib/connect-token";
 
 // Creates a Dodo hosted-checkout session for a Mira plan and returns its url.
 // Body: { plan: "companion" | "assistant" | "studio", email?, persona? }
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
   }
 
   // Token that ties this purchase to the Telegram bot after payment.
-  const token = crypto.randomUUID();
+  const token = mintConnectToken();
   const record: ConnectRecord = {
     token,
     plan,

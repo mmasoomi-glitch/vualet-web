@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Logo } from "@/components/logo";
-import { clearAdminSession } from "@/lib/admin-auth";
 
 const NAV = [
   { href: "/admin", label: "Overview", icon: "M3 3h7v7H3V3zm0 11h7v7H3v-7zm11 0h7v7h-7v-7zm0-11h7v7h-7V3z" },
@@ -82,9 +81,9 @@ export function Sidebar() {
               <p className="text-[10px] text-[var(--muted)]">Internal team</p>
             </div>
             <button
-              onClick={() => {
-                clearAdminSession();
-                window.location.href = "/admin";
+              onClick={async () => {
+                await fetch("/api/admin/login", { method: "DELETE" }).catch(() => {});
+                window.location.href = "/admin-login";
               }}
               className="w-full text-left rounded-lg px-3 py-2 text-sm text-[var(--muted)] hover:text-[var(--color-vualet-danger)] hover:bg-[var(--background)] transition-colors"
             >

@@ -7,14 +7,38 @@ import { Stepper } from "../_components/Stepper";
 
 export default function MiraPlans() {
   const [selected, setSelected] = useState<string>("assistant");
+  const [busy, setBusy] = useState(false);
 
-  function startCheckout() {
-    // Trial needs no card → straight to welcome. Paid → the payment step.
-    if (selected === "trial") {
-      window.location.href = "/mira/welcome";
-    } else {
+  async function startCheckout() {
+    // Trial needs no card → mint a connect token and go straight to welcome.
+    // Paid → the payment step.
+    if (selected !== "trial") {
       window.location.href = `/mira/checkout?plan=${selected}`;
+      return;
     }
+    setBusy(true);
+    let setup: Record<string, unknown> = {};
+    try {
+      setup = JSON.parse(localStorage.getItem("mira_setup") || "{}");
+    } catch {
+      // no setup saved — she'll ask who to be in chat
+    }
+    try {
+      const res = await fetch("/api/begin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: "trial", setup }),
+      });
+      const data = await res.json();
+      if (res.ok && data?.token) {
+        window.location.href = `/mira/welcome?token=${encodeURIComponent(data.token)}`;
+        return;
+      }
+    } catch {
+      // fall through to tokenless welcome rather than dead-ending the funnel
+    }
+    setBusy(false);
+    window.location.href = "/mira/welcome";
   }
 
   return (
@@ -111,11 +135,14 @@ export default function MiraPlans() {
           type="button"
           className="btn-mira"
           onClick={startCheckout}
-          style={{ minWidth: 240, cursor: "pointer" }}
+          disabled={busy}
+          style={{ minWidth: 240, cursor: busy ? "wait" : "pointer", opacity: busy ? 0.7 : 1 }}
         >
-          {selected === "trial"
-            ? "Start free →"
-            : `Continue with ${TIERS.find((t) => t.id === selected)?.name} →`}
+          {busy
+            ? "Waking her up…"
+            : selected === "trial"
+              ? "Start free →"
+              : `Continue with ${TIERS.find((t) => t.id === selected)?.name} →`}
         </button>
         <p style={{ fontSize: 13, color: "var(--mira-slate)", margin: "14px 0 0" }}>
           No card needed to start the trial · Secure checkout by Dodo · Cancel anytime

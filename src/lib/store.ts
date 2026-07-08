@@ -12,6 +12,12 @@ const URL = process.env.UPSTASH_REDIS_REST_URL;
 const TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const memory = new Map<string, string>();
 
+if (!URL && process.env.NODE_ENV === "production") {
+  console.warn(
+    "[mira] UPSTASH_REDIS_REST_URL/_TOKEN unset in production — connect records live in-memory and will NOT survive redeploys or scale-out. Configure Vercel KV/Upstash.",
+  );
+}
+
 export function storeConfigured(): boolean {
   return Boolean(URL && TOKEN);
 }
@@ -53,7 +59,7 @@ export type ConnectRecord = {
   token: string;
   plan: string;
   email?: string;
-  status: "pending" | "active" | "cancelled";
+  status: "pending" | "bound" | "active" | "cancelled";
   customerId?: string;
   subscriptionId?: string;
   telegramId?: number;
@@ -74,6 +80,29 @@ export async function putConnect(rec: ConnectRecord): Promise<void> {
 
 export async function getConnect(token: string): Promise<ConnectRecord | null> {
   return kvGet<ConnectRecord>(connectKey(token));
+}
+
+/**
+ * Single-use claim binding: the first Telegram id to claim a token owns it.
+ * The same id may re-read (idempotent rebind); any other id is rejected.
+ * Not atomic across concurrent claims on Upstash REST — acceptable for the
+ * onboarding flow where one human taps one deep link.
+ */
+export async function claimConnect(
+  token: string,
+  telegramId: number,
+): Promise<{ ok: true; rec: ConnectRecord } | { ok: false; reason: "not_found" | "foreign" }> {
+  const rec = await getConnect(token);
+  if (!rec) return { ok: false, reason: "not_found" };
+  if (rec.telegramId != null && rec.telegramId !== telegramId) {
+    return { ok: false, reason: "foreign" };
+  }
+  if (rec.telegramId == null) {
+    rec.telegramId = telegramId;
+    if (rec.status === "pending") rec.status = "bound";
+    await putConnect(rec);
+  }
+  return { ok: true, rec };
 }
 
 export async function putSubscription(customerId: string, rec: ConnectRecord): Promise<void> {

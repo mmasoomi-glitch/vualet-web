@@ -1,17 +1,69 @@
 import { NextResponse } from "next/server";
-import { getConnect } from "@/lib/store";
+import { getConnect, claimConnect } from "@/lib/store";
+import { verifyConnectToken, safeEqual } from "@/lib/connect-token";
 
-// Resolves a post-checkout connect token into the info the welcome page needs:
-// plan, status, the customer id (for the billing portal), and the Telegram
-// deep-link that binds this purchase to the user's chat with Mira.
+// Two callers, two shapes:
+//   GET  ?token=…            — the welcome page. Public, but the token must carry a
+//                              valid HMAC. Returns display info only — NEVER the persona.
+//   POST {token, telegramId} — the Telegram bot, authenticated with the shared
+//                              x-mira-bind-secret header. Performs the single-use claim
+//                              (first telegramId owns the token) and returns the persona.
+
+function botUrlFor(token: string): string {
+  const bot = process.env.NEXT_PUBLIC_TELEGRAM_BOT || "ballerina_10840_bot";
+  return `https://t.me/${bot}?start=${token}`;
+}
+
 export async function GET(req: Request) {
   const token = new URL(req.url).searchParams.get("token");
   if (!token) return NextResponse.json({ error: "missing token" }, { status: 400 });
+  if (!verifyConnectToken(token)) return NextResponse.json({ error: "invalid token" }, { status: 403 });
 
   const rec = await getConnect(token);
   if (!rec) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
-  const bot = process.env.NEXT_PUBLIC_TELEGRAM_BOT || "ballerina_10840_bot";
+  return NextResponse.json({
+    plan: rec.plan,
+    status: rec.status,
+    customerId: rec.customerId ?? null,
+    assistantName: rec.assistantName ?? null,
+    botUrl: botUrlFor(rec.token),
+  });
+}
+
+export async function POST(req: Request) {
+  const secret = process.env.MIRA_BIND_SECRET;
+  const presented = req.headers.get("x-mira-bind-secret") ?? "";
+  if (secret) {
+    if (!safeEqual(presented, secret)) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+  } else if (process.env.NODE_ENV === "production") {
+    console.warn("[mira] MIRA_BIND_SECRET unset in production — refusing bot bind calls.");
+    return NextResponse.json({ error: "not_configured" }, { status: 503 });
+  }
+
+  let body: { token?: string; telegramId?: number };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid body" }, { status: 400 });
+  }
+  const { token, telegramId } = body;
+  if (!token || typeof telegramId !== "number" || !Number.isFinite(telegramId)) {
+    return NextResponse.json({ error: "token and numeric telegramId required" }, { status: 400 });
+  }
+  if (!verifyConnectToken(token)) return NextResponse.json({ error: "invalid token" }, { status: 403 });
+
+  const claim = await claimConnect(token, telegramId);
+  if (!claim.ok) {
+    return NextResponse.json(
+      { error: claim.reason },
+      { status: claim.reason === "foreign" ? 409 : 404 },
+    );
+  }
+
+  const rec = claim.rec;
   return NextResponse.json({
     plan: rec.plan,
     status: rec.status,
@@ -19,6 +71,6 @@ export async function GET(req: Request) {
     persona: rec.persona ?? null,
     role: rec.role ?? null,
     assistantName: rec.assistantName ?? null,
-    botUrl: `https://t.me/${bot}?start=${rec.token}`,
+    botUrl: botUrlFor(rec.token),
   });
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { putConnect } from "@/lib/store";
+import { mintConnectToken } from "@/lib/connect-token";
 
 // Mock (no-payment) onboarding path. Creates a connect token that carries the
 // persona chosen while shaping Mira, and returns the Telegram deep-link that
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
   }
 
   const { plan, email, setup } = body;
-  const token = crypto.randomUUID();
+  const token = mintConnectToken();
 
   await putConnect({
     token,
