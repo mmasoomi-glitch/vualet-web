@@ -1,42 +1,49 @@
 @import "tailwindcss";
 
+/* Unified under the Mira brand kit (owner request 2026-07-16): the whole site now
+   wears Mira's identity — rose/lavender/indigo, cream canvas, plum ink — matching
+   the .mira-root sub-brand theme so landing/signup and the Mira product pages read
+   as one brand. The token NAMES stay (--color-vualet-*) so no page markup changes;
+   only the VALUES are remapped to Mira. */
 @theme {
-  --color-vualet-indigo: #5B5BF6;
-  --color-vualet-indigo-hover: #4848e3;
-  --color-vualet-indigo-soft: #8b8bf8;
-  --color-vualet-ink: #0F1117;
-  --color-vualet-ink-2: #161823;
-  --color-vualet-lime: #C7F25A;
-  --color-vualet-text-dark: #E6E8EE;
-  --color-vualet-text-light: #0B0D12;
-  --color-vualet-muted-dark: #9CA3AF;
-  --color-vualet-muted-light: #4B5563;
-  --color-vualet-border-dark: #20232E;
-  --color-vualet-border-light: #E5E7EB;
-  --color-vualet-success: #22C55E;
+  --color-vualet-indigo: #6366F1;         /* Mira aether */
+  --color-vualet-indigo-hover: #5254E8;
+  --color-vualet-indigo-soft: #C7B8F0;    /* Mira lavender */
+  --color-vualet-ink: #2A1F2D;            /* Mira ink (plum) */
+  --color-vualet-ink-2: #3A2F3D;
+  --color-vualet-lime: #F8A5A0;           /* Mira rose replaces the acid lime accent */
+  --color-vualet-text-dark: #FFF8F0;      /* cream text on dark */
+  --color-vualet-text-light: #2A1F2D;
+  --color-vualet-muted-dark: #B8AEBC;
+  --color-vualet-muted-light: #8C8190;    /* Mira slate */
+  --color-vualet-border-dark: #3A2F3D;
+  --color-vualet-border-light: #E8E0EA;   /* Mira fog */
+  --color-vualet-success: #6BCE9B;        /* Mira success */
   --color-vualet-danger: #EF4444;
 
-  --font-display: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-mira-display, "Fraunces", Georgia, serif);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Mira is a warm light brand and its product pages are always cream — so the whole
+   site stays cream in both light and dark OS settings, for one consistent identity. */
 :root {
-  --background: #FFFFFF;
-  --foreground: #0B0D12;
-  --surface: #FFFFFF;
-  --surface-2: #F7F8FA;
-  --muted: #4B5563;
-  --border: #E5E7EB;
+  --background: #FFF8F0;                   /* Mira cream */
+  --foreground: #2A1F2D;                   /* Mira ink */
+  --surface: #FEFAF6;                      /* Mira canvas */
+  --surface-2: #F2EAF0;                    /* Mira frost */
+  --muted: #8C8190;                        /* Mira slate */
+  --border: #E8E0EA;                       /* Mira fog */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0F1117;
-    --foreground: #E6E8EE;
-    --surface: #0F1117;
-    --surface-2: #161823;
-    --muted: #9CA3AF;
-    --border: #20232E;
+    --background: #FFF8F0;
+    --foreground: #2A1F2D;
+    --surface: #FEFAF6;
+    --surface-2: #F2EAF0;
+    --muted: #8C8190;
+    --border: #E8E0EA;
   }
 }
 
