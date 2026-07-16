@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Inter, IBM_Plex_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 import { SiteChrome } from "@/components/site-chrome";
@@ -49,16 +50,19 @@ export const metadata: Metadata = {
   icons: { icon: "/favicon.svg" },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Read the request host so SiteChrome can suppress the Vualet corporate chrome on the
+  // mira.* sub-brand host (the Mira page is served at "/" via the reverse proxy).
+  const host = (await headers()).get("host") ?? "";
   return (
     <html
       lang="en"
       className={`${inter.variable} ${plexSans.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)]">
-        <SiteChrome>{children}</SiteChrome>
+        <SiteChrome host={host}>{children}</SiteChrome>
       </body>
     </html>
   );
