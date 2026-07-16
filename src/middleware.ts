@@ -46,9 +46,15 @@ export async function middleware(req: NextRequest) {
   }
 
   // mira.vualet.com → serve the Mira page at the subdomain root.
+  // Use nextUrl.clone() (same-origin) rather than new URL("/mira", req.url):
+  // behind a reverse proxy, req.url carries the internal host/proto, so building
+  // an absolute URL turns this into a cross-origin rewrite that Next tries to
+  // PROXY (https → the internal http port) and 500s. Cloning keeps it internal.
   const host = (req.headers.get("host") || "").toLowerCase();
   if (host.startsWith("mira.") && pathname === "/") {
-    return NextResponse.rewrite(new URL("/mira", req.url));
+    const url = req.nextUrl.clone();
+    url.pathname = "/mira";
+    return NextResponse.rewrite(url);
   }
   return NextResponse.next();
 }
