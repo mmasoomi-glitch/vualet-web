@@ -7,6 +7,19 @@ import { mintConnectToken } from "@/lib/connect-token";
 // binds this setup to the user's chat. Does NOT touch Dodo and works with zero
 // env (store falls back to in-memory).
 // Body: { plan?, email?, setup?: { assistantName?, role?, vibe?, persona? } }
+//
+// Length caps below are input-validation guards (OWASP ASVS 5.1/5.2), not
+// business rules: they exist so a malicious/broken client can't shove
+// megabytes of text into the store. `persona` is free-form user prose so it
+// gets a generous cap; the short fields are effectively labels/enum-ish
+// values and get a tight cap.
+const CAP_SHORT = 200; // plan, email, setup.assistantName/role/vibe
+const CAP_PERSONA = 2000; // setup.persona
+
+function tooLong(s: string | undefined, max: number): boolean {
+  return typeof s === "string" && s.length > max;
+}
+
 export async function POST(req: Request) {
   let body: {
     plan?: string;
@@ -20,6 +33,18 @@ export async function POST(req: Request) {
   }
 
   const { plan, email, setup } = body;
+
+  if (
+    tooLong(plan, CAP_SHORT) ||
+    tooLong(email, CAP_SHORT) ||
+    tooLong(setup?.assistantName, CAP_SHORT) ||
+    tooLong(setup?.role, CAP_SHORT) ||
+    tooLong(setup?.vibe, CAP_SHORT) ||
+    tooLong(setup?.persona, CAP_PERSONA)
+  ) {
+    return NextResponse.json({ error: "field too long" }, { status: 400 });
+  }
+
   const token = mintConnectToken();
 
   await putConnect({

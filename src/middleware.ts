@@ -24,10 +24,27 @@ async function verifyAdminCookie(value: string | undefined): Promise<boolean> {
     let b64 = "";
     for (const byte of mac) b64 += String.fromCharCode(byte);
     const expect = btoa(b64).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    return expect === value.slice(dot + 1);
+    return timingSafeEqual(expect, value.slice(dot + 1));
   } catch {
     return false;
   }
+}
+
+// Constant-time string compare (base64url signatures). Avoids the short-circuit
+// `===` comparison, which leaks timing information proportional to the number
+// of matching leading characters and lets an attacker brute-force the
+// signature byte-by-byte. Decodes both sides to equal-length byte arrays
+// (return false immediately, without inspecting content, on length mismatch)
+// and XOR-accumulates every byte before returning a single boolean.
+function timingSafeEqual(a: string, b: string): boolean {
+  const aBytes = new TextEncoder().encode(a);
+  const bBytes = new TextEncoder().encode(b);
+  if (aBytes.length !== bBytes.length) return false;
+  let diff = 0;
+  for (let i = 0; i < aBytes.length; i++) {
+    diff |= aBytes[i] ^ bBytes[i];
+  }
+  return diff === 0;
 }
 
 export async function middleware(req: NextRequest) {
