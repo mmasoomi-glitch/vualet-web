@@ -9,8 +9,11 @@ import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 function secret(): string {
   const s = process.env.MIRA_TOKEN_SECRET;
   if (s) return s;
+  // Hard-fail in production (parity with MIRA_BIND_SECRET, which 503s when unset):
+  // a missing secret here silently makes every connect token forgeable with a
+  // string that lives in the public repo. Refuse rather than degrade.
   if (process.env.NODE_ENV === "production") {
-    console.warn("[mira] MIRA_TOKEN_SECRET is unset in production — connect tokens are forgeable. Set it now.");
+    throw new Error("MIRA_TOKEN_SECRET is unset in production — refusing to mint/verify forgeable connect tokens.");
   }
   return "mira-dev-token-secret-not-for-production";
 }

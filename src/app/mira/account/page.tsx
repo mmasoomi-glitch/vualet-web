@@ -143,8 +143,13 @@ export default function MiraAccount() {
               className="btn-mira-soft"
               style={{ padding: "10px 18px", fontSize: 14, background: "transparent", color: "var(--mira-slate)" }}
               onClick={() => {
-                // TODO(backend): wire to real sign-out.
-                alert("Stub: sign out hooks into auth here.");
+                // Clear any local session state and return to the entry page.
+                // (Server-side session invalidation lands with real auth.)
+                try {
+                  localStorage.removeItem("mira_setup");
+                  localStorage.removeItem("mira_token");
+                } catch {}
+                window.location.href = "/mira";
               }}
             >
               Sign out
