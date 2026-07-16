@@ -37,6 +37,8 @@ const columns = [
       { name: "Security", href: "/security" },
       { name: "Privacy", href: "/legal/privacy" },
       { name: "Terms", href: "/legal/terms" },
+      { name: "Refund Policy", href: "/legal/refund" },
+      { name: "AI Disclosure", href: "/legal/ai-disclosure" },
     ],
   },
 ];
