@@ -24,14 +24,6 @@ export function LegalPage({
 }) {
   return (
     <article>
-      <div className={styles.banner} role="note">
-        <span aria-hidden="true">⚠️</span>
-        <span>
-          <strong>Note:</strong> This is a template for launch; have qualified
-          counsel review before relying on it.
-        </span>
-      </div>
-
       <nav className={styles.crumbs} aria-label="Legal pages">
         {LEGAL_LINKS.map((l) => (
           <Link

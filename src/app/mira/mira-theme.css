@@ -15,7 +15,12 @@
   --mira-fog: #E8E0EA;
   --mira-frost: #F2EAF0;
   --mira-success: #6BCE9B;
-  --mira-grad-presence: linear-gradient(135deg, #F8A5A0 0%, #C7B8F0 55%, #6366F1 100%);
+  /* Darkened from the original #F8A5A0/#C7B8F0/#6366F1 stops (white-on-gradient text
+     measured ~1.8:1-1.9:1 at the lightest points — WCAG 1.4.3 fail). These deeper
+     tones keep the same rose→lavender→aether hue path but hold >=4.5:1 for white
+     text at every point along the gradient (worst stop ~5.2:1, verified via relative
+     luminance; see a11y fix report). */
+  --mira-grad-presence: linear-gradient(135deg, #B54A45 0%, #6B5CA5 55%, #3538A8 100%);
   --mira-grad-aura: radial-gradient(circle at center, #FFEDEB 0%, #F8A5A0 40%, #C7B8F0 100%);
   --mira-radius-lg: 24px;
   --mira-radius-xl: 32px;
@@ -41,16 +46,62 @@
 .btn-mira:hover { box-shadow: var(--mira-shadow-aura); transform: translateY(-1px); }
 .btn-mira-soft {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: var(--mira-petal); color: var(--mira-rose-deep); font-weight: 500;
+  /* color was --mira-rose-deep (#E68A85) on --mira-petal (#FFDCE0) = ~2:1 (WCAG 1.4.3
+     fail). --mira-ink on --mira-petal measures ~12.4:1. */
+  background: var(--mira-petal); color: var(--mira-ink); font-weight: 500;
   padding: 13px 26px; border-radius: var(--mira-radius-full); border: none; cursor: pointer; transition: background .3s;
 }
 .btn-mira-soft:hover { background: var(--mira-rose-light); }
 
+/* WCAG 2.4.7 / 2.4.13 — branded focus indicator for keyboard users. */
+.mira-root .mira-navlink:focus-visible,
+.btn-mira:focus-visible,
+.btn-mira-soft:focus-visible {
+  outline: 2px solid var(--aether);
+  outline-offset: 2px;
+}
+
 @keyframes mira-breathe { 0%,100% { opacity:.5; transform: scale(1); } 50% { opacity:.8; transform: scale(1.05); } }
 .mira-aura { animation: mira-breathe 2400ms cubic-bezier(.4,0,.2,1) infinite; transform-origin: center; }
 
+/* WCAG 2.2.2 — the aura is purely decorative; stop the infinite animation for users
+   who asked the OS for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .mira-aura { animation: none; }
+}
+
 .mira-root .mira-navlink { transition: color .2s; }
 .mira-root .mira-navlink:hover { color: var(--mira-rose-deep); }
+
+/* ---------- MiraNav (header) — 320px reflow ----------
+   Static layout values live here (not inline) so the <=420px overrides below can
+   win without !important. At narrow widths the row (logo + Plans + Account +
+   CTA) is wider than a 320px viewport when laid out on one line; the Account
+   link hides and the CTA shrinks so what remains fits without any horizontal
+   overflow (verified via headless screenshot at 320px). */
+.mira-navbar-row {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+.mira-navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+.mira-nav-cta { padding: 9px 18px; font-size: 14px; }
+@media (max-width: 420px) {
+  .mira-navbar-row { padding: 12px 14px; gap: 10px; }
+  .mira-navbar-links { gap: 10px; }
+  .mira-nav-account { display: none; }
+  .mira-nav-cta { padding: 8px 14px; font-size: 12.5px; }
+}
 
 /* ---------- Responsive grid utilities ---------- */
 .mira-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
@@ -59,6 +110,21 @@
 @media (max-width: 860px) { .mira-3col { grid-template-columns: 1fr; } .mira-4col { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 720px) { .mira-2col { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .mira-4col { grid-template-columns: 1fr; } .mira-step-label { display: none; } }
+
+/* ---------- 320px reflow safety net (WCAG 1.4.10) ----------
+   Grid/flex items default to min-width:auto, which lets their intrinsic content
+   width push the whole row (and, via width:auto block ancestors like the hero
+   wrapper, the entire page) wider than a 320px viewport instead of wrapping.
+   min-width:0 lets them shrink to the container; max-width:100% on the theme's
+   containers/media stops anything from overflowing to the right. */
+.mira-root, .mira-2col, .mira-3col, .mira-4col,
+.mira-2col > *, .mira-3col > *, .mira-4col > * {
+  min-width: 0;
+}
+.mira-root img { max-width: 100%; height: auto; }
+@media (max-width: 380px) {
+  .mira-hero-pad, .mira-plans-pad { padding-left: 16px; padding-right: 16px; }
+}
 
 /* ---------- Mira assistant bot (floating CS) ---------- */
 .mira-bot-fab {

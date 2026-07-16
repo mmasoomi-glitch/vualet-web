@@ -42,7 +42,7 @@ export default function MiraPlans() {
   }
 
   return (
-    <main style={{ maxWidth: 1080, margin: "0 auto", padding: "48px 24px 80px" }}>
+    <main className="mira-plans-pad" style={{ maxWidth: 1080, width: "100%", minWidth: 0, boxSizing: "border-box", margin: "0 auto", padding: "48px 24px 80px" }}>
       <Stepper current={2} />
       <header style={{ textAlign: "center", marginBottom: 36 }}>
         <h1 className="display" style={{ fontSize: "clamp(30px,5vw,48px)", margin: "0 0 8px" }}>
@@ -56,8 +56,9 @@ export default function MiraPlans() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+          gridTemplateColumns: "repeat(auto-fit,minmax(min(220px,100%),1fr))",
           gap: 16,
+          minWidth: 0,
         }}
       >
         {TIERS.map((t) => {

@@ -13,29 +13,24 @@ export default function MiraNav({ cta = true }: { cta?: boolean }) {
         borderBottom: "1px solid var(--mira-fog)",
       }}
     >
-      <nav
-        style={{
-          maxWidth: 1080,
-          margin: "0 auto",
-          padding: "14px 24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 16,
-        }}
-      >
-        <Link href="/mira" aria-label="Mira home" style={{ display: "inline-flex", alignItems: "center" }}>
-          <img src="/mira/mira-wordmark-color.svg" alt="Mira" style={{ height: 22 }} />
+      <nav className="mira-navbar-row">
+        <Link href="/mira" aria-label="Mira home" style={{ display: "inline-flex", alignItems: "center", minWidth: 0, flexShrink: 0 }}>
+          <img src="/mira/mira-wordmark-color.svg" alt="Mira" style={{ height: 22, maxWidth: "100%" }} />
         </Link>
-        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+        {/* At <=420px the Account link hides and the CTA shrinks (mira-theme.css) —
+            flex-wrap alone doesn't reliably collapse this row at 320px because a
+            wrapping flex container's intrinsic width is measured per-item, not as
+            a sum, so the browser never judged this row "too wide" to wrap; explicit
+            prioritization is the reliable fix. */}
+        <div className="mira-navbar-links">
           <Link href="/mira/plans" className="mira-navlink" style={{ fontSize: 14, color: "var(--mira-graphite)", textDecoration: "none" }}>
             Plans
           </Link>
-          <Link href="/mira/account" className="mira-navlink" style={{ fontSize: 14, color: "var(--mira-graphite)", textDecoration: "none" }}>
+          <Link href="/mira/account" className="mira-navlink mira-nav-account" style={{ fontSize: 14, color: "var(--mira-graphite)", textDecoration: "none" }}>
             Account
           </Link>
           {cta && (
-            <Link className="btn-mira" href="/mira/start" style={{ padding: "9px 18px", fontSize: 14 }}>
+            <Link className="btn-mira mira-nav-cta" href="/mira/start">
               Shape your Mira
             </Link>
           )}

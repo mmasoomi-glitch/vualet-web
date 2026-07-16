@@ -11,20 +11,6 @@
   margin: 0 auto;
 }
 
-.banner {
-  display: flex;
-  gap: 0.5rem;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--color-vualet-lime);
-  border-radius: 0.75rem;
-  padding: 1rem 1.25rem;
-  font-size: 0.8125rem;
-  line-height: 1.6;
-  color: var(--foreground);
-  margin-bottom: 2rem;
-}
-
 .crumbs {
   display: flex;
   flex-wrap: wrap;
@@ -35,7 +21,8 @@
 .crumbLink {
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--muted);
+  /* was var(--muted) (#8C8190 on cream ~3.5:1, WCAG 1.4.3 fail) */
+  color: #524A55;
   padding: 0.35rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 9999px;
@@ -65,7 +52,8 @@
 .meta {
   margin-top: 0.5rem;
   font-size: 0.8125rem;
-  color: var(--muted);
+  /* was var(--muted) (#8C8190 on cream ~3.5:1, WCAG 1.4.3 fail); #524A55 (mira-graphite) is ~8:1 */
+  color: #524A55;
 }
 
 .intro {
@@ -171,7 +159,8 @@
   padding-top: 1.5rem;
   border-top: 1px solid var(--border);
   font-size: 0.8125rem;
-  color: var(--muted);
+  /* was var(--muted) (#8C8190 on cream ~3.5:1, WCAG 1.4.3 fail) */
+  color: #524A55;
   line-height: 1.6;
 }
 

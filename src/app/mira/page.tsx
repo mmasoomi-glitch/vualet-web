@@ -30,7 +30,7 @@ export default function MiraPage() {
       {/* Hero */}
       <section style={{ position: "relative", overflow: "hidden", textAlign: "center" }}>
         <div className="mira-aura" aria-hidden style={{ position: "absolute", inset: "-8% 0 auto 0", height: 520, margin: "auto", zIndex: 0, background: "var(--mira-grad-aura)", filter: "blur(80px)", opacity: 0.35 }} />
-        <div style={{ position: "relative", zIndex: 1, maxWidth: 1080, margin: "0 auto", padding: "84px 24px 48px" }}>
+        <div className="mira-hero-pad" style={{ position: "relative", zIndex: 1, maxWidth: 1080, width: "100%", minWidth: 0, boxSizing: "border-box", margin: "0 auto", padding: "84px 24px 48px" }}>
           <img src="/mira/mira-wordmark-color.svg" alt="Mira" style={{ height: 34, marginBottom: 26 }} />
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--mira-graphite)", background: "var(--mira-frost)", borderRadius: 999, padding: "7px 14px" }}>
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--mira-rose)" }} /> No app · No new number · Just a message
@@ -112,7 +112,8 @@ export default function MiraPage() {
         </div>
       </section>
 
-      <p style={{ textAlign: "center", color: "var(--mira-slate)", fontSize: 13, padding: "30px 0" }}>Mira — MEE-rah · she sees · a Vualet product</p>
+      {/* was --mira-slate (#8C8190 on cream ~3.5:1, WCAG 1.4.3 fail) — --mira-graphite is ~8:1 */}
+      <p style={{ textAlign: "center", color: "var(--mira-graphite)", fontSize: 13, padding: "30px 0" }}>Mira — MEE-rah · she sees · a Vualet product</p>
     </div>
   );
 }
