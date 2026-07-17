@@ -38,7 +38,7 @@ import {
 export const runtime = "nodejs";
 
 const MSG_MAX_LEN = 800; // cap request size
-const MAX_TOKENS = 320; // cap response size
+const MAX_TOKENS = 520; // cap response size
 const RATE_LIMIT = 20; // requests
 const RATE_WINDOW_MS = 60_000; // per minute per IP
 
