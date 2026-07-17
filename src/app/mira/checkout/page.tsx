@@ -28,7 +28,7 @@ function Checkout() {
   const router = useRouter();
   const params = useSearchParams();
   const plan = tierById(params.get("plan")) ?? TIERS.find((t) => t.id === "assistant")!;
-  const isTrial = plan.id === "trial";
+  const isTrial = plan.id === "free";
   const [paying, setPaying] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +57,7 @@ function Checkout() {
         router.push(`/mira/welcome?token=${data.token}`);
         return;
       }
-      setError("Couldn't start your trial. Try again.");
+      setError("Couldn't start your free plan. Try again.");
     } catch {
       setError("Something went wrong. Try again.");
     }

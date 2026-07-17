@@ -353,7 +353,7 @@ export default function ShapeYourMira() {
               ))}
             </dl>
             <p style={{ fontSize: 13, color: "var(--mira-slate)", marginTop: 16 }}>
-              You&apos;ll start on the free trial. Pick a plan whenever she&apos;s earned it.
+              You&apos;ll start on the free plan. Upgrade whenever she&apos;s earned it.
             </p>
           </div>
         )}

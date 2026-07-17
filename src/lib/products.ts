@@ -23,9 +23,9 @@ export const PRODUCTS: Product[] = [
       "No app to install — she messages you on Telegram or WhatsApp",
       "Voice-first and multilingual, on the fly",
       "Remembers you across every conversation",
-      "Feed her a PDF, link, or notes and she becomes the expert",
+      "Load her knowledge base with your own text and she draws on it",
     ],
-    startingPriceUsd: 19,
+    startingPriceUsd: 14.99,
   },
   {
     slug: "whatsapp-agents",

@@ -8,18 +8,18 @@ const STEPS: [string, string][] = [
 
 const FEATURES: [string, string, string][] = [
   ["Companion", "Talks like a person", "Natural voice notes, in your language, who remembers your life across every chat."],
-  ["Everything", "Replaces your apps", "Store family albums, run your accounting, draft and send — all by simple voice."],
-  ["Builder", "Makes real things", "Describe what you need in plain words; Mira builds it and sends it back, ready to use."],
-  ["Tutor", "Teaches & tests", "Language practice, exam prep, interviews — feed her your notes and she becomes the expert."],
+  ["Memory", "Knows your world", "She remembers you across every conversation and holds the persona you shape for her."],
+  ["Builder", "Makes real things (beta)", "Describe a small web app or site in plain words; Mira builds it and sends it back as a zip or GitHub repo."],
+  ["Tutor", "Teaches & tests", "Language practice, exam prep, interviews — load her knowledge base with your own text and she draws on it."],
   ["Yours", "Private by design", "Your Mira is sealed off from everyone else's. Your conversations are yours alone."],
   ["Caring", "Looks out for you", "She notices the emotional context, not just the task — and keeps you safe, not just busy."],
 ];
 
 const TIERS: { name: string; price: string; sub: string; items: string[]; featured?: boolean }[] = [
-  { name: "Trial", price: "Free", sub: "1 hour · 20 msgs/day", items: ["Everything, to taste", "Voice + chat", "No card to start"] },
-  { name: "Companion", price: "$19", sub: "chat & voice", items: ["Unlimited-ish chat", "Everyday helpers", "Your language"] },
-  { name: "Assistant", price: "$59", sub: "+ small builds", items: ["Everything in Companion", "Builds little apps", "Priority replies"], featured: true },
-  { name: "Studio", price: "$199", sub: "+ full builds", items: ["Full app builds", "Your own number", "Top of the queue"] },
+  { name: "Free", price: "Free", sub: "1,000,000 tokens / month", items: ["Chat + voice notes", "Remembers you across chats", "Capped voice minutes"] },
+  { name: "Companion", price: "$14.99", sub: "15M tokens / month", items: ["Everything in Free", "A persona you shape", "Load her knowledge base with your own text"] },
+  { name: "Assistant", price: "$39", sub: "60M tokens / month", items: ["Everything in Companion", "Build pipeline (beta): small web apps & sites", "Priority replies"], featured: true },
+  { name: "Studio", price: "$79", sub: "200M tokens / month", items: ["Everything in Assistant", "Your own WhatsApp number", "Top of the queue"] },
 ];
 
 const card: React.CSSProperties = { background: "var(--mira-canvas)", border: "1px solid var(--mira-fog)", borderRadius: "var(--mira-radius-lg)", boxShadow: "var(--mira-shadow-sm)" };
@@ -40,13 +40,13 @@ export default function MiraPage() {
           </h1>
           <p style={{ fontSize: "clamp(17px,2.2vw,21px)", color: "var(--mira-graphite)", maxWidth: 600, margin: "22px auto 0", lineHeight: 1.6 }}>
             Mira lives in the chat you already use. She talks, remembers you, and quietly gets things
-            done — from a quick answer to storing your family albums to running your accounting, all by voice.
+            done — from a quick answer to a voice-note reply to building you a small web app, all by voice.
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", marginTop: 34, flexWrap: "wrap" }}>
-            <Link className="btn-mira" href="/mira/signup">Start free — 1 hour →</Link>
+            <Link className="btn-mira" href="/mira/signup">Start free →</Link>
             <Link className="btn-mira-soft" href="#how">See how she works</Link>
           </div>
-          <p style={{ marginTop: 16, fontSize: 13, color: "var(--mira-slate)" }}>Free 1-hour trial · No credit card · Cancel anytime</p>
+          <p style={{ marginTop: 16, fontSize: 13, color: "var(--mira-slate)" }}>Free every month · No credit card · Cancel anytime</p>
         </div>
       </section>
 
@@ -93,7 +93,7 @@ export default function MiraPage() {
       <section style={{ background: "var(--mira-canvas)", borderTop: "1px solid var(--mira-fog)" }}>
         <div style={{ maxWidth: 1080, margin: "0 auto", padding: "64px 24px" }}>
           <h2 className="display" style={{ fontSize: "clamp(28px,4vw,38px)", textAlign: "center", margin: "0 0 8px" }}>Simple plans</h2>
-          <p style={{ textAlign: "center", color: "var(--mira-graphite)", margin: "0 auto 36px" }}>Start free for an hour. Upgrade only when she&apos;s already earned it.</p>
+          <p style={{ textAlign: "center", color: "var(--mira-graphite)", margin: "0 auto 36px" }}>Free every month — a million tokens on the house. Upgrade only when she&apos;s already earned it.</p>
           <div className="mira-4col">
             {TIERS.map((t) => (
               <div key={t.name} style={{ background: "var(--mira-cream)", border: `1px solid ${t.featured ? "var(--mira-rose)" : "var(--mira-fog)"}`, borderRadius: "var(--mira-radius-lg)", padding: 24, boxShadow: t.featured ? "var(--mira-shadow-md)" : "none" }}>

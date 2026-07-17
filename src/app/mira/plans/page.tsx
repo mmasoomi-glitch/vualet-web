@@ -10,9 +10,9 @@ export default function MiraPlans() {
   const [busy, setBusy] = useState(false);
 
   async function startCheckout() {
-    // Trial needs no card → mint a connect token and go straight to welcome.
+    // Free needs no card → mint a connect token and go straight to welcome.
     // Paid → the payment step.
-    if (selected !== "trial") {
+    if (selected !== "free") {
       window.location.href = `/mira/checkout?plan=${selected}`;
       return;
     }
@@ -27,7 +27,7 @@ export default function MiraPlans() {
       const res = await fetch("/api/begin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "trial", setup }),
+        body: JSON.stringify({ plan: "free", setup }),
       });
       const data = await res.json();
       if (res.ok && data?.token) {
@@ -49,7 +49,7 @@ export default function MiraPlans() {
           Choose how far <span className="grad">she goes</span>
         </h1>
         <p style={{ color: "var(--mira-graphite)", fontSize: 16, maxWidth: 520, margin: "0 auto" }}>
-          Start free for an hour. Upgrade only when she&apos;s already earned it.
+          Free every month — a million tokens on the house. Upgrade only when she&apos;s already earned it.
         </p>
       </header>
 
@@ -141,12 +141,12 @@ export default function MiraPlans() {
         >
           {busy
             ? "Waking her up…"
-            : selected === "trial"
+            : selected === "free"
               ? "Start free →"
               : `Continue with ${TIERS.find((t) => t.id === selected)?.name} →`}
         </button>
         <p style={{ fontSize: 13, color: "var(--mira-slate)", margin: "14px 0 0" }}>
-          No card needed to start the trial · Secure checkout by Stripe · Cancel anytime
+          No card needed to start free · Secure checkout by Stripe · Cancel anytime
         </p>
         <p style={{ fontSize: 14, color: "var(--mira-graphite)", margin: "20px 0 0" }}>
           Haven&apos;t shaped her yet? <Link href="/mira/start" style={{ color: "var(--mira-rose-deep)" }}>Start here →</Link>
