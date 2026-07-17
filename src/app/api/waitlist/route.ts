@@ -28,16 +28,23 @@ async function appendWaitlist(entry: Entry): Promise<void> {
   await fs.appendFile(WAITLIST_FILE, JSON.stringify(entry) + "\n", "utf8");
 }
 
+// RELATIVE See-Other redirect. Behind the nginx proxy, req.url carries the
+// internal origin (http://localhost:3021), so building an absolute redirect from
+// it sends the browser to localhost. A relative Location is resolved by the
+// browser against the real request URL (mira.vualet.com) — correct every time.
+function seeOther(pathAndQuery: string) {
+  return new NextResponse(null, { status: 303, headers: { Location: pathAndQuery } });
+}
+
 export async function POST(req: Request) {
   const form = await req.formData().catch(() => null);
   const email = String(form?.get("email") ?? "").trim().toLowerCase();
   const source = String(form?.get("source") ?? form?.get("product") ?? "")
     .trim()
     .slice(0, SOURCE_MAX_LEN);
-  const origin = new URL(req.url).origin;
 
   if (!email || email.length > EMAIL_MAX_LEN || !EMAIL_RE.test(email)) {
-    return NextResponse.redirect(`${origin}/signup?error=1`, { status: 303 });
+    return seeOther("/signup?error=1");
   }
 
   const entry: Entry = { email, source, at: new Date().toISOString() };
@@ -59,9 +66,9 @@ export async function POST(req: Request) {
   }
 
   if (!persisted) {
-    return NextResponse.redirect(`${origin}/signup?error=2`, { status: 303 });
+    return seeOther("/signup?error=2");
   }
-  return NextResponse.redirect(`${origin}/signup?joined=1`, { status: 303 });
+  return seeOther("/signup?joined=1");
 }
 
 // Owner export: GET /api/waitlist?key=<WAITLIST_EXPORT_KEY> → { count, entries }.
