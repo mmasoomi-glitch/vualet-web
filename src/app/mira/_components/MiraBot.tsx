@@ -24,7 +24,7 @@ export default function MiraBot() {
     setInput("");
     setBusy(true);
     try {
-      const r = await fetch("/api/support", {
+      const r = await fetch("/api/veridian-demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text }),
