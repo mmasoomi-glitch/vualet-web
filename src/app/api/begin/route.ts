@@ -4,7 +4,7 @@ import { mintConnectToken } from "@/lib/connect-token";
 
 // Mock (no-payment) onboarding path. Creates a connect token that carries the
 // persona chosen while shaping Mira, and returns the Telegram deep-link that
-// binds this setup to the user's chat. Does NOT touch Dodo and works with zero
+// binds this setup to the user's chat. Does NOT touch Stripe and works with zero
 // env (store falls back to in-memory).
 // Body: { plan?, email?, setup?: { assistantName?, role?, vibe?, persona? } }
 //

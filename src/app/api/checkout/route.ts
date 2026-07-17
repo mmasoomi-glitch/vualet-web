@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { dodo, productIdFor, isPaidPlan, appUrl, paymentsConfigured } from "@/lib/dodo";
+import { stripe, priceIdFor, isPaidPlan, appUrl, paymentsConfigured } from "@/lib/stripe";
 import { putConnect, type ConnectRecord } from "@/lib/store";
 import { mintConnectToken } from "@/lib/connect-token";
 
-// Creates a Dodo hosted-checkout session for a Mira plan and returns its url.
+// Creates a Stripe Checkout session (subscription) for a Mira plan and returns its url.
 // Body: { plan: "companion" | "assistant" | "studio", email?, persona? }
 export async function POST(req: Request) {
   let body: { plan?: string; email?: string; persona?: string };
@@ -43,15 +43,21 @@ export async function POST(req: Request) {
   try {
     await putConnect(record);
 
-    const session = await dodo().checkoutSessions.create({
-      product_cart: [{ product_id: productIdFor(plan), quantity: 1 }],
-      customer: email ? { email, name: email.split("@")[0] } : undefined,
+    const session = await stripe().checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: priceIdFor(plan), quantity: 1 }],
+      customer_email: email || undefined,
       metadata: { connect_token: token, plan, persona: persona ?? "" },
-      return_url: `${appUrl()}/mira/welcome?token=${token}`,
+      // Carry the token onto the subscription too, so renewal webhooks can find it.
+      subscription_data: { metadata: { connect_token: token, plan } },
+      automatic_tax: { enabled: true },
+      billing_address_collection: "required",
+      success_url: `${appUrl()}/mira/welcome?token=${token}`,
+      cancel_url: `${appUrl()}/mira/plans`,
     });
 
-    const url = (session as { checkout_url?: string }).checkout_url;
-    if (!url) throw new Error("Dodo returned no checkout_url.");
+    const url = session.url;
+    if (!url) throw new Error("Stripe returned no checkout url.");
     return NextResponse.json({ url });
   } catch (err) {
     console.error("[checkout] failed:", err);

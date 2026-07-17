@@ -146,7 +146,7 @@ export default function MiraPlans() {
               : `Continue with ${TIERS.find((t) => t.id === selected)?.name} →`}
         </button>
         <p style={{ fontSize: 13, color: "var(--mira-slate)", margin: "14px 0 0" }}>
-          No card needed to start the trial · Secure checkout by Dodo · Cancel anytime
+          No card needed to start the trial · Secure checkout by Stripe · Cancel anytime
         </p>
         <p style={{ fontSize: 14, color: "var(--mira-graphite)", margin: "20px 0 0" }}>
           Haven&apos;t shaped her yet? <Link href="/mira/start" style={{ color: "var(--mira-rose-deep)" }}>Start here →</Link>

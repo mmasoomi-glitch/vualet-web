@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { dodo, appUrl, paymentsConfigured } from "@/lib/dodo";
+import { stripe, appUrl, paymentsConfigured } from "@/lib/stripe";
 
-// Returns a Dodo customer-portal link so a subscriber can manage/cancel billing.
-// Body: { customer_id }  (until auth lands, the welcome page passes this through).
+// Returns a Stripe billing-portal link so a subscriber can manage/cancel billing.
+// Body: { customer_id }  (until auth lands, the account page passes this through).
 export async function POST(req: Request) {
   if (!paymentsConfigured()) {
     return NextResponse.json({ error: "not_configured" }, { status: 503 });
@@ -19,12 +19,12 @@ export async function POST(req: Request) {
   }
 
   try {
-    const session = await dodo().customers.customerPortal.create(customerId, {
-      send_email: false,
-    } as Record<string, unknown>);
-    const url = (session as { link?: string; url?: string }).link ?? (session as { url?: string }).url;
-    if (!url) throw new Error("Dodo returned no portal link.");
-    return NextResponse.json({ url });
+    const session = await stripe().billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${appUrl()}/mira/account`,
+    });
+    if (!session.url) throw new Error("Stripe returned no portal url.");
+    return NextResponse.json({ url: session.url });
   } catch (err) {
     console.error("[portal] failed:", err);
     return NextResponse.json(

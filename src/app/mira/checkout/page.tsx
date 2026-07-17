@@ -63,8 +63,8 @@ function Checkout() {
     }
   }
 
-  async function payWithDodo() {
-    // Real charge: create a Dodo hosted-checkout session and hand off to it.
+  async function payWithStripe() {
+    // Real charge: create a Stripe hosted-checkout session and hand off to it.
     const setup = readSetup();
     try {
       const res = await fetch("/api/checkout", {
@@ -94,7 +94,7 @@ function Checkout() {
     if (isTrial) {
       await payTrial();
     } else {
-      await payWithDodo();
+      await payWithStripe();
     }
     setPaying(false);
   }
@@ -136,11 +136,11 @@ function Checkout() {
           </Link>
         </section>
 
-        {/* Email capture + handoff to Dodo's hosted checkout */}
+        {/* Email capture + handoff to Stripe's hosted checkout */}
         <form onSubmit={pay} style={card}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--mira-slate)", marginBottom: 14 }}>
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--mira-success)" }} />
-            {isTrial ? "No card needed to start" : "Secure checkout · powered by Dodo Payments"}
+            {isTrial ? "No card needed to start" : "Secure checkout · powered by Stripe"}
           </div>
           <label style={{ display: "block", fontSize: 13, color: "var(--mira-graphite)", marginBottom: 6 }}>Email</label>
           <input
@@ -173,7 +173,7 @@ function Checkout() {
           <p style={{ textAlign: "center", fontSize: 12, color: "var(--mira-slate)", margin: "12px 0 0" }}>
             {isTrial
               ? "No card required — cancel anytime."
-              : "You'll complete payment on Dodo's secure checkout page. Cancel anytime."}
+              : "You'll complete payment on Stripe's secure checkout page. Cancel anytime."}
           </p>
         </form>
       </div>
