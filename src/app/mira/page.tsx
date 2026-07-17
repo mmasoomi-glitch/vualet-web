@@ -37,11 +37,11 @@ export default function MiraPage() {
             </div>
 
             {/* SIGNATURE: recall ledger */}
-            <div className="mha-ledger-stage mha-rise mha-d3">
+            <div className="mha-recall-stage mha-rise mha-d3">
               <div className="mha-float-tag">RECALL &middot; <b>100% verbatim</b></div>
-              <div className="mha-ledger" role="img" aria-label="A recall ledger: three timestamped facts Mira recalled exactly, each marked verified, and one honest 'I don't know' entry marked no-guess.">
-                <div className="mha-ledger-top">
-                  <span className="mha-t">Recall ledger</span>
+              <div className="mha-recall" role="img" aria-label="Verified recall: three timestamped facts Mira recalled exactly, each marked verified, and one honest 'I don't know' entry marked no-guess.">
+                <div className="mha-recall-top">
+                  <span className="mha-t">Verified recall</span>
                   <span className="mha-live">Kept exact</span>
                 </div>
                 <div className="mha-entry">
