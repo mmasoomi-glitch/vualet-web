@@ -351,6 +351,119 @@
   .mira-root .mha-seal { transform: rotate(-13deg); }
 }
 
+/* ============================================================================
+   MSA — "Private line + stand-in" homepage section.
+   Sells (1) she's private: a WhatsApp "message yourself" self-chat rendered in
+   Mira's own cream/petal/rose (not WhatsApp green), and (2) she can stand in for
+   you. Pure CSS phone, no image. All scoped .mira-root .msa-* so it cannot leak
+   or collide with the .mha-* page. Reuses the --mira-* brand tokens only.
+   ========================================================================== */
+.mira-root .msa { padding: 84px 0; }
+.mira-root .msa-h2 { font-size: clamp(1.9rem, 3.6vw, 2.9rem); margin: 16px 0 0; line-height: 1.08; }
+.mira-root .msa-sub { color: var(--mira-graphite); font-size: 1.08rem; margin: 16px 0 0; max-width: 56ch; }
+
+/* ---- A. layout: phone + copy ---- */
+.mira-root .msa-privacy { display: grid; grid-template-columns: minmax(0, 320px) 1fr; gap: 54px; align-items: center; margin-top: 48px; }
+
+/* ---- the CSS phone (self-chat) ---- */
+.mira-root .msa-phone {
+  position: relative; width: 300px; max-width: 100%; margin: 0 auto;
+  padding: 12px; border-radius: 42px;
+  background: linear-gradient(158deg, #2A1F2D 0%, #3B2E3E 100%);
+  box-shadow: var(--mira-shadow-lg), inset 0 0 0 1px rgba(255,255,255,.06);
+}
+.mira-root .msa-notch {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  width: 116px; height: 20px; border-radius: 0 0 14px 14px; background: #2A1F2D; z-index: 3;
+}
+.mira-root .msa-screen { border-radius: 30px; overflow: hidden; background: var(--mira-frost); }
+
+/* header — self chat, rose gradient in place of WhatsApp green */
+.mira-root .msa-bar { display: flex; align-items: center; gap: 9px; padding: 26px 12px 12px; background: var(--mira-grad-presence); color: #fff; }
+.mira-root .msa-back { font-size: 1.35rem; line-height: 1; opacity: .9; }
+.mira-root .msa-av { flex: none; width: 33px; height: 33px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255,255,255,.24); font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-size: 1rem; }
+.mira-root .msa-id { min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.mira-root .msa-id .n { font-size: .86rem; font-weight: 600; }
+.mira-root .msa-self { font-weight: 400; opacity: .8; font-size: .74rem; }
+.mira-root .msa-id .s { font-size: .6rem; opacity: .82; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mira-root .msa-dots { margin-left: auto; opacity: .85; font-size: 1rem; }
+
+/* thread */
+.mira-root .msa-thread { padding: 14px 12px 18px; display: flex; flex-direction: column; gap: 8px; min-height: 232px;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(199,184,240,.14), transparent 42%),
+    radial-gradient(circle at 82% 78%, rgba(248,165,160,.14), transparent 42%),
+    var(--mira-frost); }
+.mira-root .msa-day { align-self: center; background: #fff; color: var(--mira-graphite); font-family: var(--mira-mono);
+  font-size: .58rem; letter-spacing: .06em; text-transform: uppercase; padding: 3px 11px; border-radius: var(--mira-radius-full); box-shadow: var(--mira-shadow-sm); }
+.mira-root .msa-locknote { align-self: center; text-align: center; max-width: 88%; background: rgba(255,248,240,.9);
+  color: var(--mira-graphite); font-size: .62rem; line-height: 1.4; padding: 5px 11px; border-radius: 10px; margin-bottom: 2px; }
+.mira-root .msa-lock { color: var(--mira-verify-deep); }
+
+/* every bubble sits on the sender side (right) */
+.mira-root .msa-b { align-self: flex-end; max-width: 84%; padding: 7px 10px 5px; font-size: .8rem; line-height: 1.45;
+  border-radius: 13px; border-bottom-right-radius: 4px; box-shadow: 0 1px 1px rgba(42,31,45,.07); }
+.mira-root .msa-b.you { background: var(--mira-petal); color: var(--mira-ink); }
+.mira-root .msa-b.mira { background: #fff; color: var(--mira-ink); border: 1px solid var(--mira-fog); border-left: 2.5px solid var(--mira-rose-deep); }
+.mira-root .msa-reply { align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; max-width: 88%; }
+.mira-root .msa-tag { font-family: var(--mira-mono); font-size: .55rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--mira-rose-ink); margin: 2px 3px 3px 0; }
+.mira-root .msa-meta { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 3px;
+  font-family: var(--mira-mono); font-size: .55rem; color: var(--mira-graphite); }
+.mira-root .msa-ticks { color: var(--mira-aether-ink); flex: none; }
+
+/* voice note */
+.mira-root .msa-voice { display: flex; align-items: center; gap: 8px; }
+.mira-root .msa-play { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--mira-grad-presence); color: #fff; font-size: .58rem; padding-left: 2px; }
+.mira-root .msa-wave { display: flex; align-items: center; gap: 2px; height: 18px; }
+.mira-root .msa-wave i { display: block; width: 2px; border-radius: 2px; background: var(--mira-rose-deep); }
+.mira-root .msa-vtime { font-family: var(--mira-mono); font-size: .58rem; color: var(--mira-graphite); }
+
+/* copy beside phone */
+.mira-root .msa-h3 { font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 400;
+  font-size: clamp(1.5rem, 2.6vw, 2rem); letter-spacing: -.01em; margin: 0; line-height: 1.12; }
+.mira-root .msa-copy .msa-list { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.mira-root .msa-copy .msa-list li { display: flex; align-items: flex-start; gap: 12px; color: var(--mira-graphite); font-size: 1.04rem; line-height: 1.45; }
+.mira-root .msa-ck { flex: none; margin-top: 2px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(18,120,78,.14); color: var(--mira-verify-deep); }
+
+/* ---- B. stand-in ---- */
+.mira-root .msa-standin { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 34px; align-items: stretch; }
+.mira-root .msa-cap { background: var(--mira-cream); border: 1px solid var(--mira-fog); border-radius: var(--mira-radius-lg); padding: 30px; }
+.mira-root .msa-num { font-family: var(--mira-mono); font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--mira-rose-ink); }
+.mira-root .msa-cap h3 { margin-top: 14px; }
+.mira-root .msa-cap p { color: var(--mira-graphite); font-size: 1.04rem; line-height: 1.5; margin: 14px 0 0; }
+.mira-root .msa-capfoot { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px;
+  font-family: var(--mira-mono); font-size: .68rem; letter-spacing: .03em; color: var(--mira-verify-deep); }
+.mira-root .msa-eg { position: relative; margin: 0; background: var(--mira-canvas); border: 1px dashed var(--mira-lavender);
+  border-radius: var(--mira-radius-lg); padding: 34px 30px 26px; }
+.mira-root .msa-eg-badge { position: absolute; top: -12px; left: 26px; background: #fff; color: var(--mira-aether-ink);
+  border: 1px solid var(--mira-lavender); border-radius: var(--mira-radius-full); padding: 3px 13px;
+  font-family: var(--mira-mono); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; box-shadow: var(--mira-shadow-sm); }
+.mira-root .msa-eg-body { color: var(--mira-ink); font-size: 1.08rem; line-height: 1.55; margin: 0; }
+.mira-root .msa-eg-note { color: var(--mira-graphite); font-family: var(--mira-mono); font-size: .66rem; letter-spacing: .04em; margin: 16px 0 0; }
+
+/* ---- C. honest stats ---- */
+.mira-root .msa-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 42px;
+  border-top: 1px solid var(--mira-fog); padding-top: 36px; }
+.mira-root .msa-stat { display: flex; flex-direction: column; gap: 8px; }
+.mira-root .msa-fig { font-weight: 400; font-size: clamp(1.7rem, 2.8vw, 2.35rem); line-height: 1; letter-spacing: -.01em; color: var(--mira-ink); }
+.mira-root .msa-lab { font-family: var(--mira-mono); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--mira-graphite); }
+
+/* ---- responsive ---- */
+@media (max-width: 820px) {
+  .mira-root .msa-privacy { grid-template-columns: 1fr; gap: 38px; }
+  .mira-root .msa-standin { grid-template-columns: 1fr; }
+  .mira-root .msa-stats { grid-template-columns: repeat(2, 1fr); gap: 26px 18px; }
+}
+@media (max-width: 460px) {
+  .mira-root .msa { padding: 64px 0; }
+  .mira-root .msa-stats { grid-template-columns: 1fr; }
+  .mira-root .msa-cap, .mira-root .msa-eg { padding-left: 22px; padding-right: 22px; }
+}
+
 /* ---- responsive ---- */
 @media (max-width: 900px) {
   .mira-root .mha-hero-grid { grid-template-columns: 1fr; gap: 44px; }

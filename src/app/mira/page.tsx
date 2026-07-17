@@ -1,4 +1,5 @@
 import Link from "next/link";
+import WhatsAppStandin from "./_components/WhatsAppStandin";
 
 /* Design A — "Recall Ledger". Ported faithfully from the approved mock.
    Styling lives in mira-theme.css (scoped .mira-root .mha-*); the layout already
@@ -129,6 +130,9 @@ export default function MiraPage() {
             </div>
           </div>
         </section>
+
+        {/* PRIVATE LINE + STAND-IN */}
+        <WhatsAppStandin />
 
         {/* FULL-WIDTH BRAND BAND */}
         <section className="mha-band" aria-hidden>
