@@ -57,6 +57,74 @@ export default function VeridianPage() {
           </p>
         </header>
 
+        {/* Canonical Memory banner — the headline proof. Reuses the Recall-Ledger
+            aesthetic (mono type, hairline border, verified green tick) from mira-theme.css. */}
+        <div
+          role="note"
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+            background: "var(--mira-canvas)",
+            border: "1px solid var(--mira-fog)",
+            borderLeft: "2px solid var(--mira-verify)",
+            borderRadius: "var(--mira-radius-lg)",
+            padding: "14px 18px",
+            marginBottom: 12,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              marginTop: 2,
+              width: 20,
+              height: 20,
+              flex: "0 0 auto",
+              borderRadius: "50%",
+              background: "rgba(18,120,78,.14)",
+              color: "var(--mira-verify-deep)",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            ✓
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: "var(--mira-mono)",
+                fontSize: 11,
+                letterSpacing: ".16em",
+                textTransform: "uppercase",
+                color: "var(--mira-verify-deep)",
+                marginBottom: 4,
+              }}
+            >
+              Canonical Memory
+            </div>
+            <div style={{ fontSize: 14, lineHeight: 1.55, color: "var(--mira-ink)" }}>
+              The first AI that remembers you — and can prove it. Tell her your name or a detail about
+              yourself, then come back later:{" "}
+              <strong style={{ fontWeight: 600 }}>she recalls exactly what you told her</strong>, and never
+              invents what she doesn&apos;t know.
+              <span
+                style={{
+                  display: "block",
+                  marginTop: 6,
+                  fontFamily: "var(--mira-mono)",
+                  fontSize: 11.5,
+                  letterSpacing: ".04em",
+                  color: "var(--mira-graphite)",
+                }}
+              >
+                Verified · tamper-evident · grounded
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Sandbox banner */}
         <div
           role="note"

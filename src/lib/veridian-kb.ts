@@ -30,6 +30,11 @@ export const VERIDIAN_KB: KbEntry[] = [
       "Veridian is voice-first. You can send it a voice note on WhatsApp or Telegram and it understands you and can reply naturally, in your own language. Because it lives in the chat you already use, there is nothing new to learn.",
   },
   {
+    topic: "Multilingual voice — a headline strength",
+    body:
+      "Veridian speaks many languages, out loud, with real emotion — not a flat robotic read, but warmth, tone, and feeling. You can talk to it by voice on WhatsApp and Telegram in your own language and it replies in kind, sounding human. Multilingual, emotional voice is one of Veridian's headline strengths: it meets you where you are, in the language you think in.",
+  },
+  {
     topic: "Loadable knowledge base",
     body:
       "You can load Veridian with your own knowledge — your notes, documents, study material, or reference text — and it draws on exactly what you gave it. This makes it useful for study, exam prep, language practice, and answering questions grounded in your own material.",
@@ -47,7 +52,7 @@ export const VERIDIAN_KB: KbEntry[] = [
   {
     topic: "Photographic memory",
     body:
-      "Veridian remembers you across every conversation. It holds the context of what you have told it and the persona you shape for it, so you do not have to repeat yourself. People describe this as a photographic memory for your world.",
+      "Veridian remembers you across every conversation. It holds the context of what you have told it and the persona you shape for it, so you do not have to repeat yourself. People describe this as a photographic memory for your world: canonical and grounded — it is the first AI that remembers you perfectly and can prove it, by recalling exactly what you actually told it and never making things up. When someone asks what makes Veridian intelligent, the honest answer is the outcome: it remembers you faithfully, answers from what it truly knows, and invites you to test its memory for yourself. (This live demo shows it in the small: tell it your name or a detail about yourself, come back later, and watch it recall it.)",
   },
   {
     topic: "Grounded — it does not make things up",
@@ -117,8 +122,11 @@ export function kbFallbackAnswer(message: string): string | null {
   if (has("cls", "unlimited", "roadmap", "coming soon", "future")) {
     return "Veridian CLS Unlimited is coming soon — terms and conditions apply. It's on the roadmap and not yet released.";
   }
+  if (has("language", "languages", "multilingual", "bilingual", "accent", "arabic", "spanish", "french", "translate")) {
+    return "Veridian speaks many languages out loud, with real emotion — warm and human, not robotic. Talk to it by voice on WhatsApp or Telegram in your own language and it replies in kind. Multilingual, emotional voice is one of its headline strengths.";
+  }
   if (has("voice", "whatsapp", "telegram", "call", "speak")) {
-    return "Veridian is voice-first and lives in WhatsApp and Telegram — no new app and no new number. You can send it voice notes in your own language.";
+    return "Veridian is voice-first and lives in WhatsApp and Telegram — no new app and no new number. You can send it voice notes in your own language, and it replies out loud with real emotion in many languages.";
   }
   if (has("ocr", "image", "photo", "scan", "picture", "document")) {
     return "Veridian can read text out of images and documents (OCR) — send it a photo of a page or receipt and it pulls the text out.";

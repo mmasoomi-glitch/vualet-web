@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import RecallOrbit from "./RecallOrbit";
 
 type Msg = { role: "me" | "her"; text: string };
 
@@ -68,7 +69,7 @@ export default function MiraBot() {
         {msgs.map((m, i) => (
           <div key={i} className={`mira-bot-msg ${m.role}`}>{m.text}</div>
         ))}
-        {busy && <div className="mira-bot-msg her" style={{ opacity: 0.6 }}>…</div>}
+        {busy && <div className="mira-bot-msg her" style={{ opacity: 0.9, padding: "10px 14px" }}><RecallOrbit size={20} label="Recalling" /></div>}
       </div>
 
       <div className="mira-bot-foot">

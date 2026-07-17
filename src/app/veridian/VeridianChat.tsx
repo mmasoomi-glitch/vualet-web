@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import RecallOrbit from "@/app/mira/_components/RecallOrbit";
 
 type Msg = { role: "me" | "her"; text: string };
 
 const SUGGESTIONS = [
   "What can Veridian do?",
+  "Do you remember me?",
   "How does voice work?",
   "What are the pricing tiers?",
-  "Does it make things up?",
 ];
 
 const MSG_MAX_LEN = 800;
@@ -20,7 +21,7 @@ export default function VeridianChat() {
     {
       role: "her",
       text:
-        "Hi — I'm the Veridian demo. Ask me anything I know about the product: voice on WhatsApp and Telegram, my memory, OCR, small builds, pricing, or the company. If I don't know something, I'll tell you — I won't make it up.",
+        "Hi — I'm the Veridian demo. Ask me anything I know about the product: voice on WhatsApp and Telegram, my memory, OCR, small builds, pricing, or the company. And try me on memory — tell me your name or a detail about yourself, then come back later and see what I recall. If I don't know something, I'll tell you — I won't make it up.",
     },
   ]);
   const logRef = useRef<HTMLDivElement>(null);
@@ -101,7 +102,7 @@ export default function VeridianChat() {
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <strong style={{ fontWeight: 500 }}>Veridian</strong>
-          <div style={{ fontSize: 12, opacity: 0.9 }}>read-only demo · answers from what it knows</div>
+          <div style={{ fontSize: 12, opacity: 0.9 }}>read-only demo · remembers you · answers from what it knows</div>
         </div>
       </div>
 
@@ -168,7 +169,7 @@ export default function VeridianChat() {
               borderRadius: 16,
             }}
           >
-            …
+            <RecallOrbit size={22} label="Recalling" />
           </div>
         )}
       </div>
