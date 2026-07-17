@@ -15,6 +15,16 @@
   --mira-fog: #E8E0EA;
   --mira-frost: #F2EAF0;
   --mira-success: #6BCE9B;
+  /* Design A (Recall Ledger) accents. --mira-verify-deep/-rose-ink/-aether-ink are
+     the DARKENED text-safe variants of the brand green/rose/aether: the light brand
+     tones (#6BCE9B rose-deep #E68A85, #6366F1) drop below 4.5:1 as small text on the
+     cream canvas, so meaningful labels use these deeper tones (all measured >=4.5:1
+     on --mira-cream) while the light tones stay on borders/dots/fills only. */
+  --mira-verify: #6BCE9B;
+  --mira-verify-deep: #12784E;
+  --mira-rose-ink: #B54A45;
+  --mira-aether-ink: #4F46E5;
+  --mira-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
   /* Darkened from the original #F8A5A0/#C7B8F0/#6366F1 stops (white-on-gradient text
      measured ~1.8:1-1.9:1 at the lightest points — WCAG 1.4.3 fail). These deeper
      tones keep the same rose→lavender→aether hue path but hold >=4.5:1 for white
@@ -160,4 +170,203 @@
 @media (max-width: 480px) {
   .mira-bot-panel { right: 8px; bottom: 8px; width: calc(100vw - 16px); height: calc(100vh - 16px); max-height: none; }
   .mira-bot-fab { right: 12px; bottom: 12px; }
+}
+
+/* ============================================================================
+   DESIGN A — "Recall Ledger" homepage. Ported faithfully from the approved mock.
+   Everything is scoped under .mira-root and prefixed .mira-* so it cannot leak
+   into the Vualet house style or collide with generic class names. Reuses the
+   --mira-* brand tokens; the serif comes from the layout's Fraunces variable and
+   the utility face from --mira-mono.
+   ========================================================================== */
+.mira-root .mha-wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+.mira-root .mha-serif { font-family: var(--font-mira-display, "Fraunces", Georgia, serif); }
+.mira-root .mha-mono { font-family: var(--mira-mono); }
+
+/* shared focus ring for every interactive element on this page */
+.mira-root .mha-page a:focus-visible,
+.mira-root .mha-page button:focus-visible { outline: 2px solid var(--aether); outline-offset: 3px; border-radius: 6px; }
+
+.mira-root .mha-eyebrow {
+  font-family: var(--mira-mono); font-size: .72rem; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--mira-graphite); display: inline-flex; align-items: center; gap: 10px;
+}
+.mira-root .mha-eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--mira-rose-deep); }
+
+/* ---- buttons ---- */
+.mira-root .mha-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  font-weight: 600; font-size: 1rem; text-decoration: none; cursor: pointer; border: none;
+  padding: 15px 30px; border-radius: var(--mira-radius-full);
+  transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s;
+}
+.mira-root .mha-btn-primary { background: var(--mira-grad-presence); color: #fff; }
+.mira-root .mha-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(248,165,160,.5); }
+.mira-root .mha-btn-primary .mha-arw { transition: transform .3s; }
+.mira-root .mha-btn-primary:hover .mha-arw { transform: translateX(4px); }
+.mira-root .mha-btn-ghost { background: transparent; color: var(--mira-ink); border: 1px solid var(--mira-fog); padding: 14px 26px; font-weight: 500; }
+.mira-root .mha-btn-ghost:hover { border-color: var(--mira-rose-deep); background: #fff; }
+.mira-root .mha-btn-onlight { background: #fff; color: var(--mira-ink); }
+.mira-root .mha-btn-onlight:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(42,31,45,.28); }
+
+/* ---- hero ---- */
+.mira-root .mha-hero { position: relative; padding: 66px 0 72px; overflow: hidden; }
+.mira-root .mha-hero-orb {
+  position: absolute; right: -6%; top: -12%; width: 620px; max-width: 80%; height: auto;
+  opacity: .16; filter: blur(2px); pointer-events: none; z-index: 0;
+}
+.mira-root .mha-hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; align-items: center; }
+.mira-root .mha-hero h1 { font-size: clamp(1.62rem, 6.2vw, 4.7rem); line-height: 1.04; margin: 22px 0 0; }
+.mira-root .mha-lede { font-size: clamp(1.08rem, 1.6vw, 1.28rem); color: var(--mira-graphite); max-width: 34ch; margin: 26px 0 0; }
+.mira-root .mha-lede b { color: var(--mira-ink); font-weight: 600; }
+.mira-root .mha-cta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 34px; }
+.mira-root .mha-micro { font-family: var(--mira-mono); font-size: .74rem; color: var(--mira-graphite); letter-spacing: .02em; margin-top: 16px; }
+.mira-root .mha-micro .mha-g { color: var(--mira-verify-deep); }
+
+/* ---- signature: recall ledger ---- */
+.mira-root .mha-ledger-stage { position: relative; }
+.mira-root .mha-ledger {
+  background: var(--mira-canvas); border: 1px solid var(--mira-fog); border-radius: var(--mira-radius-lg);
+  box-shadow: var(--mira-shadow-lg); overflow: hidden; position: relative;
+}
+.mira-root .mha-ledger-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 20px; border-bottom: 1px solid var(--mira-fog); background: #fff;
+}
+.mira-root .mha-ledger-top .mha-t { font-family: var(--mira-mono); font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--mira-ink); }
+.mira-root .mha-live { font-family: var(--mira-mono); font-size: .66rem; letter-spacing: .12em; color: var(--mira-verify-deep); display: inline-flex; align-items: center; gap: 7px; }
+.mira-root .mha-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--mira-verify); box-shadow: 0 0 0 4px rgba(107,206,155,.22); }
+.mira-root .mha-entry { padding: 16px 20px; border-bottom: 1px dashed var(--mira-fog); }
+.mira-root .mha-entry:last-child { border-bottom: none; padding-bottom: 30px; padding-right: 78px; }
+.mira-root .mha-entry-meta { display: flex; align-items: center; gap: 10px; font-family: var(--mira-mono); font-size: .66rem; letter-spacing: .05em; color: var(--mira-graphite); margin-bottom: 9px; }
+.mira-root .mha-entry-meta .mha-idx { color: var(--mira-rose-ink); }
+.mira-root .mha-q { font-size: .92rem; color: var(--mira-graphite); }
+.mira-root .mha-a { font-size: 1.02rem; color: var(--mira-ink); margin-top: 5px; font-weight: 500; }
+.mira-root .mha-stamp { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mira-mono); font-size: .63rem; letter-spacing: .1em; text-transform: uppercase; padding: 4px 9px; border-radius: var(--mira-radius-full); margin-top: 11px; }
+.mira-root .mha-stamp.mha-ok { background: rgba(18,120,78,.14); color: var(--mira-verify-deep); }
+.mira-root .mha-stamp.mha-no { background: var(--mira-frost); color: var(--mira-graphite); border: 1px dashed var(--mira-fog); }
+.mira-root .mha-stamp .mha-ck { width: 13px; height: 13px; }
+.mira-root .mha-seal {
+  position: absolute; right: -40px; bottom: -40px; width: 128px; height: 128px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #fff 0%, var(--mira-petal) 78%);
+  border: 1.5px solid var(--mira-rose-deep); box-shadow: var(--mira-shadow-md);
+  display: grid; place-items: center; transform: rotate(-13deg); z-index: 3;
+}
+.mira-root .mha-seal svg { width: 100%; height: 100%; position: absolute; inset: 0; }
+.mira-root .mha-seal .mha-core { text-align: center; font-family: var(--mira-mono); line-height: 1.25; color: var(--mira-rose-ink); }
+.mira-root .mha-seal .mha-core .mha-big { display: block; font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 400; font-size: 1.5rem; color: var(--mira-ink); letter-spacing: -.01em; }
+.mira-root .mha-seal .mha-core .mha-sm { font-size: .5rem; letter-spacing: .14em; text-transform: uppercase; }
+.mira-root .mha-float-tag {
+  position: absolute; left: -18px; top: -16px; background: #fff; border: 1px solid var(--mira-fog);
+  border-radius: var(--mira-radius-full); padding: 8px 15px; box-shadow: var(--mira-shadow-md); z-index: 3;
+  font-family: var(--mira-mono); font-size: .66rem; letter-spacing: .08em; color: var(--mira-ink); display: flex; align-items: center; gap: 8px;
+}
+.mira-root .mha-float-tag b { color: var(--mira-verify-deep); font-weight: 500; }
+
+/* ---- band: two promises ---- */
+.mira-root .mha-promises { position: relative; overflow: hidden; background: var(--mira-canvas); border-top: 1px solid var(--mira-fog); border-bottom: 1px solid var(--mira-fog); padding: 76px 0; }
+.mira-root .mha-mesh { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .10; pointer-events: none; z-index: 0; }
+.mira-root .mha-promises > .mha-wrap { position: relative; z-index: 1; }
+.mira-root .mha-sec-head { max-width: 52ch; }
+.mira-root .mha-sec-head h2 { font-size: clamp(1.9rem, 3.6vw, 2.9rem); margin: 16px 0 0; }
+.mira-root .mha-sec-head p { color: var(--mira-graphite); margin: 16px 0 0; font-size: 1.08rem; }
+.mira-root .mha-two { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 44px; }
+.mira-root .mha-promise { background: var(--mira-cream); border: 1px solid var(--mira-fog); border-radius: var(--mira-radius-lg); padding: 30px; }
+.mira-root .mha-promise .mha-num { font-family: var(--mira-mono); font-size: .72rem; letter-spacing: .14em; color: var(--mira-rose-ink); }
+.mira-root .mha-promise h3 { font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 400; font-size: 1.7rem; letter-spacing: -.01em; margin: 14px 0 0; }
+.mira-root .mha-promise p { color: var(--mira-graphite); margin: 12px 0 0; font-size: 1.02rem; }
+.mira-root .mha-promise .mha-line { height: 1px; background: var(--mira-fog); margin: 22px 0 16px; }
+.mira-root .mha-promise .mha-foot { font-family: var(--mira-mono); font-size: .7rem; letter-spacing: .06em; color: var(--mira-verify-deep); display: inline-flex; align-items: center; gap: 8px; }
+
+/* ---- proof: the honest difference ---- */
+.mira-root .mha-proof { padding: 82px 0; }
+.mira-root .mha-proof-head { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center; }
+.mira-root .mha-proof-fig { width: 168px; height: 168px; border-radius: var(--mira-radius-lg); object-fit: cover; border: 1px solid var(--mira-fog); box-shadow: var(--mira-shadow-md); }
+.mira-root .mha-versus { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 44px; align-items: stretch; }
+.mira-root .mha-card { border-radius: var(--mira-radius-lg); padding: 28px; position: relative; }
+.mira-root .mha-card .mha-lbl { font-family: var(--mira-mono); font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; }
+.mira-root .mha-card .mha-said { font-size: 1.12rem; margin: 18px 0 0; line-height: 1.5; }
+.mira-root .mha-card.mha-other { background: var(--mira-frost); border: 1px solid var(--mira-fog); }
+.mira-root .mha-card.mha-other .mha-lbl { color: var(--mira-graphite); }
+.mira-root .mha-card.mha-other .mha-said { color: var(--mira-graphite); }
+.mira-root .mha-card.mha-other .mha-said s { text-decoration-color: var(--mira-rose-deep); text-decoration-thickness: 2px; }
+.mira-root .mha-card.mha-other .mha-verdict { margin-top: 18px; font-family: var(--mira-mono); font-size: .72rem; letter-spacing: .05em; color: var(--mira-rose-ink); }
+.mira-root .mha-card.mha-mira { background: #fff; border: 1.5px solid var(--mira-verify); box-shadow: var(--mira-shadow-md); }
+.mira-root .mha-card.mha-mira .mha-lbl { color: var(--mira-verify-deep); }
+.mira-root .mha-card.mha-mira .mha-said { color: var(--mira-ink); }
+.mira-root .mha-card.mha-mira .mha-verdict { margin-top: 18px; font-family: var(--mira-mono); font-size: .72rem; letter-spacing: .05em; color: var(--mira-verify-deep); display: inline-flex; align-items: center; gap: 8px; }
+
+/* ---- full-width brand band ---- */
+.mira-root .mha-band { position: relative; }
+.mira-root .mha-band img { display: block; width: 100%; height: clamp(160px, 26vw, 300px); object-fit: cover; }
+.mira-root .mha-band-cap {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 24px;
+  background: linear-gradient(0deg, rgba(42,31,45,.62), transparent);
+  color: #fff; font-family: var(--mira-mono); font-size: .74rem; letter-spacing: .08em;
+}
+.mira-root .mha-band-cap span { max-width: 1080px; margin: 0 auto; display: block; }
+
+/* ---- quiet capabilities ---- */
+.mira-root .mha-quiet { background: var(--mira-canvas); border-top: 1px solid var(--mira-fog); padding: 70px 0; }
+.mira-root .mha-quiet .mha-eyebrow { margin-bottom: 26px; }
+.mira-root .mha-three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.mira-root .mha-qitem { border-left: 2px solid var(--mira-fog); padding: 4px 0 4px 20px; }
+.mira-root .mha-qthumb { width: 100%; height: 128px; object-fit: cover; border-radius: var(--mira-radius-lg); border: 1px solid var(--mira-fog); margin-bottom: 16px; }
+.mira-root .mha-qitem h4 { font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 400; font-size: 1.25rem; margin: 0; }
+.mira-root .mha-qitem p { color: var(--mira-graphite); font-size: .98rem; margin: 9px 0 0; }
+.mira-root .mha-beta { font-family: var(--mira-mono); font-size: .6rem; letter-spacing: .12em; text-transform: uppercase; color: var(--mira-aether-ink); border: 1px solid var(--mira-lavender); border-radius: var(--mira-radius-full); padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
+
+/* ---- final cta ---- */
+.mira-root .mha-final { padding: 92px 0; }
+.mira-root .mha-final-inner { background: var(--mira-grad-presence); border-radius: var(--mira-radius-xl); padding: 64px 40px; text-align: center; position: relative; overflow: hidden; box-shadow: var(--mira-shadow-lg); }
+.mira-root .mha-final-inner::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 20% 0%, rgba(255,255,255,.18), transparent 55%); pointer-events: none; }
+.mira-root .mha-final h2 { font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 300; color: #fff; font-size: clamp(2rem, 4.4vw, 3.3rem); letter-spacing: -.02em; line-height: 1.08; margin: 0; position: relative; }
+.mira-root .mha-final p { color: rgba(255,255,255,.92); max-width: 44ch; margin: 18px auto 0; position: relative; font-size: 1.1rem; }
+.mira-root .mha-final .mha-btn { margin-top: 32px; position: relative; }
+.mira-root .mha-microlight { position: relative; margin-top: 16px; font-family: var(--mira-mono); font-size: .72rem; color: rgba(255,255,255,.9); }
+
+/* ---- investor + footer ---- */
+.mira-root .mha-investor { border-top: 1px solid var(--mira-fog); padding: 40px 0 8px; }
+.mira-root .mha-investor .mha-eyebrow { color: var(--mira-graphite); }
+.mira-root .mha-investor h3 { font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 400; font-size: 1.35rem; margin: 12px 0 0; color: var(--mira-ink); }
+.mira-root .mha-investor p { color: var(--mira-graphite); font-size: .98rem; margin: 8px 0 0; max-width: 60ch; }
+.mira-root .mha-footer { border-top: 1px solid var(--mira-fog); padding: 40px 0 56px; margin-top: 32px; }
+.mira-root .mha-foot-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; }
+.mira-root .mha-foot-brand { display: inline-flex; align-items: center; gap: 11px; font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 400; font-size: 1.15rem; letter-spacing: -.01em; color: var(--mira-ink); text-decoration: none; }
+.mira-root .mha-foot-links { display: flex; flex-wrap: wrap; gap: 22px; font-family: var(--mira-mono); font-size: .74rem; letter-spacing: .04em; }
+.mira-root .mha-foot-links a { color: var(--mira-graphite); text-decoration: none; }
+.mira-root .mha-foot-links a:hover { color: var(--mira-ink); }
+.mira-root .mha-foot-legal { color: var(--mira-graphite); font-size: .8rem; margin-top: 22px; }
+
+/* ---- load animation ---- */
+.mira-root .mha-rise { opacity: 0; transform: translateY(14px); animation: mha-rise .8s cubic-bezier(.16,1,.3,1) forwards; }
+.mira-root .mha-d1 { animation-delay: .05s; } .mira-root .mha-d2 { animation-delay: .15s; }
+.mira-root .mha-d3 { animation-delay: .25s; } .mira-root .mha-d4 { animation-delay: .35s; }
+.mira-root .mha-seal { opacity: 0; transform: rotate(-13deg) scale(.86); animation: mha-sealin .7s cubic-bezier(.16,1,.3,1) .55s forwards; }
+@keyframes mha-rise { to { opacity: 1; transform: translateY(0); } }
+@keyframes mha-sealin { to { opacity: 1; transform: rotate(-13deg) scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .mira-root .mha-rise, .mira-root .mha-seal { animation: none; opacity: 1; }
+  .mira-root .mha-rise { transform: none; }
+  .mira-root .mha-seal { transform: rotate(-13deg); }
+}
+
+/* ---- responsive ---- */
+@media (max-width: 900px) {
+  .mira-root .mha-hero-grid { grid-template-columns: 1fr; gap: 44px; }
+  .mira-root .mha-hero { padding: 44px 0 56px; }
+  .mira-root .mha-ledger-stage { max-width: 460px; margin: 0 auto; }
+  .mira-root .mha-two, .mira-root .mha-versus, .mira-root .mha-three { grid-template-columns: 1fr; }
+  .mira-root .mha-proof-head { grid-template-columns: 1fr; }
+  .mira-root .mha-proof-fig { display: none; }
+  .mira-root .mha-lede { max-width: 46ch; }
+}
+@media (max-width: 520px) {
+  .mira-root .mha-wrap { padding: 0 18px; }
+  .mira-root .mha-cta-row { gap: 12px; }
+  .mira-root .mha-cta-row .mha-btn { width: 100%; }
+  .mira-root .mha-final-inner { padding: 48px 22px; }
+  .mira-root .mha-seal { width: 104px; height: 104px; right: -8px; bottom: -14px; }
+  .mira-root .mha-seal .mha-core .mha-big { font-size: 1.2rem; }
+  .mira-root .mha-float-tag { left: 8px; }
 }

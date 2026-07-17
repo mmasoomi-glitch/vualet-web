@@ -1,119 +1,202 @@
 import Link from "next/link";
 
-const STEPS: [string, string][] = [
-  ["Shape her", "Pick a plan and tell Mira who to be — a friend, a tutor, an assistant. She's yours alone."],
-  ["Connect your chat", "Open her in Telegram, or scan a code to link your own WhatsApp. No new number."],
-  ["Just talk", "Speak like you would to a person. She figures out the rest and hands you the result."],
-];
+/* Design A — "Recall Ledger". Ported faithfully from the approved mock.
+   Styling lives in mira-theme.css (scoped .mira-root .mha-*); the layout already
+   provides the .mira-root wrapper, brand fonts, sticky MiraNav and MiraBot. */
 
-const FEATURES: [string, string, string][] = [
-  ["Companion", "Talks like a person", "Natural voice notes, in your language, who remembers your life across every chat."],
-  ["Memory", "Knows your world", "She remembers you across every conversation and holds the persona you shape for her."],
-  ["Builder", "Makes real things (beta)", "Describe a small web app or site in plain words; Mira builds it and sends it back as a zip or GitHub repo."],
-  ["Tutor", "Teaches & tests", "Language practice, exam prep, interviews — load her knowledge base with your own text and she draws on it."],
-  ["Yours", "Private by design", "Your Mira is sealed off from everyone else's. Your conversations are yours alone."],
-  ["Caring", "Looks out for you", "She notices the emotional context, not just the task — and keeps you safe, not just busy."],
-];
-
-const TIERS: { name: string; price: string; sub: string; items: string[]; featured?: boolean }[] = [
-  { name: "Free", price: "Free", sub: "1,000,000 tokens / month", items: ["Chat + voice notes", "Remembers you across chats", "Capped voice minutes"] },
-  { name: "Companion", price: "$14.99", sub: "15M tokens / month", items: ["Everything in Free", "A persona you shape", "Load her knowledge base with your own text"] },
-  { name: "Assistant", price: "$39", sub: "60M tokens / month", items: ["Everything in Companion", "Build pipeline (beta): small web apps & sites", "Priority replies"], featured: true },
-  { name: "Studio", price: "$79", sub: "200M tokens / month", items: ["Everything in Assistant", "Your own WhatsApp number", "Top of the queue"] },
-];
-
-const card: React.CSSProperties = { background: "var(--mira-canvas)", border: "1px solid var(--mira-fog)", borderRadius: "var(--mira-radius-lg)", boxShadow: "var(--mira-shadow-sm)" };
+function Check({ size = 24 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 12l5 5L20 6" />
+    </svg>
+  );
+}
 
 export default function MiraPage() {
   return (
-    <div style={{ background: "var(--mira-cream)", color: "var(--mira-ink)" }}>
-      {/* Hero */}
-      <section style={{ position: "relative", overflow: "hidden", textAlign: "center" }}>
-        <div className="mira-aura" aria-hidden style={{ position: "absolute", inset: "-8% 0 auto 0", height: 520, margin: "auto", zIndex: 0, background: "var(--mira-grad-aura)", filter: "blur(80px)", opacity: 0.35 }} />
-        <div className="mira-hero-pad" style={{ position: "relative", zIndex: 1, maxWidth: 1080, width: "100%", minWidth: 0, boxSizing: "border-box", margin: "0 auto", padding: "84px 24px 48px" }}>
-          <img src="/mira/mira-wordmark-color.svg" alt="Mira" style={{ height: 34, marginBottom: 26 }} />
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--mira-graphite)", background: "var(--mira-frost)", borderRadius: 999, padding: "7px 14px" }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--mira-rose)" }} /> No app · No new number · Just a message
-          </div>
-          <h1 className="display" style={{ fontSize: "clamp(40px,7vw,76px)", lineHeight: 1.05, margin: "22px auto 0", maxWidth: "15ch" }}>
-            Your assistant.<br /><span className="grad">Wonderful, by reflection.</span>
-          </h1>
-          <p style={{ fontSize: "clamp(17px,2.2vw,21px)", color: "var(--mira-graphite)", maxWidth: 600, margin: "22px auto 0", lineHeight: 1.6 }}>
-            Mira lives in the chat you already use. She talks, remembers you, and quietly gets things
-            done — from a quick answer to a voice-note reply to building you a small web app, all by voice.
-          </p>
-          <div style={{ display: "flex", gap: 14, justifyContent: "center", marginTop: 34, flexWrap: "wrap" }}>
-            <Link className="btn-mira" href="/mira/signup">Start free →</Link>
-            <Link className="btn-mira-soft" href="#how">See how she works</Link>
-          </div>
-          <p style={{ marginTop: 16, fontSize: 13, color: "var(--mira-slate)" }}>Free every month · No credit card · Cancel anytime</p>
-        </div>
-      </section>
-
-      {/* Trust strip */}
-      <section style={{ borderTop: "1px solid var(--mira-fog)", borderBottom: "1px solid var(--mira-fog)" }}>
-        <div className="mira-4col" style={{ maxWidth: 1080, margin: "0 auto", padding: "26px 24px", textAlign: "center" }}>
-          {[["Voice-first", "Talk, don't type"], ["Multilingual", "In your language"], ["No install", "Telegram or WhatsApp"], ["Private", "Yours alone, always"]].map(([t, s]) => (
-            <div key={t}><p className="display" style={{ fontSize: 18, fontWeight: 400, margin: 0 }}>{t}</p><span style={{ fontSize: 13, color: "var(--mira-slate)" }}>{s}</span></div>
-          ))}
-        </div>
-      </section>
-
-      {/* How */}
-      <section id="how" style={{ maxWidth: 1080, margin: "0 auto", padding: "64px 24px" }}>
-        <h2 className="display" style={{ fontSize: "clamp(28px,4vw,38px)", textAlign: "center", margin: "0 0 8px" }}>Three steps. No tech required.</h2>
-        <p style={{ textAlign: "center", color: "var(--mira-graphite)", maxWidth: 540, margin: "0 auto 36px" }}>You never install anything. You just start talking.</p>
-        <div className="mira-3col">
-          {STEPS.map(([t, s], i) => (
-            <div key={t} style={{ ...card, padding: 26 }}>
-              <div style={{ display: "grid", placeItems: "center", width: 36, height: 36, borderRadius: "50%", color: "#fff", background: "var(--mira-grad-presence)", fontWeight: 600 }}>{i + 1}</div>
-              <h3 className="display" style={{ fontSize: 19, fontWeight: 400, margin: "14px 0 6px" }}>{t}</h3>
-              <p style={{ color: "var(--mira-graphite)", fontSize: 15, margin: 0, lineHeight: 1.6 }}>{s}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Features */}
-      <section style={{ maxWidth: 1080, margin: "0 auto", padding: "8px 24px 64px" }}>
-        <h2 className="display" style={{ fontSize: "clamp(28px,4vw,38px)", textAlign: "center", margin: "0 0 8px" }}>The one that does everything</h2>
-        <p style={{ textAlign: "center", color: "var(--mira-graphite)", maxWidth: 560, margin: "0 auto 36px" }}>The app that replaces your apps — by voice.</p>
-        <div className="mira-3col">
-          {FEATURES.map(([k, t, s]) => (
-            <div key={t} style={{ ...card, padding: 26 }}>
-              <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-deep)", fontWeight: 600, margin: 0 }}>{k}</p>
-              <h3 className="display" style={{ fontSize: 20, fontWeight: 400, margin: "10px 0 6px" }}>{t}</h3>
-              <p style={{ color: "var(--mira-graphite)", fontSize: 15, margin: 0, lineHeight: 1.6 }}>{s}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section style={{ background: "var(--mira-canvas)", borderTop: "1px solid var(--mira-fog)" }}>
-        <div style={{ maxWidth: 1080, margin: "0 auto", padding: "64px 24px" }}>
-          <h2 className="display" style={{ fontSize: "clamp(28px,4vw,38px)", textAlign: "center", margin: "0 0 8px" }}>Simple plans</h2>
-          <p style={{ textAlign: "center", color: "var(--mira-graphite)", margin: "0 auto 36px" }}>Free every month — a million tokens on the house. Upgrade only when she&apos;s already earned it.</p>
-          <div className="mira-4col">
-            {TIERS.map((t) => (
-              <div key={t.name} style={{ background: "var(--mira-cream)", border: `1px solid ${t.featured ? "var(--mira-rose)" : "var(--mira-fog)"}`, borderRadius: "var(--mira-radius-lg)", padding: 24, boxShadow: t.featured ? "var(--mira-shadow-md)" : "none" }}>
-                <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-deep)", fontWeight: 600, margin: 0 }}>{t.name}</p>
-                <p className="display" style={{ fontSize: 32, fontWeight: 400, margin: "8px 0 0" }}>{t.price}</p>
-                <p style={{ fontSize: 12, color: "var(--mira-slate)", margin: 0 }}>{t.sub}</p>
-                <ul style={{ listStyle: "none", padding: 0, margin: "16px 0 0", fontSize: 14, color: "var(--mira-graphite)" }}>
-                  {t.items.map((it) => <li key={it} style={{ padding: "3px 0" }}>✓ {it}</li>)}
-                </ul>
+    <div className="mha-page">
+      <main>
+        {/* HERO */}
+        <section className="mha-hero">
+          <img className="mha-hero-orb" src="/brand/motif-orb.png" alt="" aria-hidden width={620} height={620} />
+          <div className="mha-wrap mha-hero-grid">
+            <div>
+              <span className="mha-eyebrow mha-rise mha-d1">Perfect recall · Zero fabrication</span>
+              <h1 className="display mha-rise mha-d2">
+                She remembers everything.<br />
+                <span className="grad">She can&rsquo;t make anything up.</span>
+              </h1>
+              <p className="mha-lede mha-rise mha-d3">
+                Mira is the assistant with photographic memory and zero hallucination &mdash; <b>not less, none.</b> She&rsquo;d sooner tell you &ldquo;I don&rsquo;t know&rdquo; than invent an answer you&rsquo;ll regret trusting.
+              </p>
+              <div className="mha-cta-row mha-rise mha-d4">
+                <Link className="mha-btn mha-btn-primary" href="/mira/signup">Join the waitlist <span className="mha-arw">&rarr;</span></Link>
+                <a className="mha-btn mha-btn-ghost" href="#proof">See the difference</a>
               </div>
-            ))}
+              <p className="mha-micro mha-rise mha-d4">Opening in waves &middot; <span className="mha-g">no spam, no fabricated hype</span></p>
+            </div>
+
+            {/* SIGNATURE: recall ledger */}
+            <div className="mha-ledger-stage mha-rise mha-d3">
+              <div className="mha-float-tag">RECALL &middot; <b>100% verbatim</b></div>
+              <div className="mha-ledger" role="img" aria-label="A recall ledger: three timestamped facts Mira recalled exactly, each marked verified, and one honest 'I don't know' entry marked no-guess.">
+                <div className="mha-ledger-top">
+                  <span className="mha-t">Recall ledger</span>
+                  <span className="mha-live">Kept exact</span>
+                </div>
+                <div className="mha-entry">
+                  <div className="mha-entry-meta"><span className="mha-idx">#0142</span> · logged 14 Nov 2025, 09:12</div>
+                  <div className="mha-q">&ldquo;Remind me what the client&rsquo;s cutoff was.&rdquo;</div>
+                  <div className="mha-a">The 3rd &mdash; not the 5th. You corrected it yourself.</div>
+                  <span className="mha-stamp mha-ok"><span className="mha-ck"><Check size={13} /></span> Verified verbatim</span>
+                </div>
+                <div className="mha-entry">
+                  <div className="mha-entry-meta"><span className="mha-idx">#0143</span> · logged 02 Feb 2026, 16:40</div>
+                  <div className="mha-q">&ldquo;What did I set the budget cap at?&rdquo;</div>
+                  <div className="mha-a">AED 42,000. You said it out loud on the call.</div>
+                  <span className="mha-stamp mha-ok"><span className="mha-ck"><Check size={13} /></span> Verified verbatim</span>
+                </div>
+                <div className="mha-entry">
+                  <div className="mha-entry-meta"><span className="mha-idx">#0144</span> · asked just now</div>
+                  <div className="mha-q">&ldquo;What&rsquo;s their new office address?&rdquo;</div>
+                  <div className="mha-a">I don&rsquo;t have that. You never told me.</div>
+                  <span className="mha-stamp mha-no">No guess &middot; nothing invented</span>
+                </div>
+                <div className="mha-seal" aria-hidden>
+                  <svg viewBox="0 0 132 132">
+                    <path id="mha-sc" d="M66,66 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" fill="none" />
+                    <text fontFamily="'IBM Plex Mono', ui-monospace, monospace" fontSize="8.2" letterSpacing="2.4" fill="#B54A45">
+                      <textPath href="#mha-sc" startOffset="0">CERTIFIED · CANNOT FABRICATE · CERTIFIED · CANNOT FABRICATE · </textPath>
+                    </text>
+                  </svg>
+                  <div className="mha-core"><span className="mha-big">Mira</span><span className="mha-sm">no invented facts</span></div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div style={{ textAlign: "center", marginTop: 30 }}>
-            <Link className="btn-mira" href="/mira/signup">Meet Mira →</Link>
+        </section>
+
+        {/* TWO PROMISES */}
+        <section className="mha-promises">
+          <img className="mha-mesh" src="/brand/texture-mesh.png" alt="" aria-hidden width={1600} height={500} />
+          <div className="mha-wrap">
+            <div className="mha-sec-head">
+              <span className="mha-eyebrow">Two promises, held literally</span>
+              <h2 className="display">Most assistants are confident. Mira is <span className="grad">correct.</span></h2>
+              <p>Everyone else fights hallucination after the fact &mdash; a filter here, a warning there. Mira&rsquo;s architecture doesn&rsquo;t leave the room for it. Two things follow, and we mean both to the letter.</p>
+            </div>
+            <div className="mha-two">
+              <div className="mha-promise">
+                <span className="mha-num">PROMISE 01</span>
+                <h3>Photographic memory</h3>
+                <p>Everything you tell her stays exactly as you said it. Months later she gives it back word-for-word, with the day you said it &mdash; not a paraphrase, not a vibe.</p>
+                <div className="mha-line"></div>
+                <span className="mha-foot"><Check size={14} /> Nothing decays, nothing drifts</span>
+              </div>
+              <div className="mha-promise">
+                <span className="mha-num">PROMISE 02</span>
+                <h3>Zero hallucination</h3>
+                <p>Not tuned down. Not &ldquo;reduced by 40%.&rdquo; None. When she doesn&rsquo;t know, she tells you she doesn&rsquo;t know &mdash; which is the one thing you can&rsquo;t afford to have faked.</p>
+                <div className="mha-line"></div>
+                <span className="mha-foot"><Check size={14} /> If it isn&rsquo;t known, it isn&rsquo;t said</span>
+              </div>
+            </div>
           </div>
+        </section>
+
+        {/* PROOF */}
+        <section className="mha-proof" id="proof">
+          <div className="mha-wrap">
+            <div className="mha-proof-head">
+              <div className="mha-sec-head">
+                <span className="mha-eyebrow">The tell is what happens at the edge</span>
+                <h2 className="display">Anyone sounds smart until they don&rsquo;t know.</h2>
+                <p>Ask a question the assistant has no answer to. That single moment separates a tool you can trust from one you have to double-check.</p>
+              </div>
+              <img className="mha-proof-fig" src="/brand/hero-memory.png" alt="Mira's memory, illustrated as a calm field of remembered detail" width={336} height={336} />
+            </div>
+            <div className="mha-versus">
+              <div className="mha-card mha-other">
+                <span className="mha-lbl">A typical assistant</span>
+                <p className="mha-said">&ldquo;Their office is at <s>Level 12, Emaar Square, Downtown Dubai</s>.&rdquo;</p>
+                <div className="mha-verdict">&rarr; Plausible. Confident. Completely made up.</div>
+              </div>
+              <div className="mha-card mha-mira">
+                <span className="mha-lbl">Mira</span>
+                <p className="mha-said">&ldquo;I don&rsquo;t have their address &mdash; you&rsquo;ve never given it to me. Send it once and I&rsquo;ll keep it exactly.&rdquo;</p>
+                <div className="mha-verdict"><Check size={14} /> True, and it stays true.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FULL-WIDTH BRAND BAND */}
+        <section className="mha-band" aria-hidden>
+          <img src="/brand/banner-wide.png" alt="" width={1600} height={300} />
+          <div className="mha-band-cap"><span>Photographic memory &middot; zero hallucination &middot; held to the letter</span></div>
+        </section>
+
+        {/* QUIET CAPABILITIES */}
+        <section className="mha-quiet" id="more">
+          <div className="mha-wrap">
+            <span className="mha-eyebrow">And, more quietly</span>
+            <div className="mha-three">
+              <div className="mha-qitem">
+                <img className="mha-qthumb" src="/brand/card-voice.png" alt="" aria-hidden width={600} height={400} />
+                <h4>Voice notes, where you already are</h4>
+                <p>Talk to her on WhatsApp or Telegram. Ramble a voice note; she keeps every word of it exact.</p>
+              </div>
+              <div className="mha-qitem">
+                <img className="mha-qthumb" src="/brand/card-memory.png" alt="" aria-hidden width={600} height={400} />
+                <h4>A knowledge base you load</h4>
+                <p>Hand her your documents and notes. She holds them verbatim and never quietly rewrites what you gave her.</p>
+              </div>
+              <div className="mha-qitem">
+                <img className="mha-qthumb" src="/brand/proof-precision.png" alt="" aria-hidden width={600} height={400} />
+                <h4>She builds small things<span className="mha-beta">Beta</span></h4>
+                <p>Ask for a quick tool or a small automation and she&rsquo;ll put it together. Early, honest about its limits.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FINAL CTA */}
+        <section className="mha-final">
+          <div className="mha-wrap">
+            <div className="mha-final-inner">
+              <h2>Remembers everything.<br />Invents nothing.</h2>
+              <p>Get early access to the assistant you don&rsquo;t have to fact-check. We open the waitlist in waves.</p>
+              <Link className="mha-btn mha-btn-onlight" href="/mira/signup">Join the waitlist &rarr;</Link>
+              <p className="mha-microlight">One email. No fabricated urgency.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* INVESTOR */}
+      <section className="mha-investor">
+        <div className="mha-wrap">
+          <span className="mha-eyebrow">Backing</span>
+          <h3>Backed by Satellite Electronic Trading</h3>
+          <p>A Dubai technology company backing Veridian&rsquo;s work to build AI that would rather say &ldquo;I don&rsquo;t know&rdquo; than guess.</p>
         </div>
       </section>
 
-      {/* was --mira-slate (#8C8190 on cream ~3.5:1, WCAG 1.4.3 fail) — --mira-graphite is ~8:1 */}
-      <p style={{ textAlign: "center", color: "var(--mira-graphite)", fontSize: 13, padding: "30px 0" }}>Mira — MEE-rah · she sees · a Vualet product</p>
+      {/* FOOTER */}
+      <footer className="mha-footer">
+        <div className="mha-wrap">
+          <div className="mha-foot-row">
+            <Link className="mha-foot-brand" href="/mira" aria-label="Mira home">Mira</Link>
+            <nav className="mha-foot-links" aria-label="Footer">
+              <a href="#proof">The difference</a>
+              <a href="#more">What she does</a>
+              <Link href="/mira/signup">Waitlist</Link>
+              <Link href="/legal/privacy">Privacy</Link>
+            </nav>
+          </div>
+          <p className="mha-foot-legal">Mira by Primaion. Photographic memory, zero hallucination &mdash; claims we hold ourselves to.</p>
+        </div>
+      </footer>
     </div>
   );
 }
