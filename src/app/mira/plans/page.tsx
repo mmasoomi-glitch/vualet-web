@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { TIERS } from "../_components/tiers";
-import { Stepper } from "../_components/Stepper";
 
 export const metadata = { title: "Plans — coming soon" };
 
@@ -13,8 +12,6 @@ export default function MiraPlans() {
       className="mira-plans-pad"
       style={{ maxWidth: 1080, width: "100%", minWidth: 0, boxSizing: "border-box", margin: "0 auto", padding: "48px 24px 80px" }}
     >
-      <Stepper current={2} />
-
       <header style={{ textAlign: "center", marginBottom: 28 }}>
         <span
           style={{

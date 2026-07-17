@@ -19,15 +19,19 @@ export default function AiDisclosurePage() {
       <div className={styles.calloutLarge}>
         <p style={{ marginTop: 0 }}>
           <strong>Mira is an AI assistant.</strong> She&apos;s built to give
-          helpful answers grounded in what you&apos;ve told her, and to keep a
-          record of how she got there — but she&apos;s still AI, and she can
-          be wrong.
+          helpful answers grounded in what you&apos;ve told her, and she is
+          designed <strong>not to fabricate or invent</strong>: where she
+          doesn&apos;t have a grounded answer, she is built to tell you she
+          doesn&apos;t know rather than guess.
         </p>
         <p>
-          Use your own judgment for anything important: money, medical,
-          legal, or safety decisions. Mira is not a licensed professional, and
-          nothing she says is professional advice. Always verify important
-          information independently before acting on it.
+          The correctness of any answer still depends on the accuracy of the
+          information you give her. Wrong or incomplete inputs can produce
+          wrong outputs — garbage in, garbage out — and making sure your inputs
+          are right is your responsibility. Mira is an informational tool, not
+          a licensed professional, and nothing she says is financial, legal, or
+          medical advice. Always verify anything important independently before
+          you act on it.
         </p>
         <p style={{ marginBottom: 0 }}>
           <strong>In an emergency, contact local emergency services — not
@@ -37,7 +41,8 @@ export default function AiDisclosurePage() {
 
       <h2>What this means in practice</h2>
       <ul>
-        <li>Mira may occasionally give an answer that is incomplete, outdated, or simply wrong — this is a known limitation of AI systems, not a rare exception.</li>
+        <li>Mira is designed not to fabricate: where she doesn&apos;t have a grounded answer, she is built to say she doesn&apos;t know rather than invent one.</li>
+        <li>The accuracy of what she gives back depends on the accuracy of what you give her — incomplete, outdated, or incorrect information from you can lead to incorrect output, and getting your inputs right is your responsibility.</li>
         <li>She is not a doctor, lawyer, accountant, therapist, or financial advisor, and nothing she outputs should be treated as advice from one.</li>
         <li>For anything with real consequences — a medical symptom, a legal question, a financial decision, a safety concern — verify with a qualified professional or a trusted, independent source.</li>
         <li>If Mira builds something for you (text, code, a document, an app package), review and test it yourself before you rely on, publish, or deploy it.</li>
@@ -46,7 +51,8 @@ export default function AiDisclosurePage() {
       <h2>Why we show you this</h2>
       <p>
         We want you to know you&apos;re talking to an AI, and to understand
-        its limits, before you rely on anything it tells you. This notice is
+        how to use her responsibly, before you rely on anything she tells you.
+        This notice is
         shown on the consent screen the first time you use Mira, and it is
         incorporated into our full{" "}
         <a href="/legal/terms">Terms of Service</a> as a contractual

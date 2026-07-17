@@ -1,38 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { TIERS, tierById } from "../_components/tiers";
+import { useEffect, useState } from "react";
 
-/* TODO(backend): all numbers below are stubbed client state.
-   Replace with the authenticated account + usage from the API. */
-const STUB_ACCOUNT = {
-  assistantName: "Mira",
-  role: "assistant",
-  planId: "companion",
-  renews: "Jul 14, 2026",
-  usage: {
-    messages: { used: 1840, cap: 5000, label: "Messages this month" },
-    voice: { used: 92, cap: 300, label: "Voice minutes" },
-    builds: { used: 1, cap: 3, label: "Little builds" },
-  },
+/* Pre-launch reality (mirrors /mira/plans + /mira/signup): Mira is waitlist-only.
+   Payments are NOT live — no plan, no card, no charges until launch. This page must
+   never imply an active paid subscription or real metered usage. */
+
+// Labels for the persona saved by the /mira/start wizard (localStorage "mira_setup").
+// That wizard stores vibe/role as ids — map them back to human labels for display.
+const VIBE_LABELS: Record<string, string> = {
+  warm: "Warm & gentle",
+  bright: "Bright & playful",
+  calm: "Calm & grounded",
+  sharp: "Sharp & direct",
+};
+const ROLE_LABELS: Record<string, string> = {
+  friend: "Friend",
+  tutor: "Tutor",
+  assistant: "Assistant",
+  coach: "Coach",
 };
 
-function Meter({ used, cap, label }: { used: number; cap: number; label: string }) {
-  const pct = Math.min(100, Math.round((used / cap) * 100));
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-        <span style={{ fontSize: 13.5, color: "var(--mira-graphite)" }}>{label}</span>
-        <span className="display" style={{ fontSize: 15 }}>
-          {used.toLocaleString()} <span style={{ color: "var(--mira-slate)", fontSize: 12 }}>/ {cap.toLocaleString()}</span>
-        </span>
-      </div>
-      <div style={{ height: 8, borderRadius: 999, background: "var(--mira-fog)", overflow: "hidden" }}>
-        <div style={{ width: `${pct}%`, height: "100%", background: "var(--mira-grad-presence)", borderRadius: 999, transition: "width .4s" }} />
-      </div>
-    </div>
-  );
-}
+type Persona = {
+  assistantName?: string;
+  role?: string;
+  vibe?: string;
+  persona?: string;
+};
 
 const card: React.CSSProperties = {
   background: "var(--mira-canvas)",
@@ -42,36 +37,34 @@ const card: React.CSSProperties = {
 };
 
 export default function MiraAccount() {
-  const plan = tierById(STUB_ACCOUNT.planId) ?? TIERS[0];
-  const nextPlan = TIERS[Math.min(TIERS.length - 1, TIERS.findIndex((t) => t.id === plan.id) + 1)];
-  const canUpgrade = nextPlan.id !== plan.id;
-  const u = STUB_ACCOUNT.usage;
+  // Read the saved persona on the client only (avoids SSR/hydration mismatch).
+  const [persona, setPersona] = useState<Persona | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
-  async function checkout(planId: string) {
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan: planId }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data.url) window.location.href = data.url;
-    else alert(data.message || "Couldn't start checkout right now.");
-  }
-
-  async function openBilling() {
-    const customerId = typeof window !== "undefined" ? localStorage.getItem("mira_customer") : null;
-    if (!customerId) {
-      alert("Open billing from the link in your welcome email — your account isn't signed in yet.");
-      return;
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("mira_setup");
+      const parsed = raw ? (JSON.parse(raw) as Persona) : null;
+      // Treat an empty object (the "skip" path) as "no persona yet".
+      setPersona(parsed && parsed.assistantName ? parsed : null);
+    } catch {
+      setPersona(null);
     }
-    const res = await fetch("/api/portal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ customer_id: customerId }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data.url) window.location.href = data.url;
-    else alert(data.message || "Couldn't open the billing portal.");
+    setLoaded(true);
+  }, []);
+
+  const assistantName = persona?.assistantName?.trim() || "Mira";
+  const vibeLabel = persona?.vibe ? VIBE_LABELS[persona.vibe] ?? "" : "";
+  const roleLabel = persona?.role ? ROLE_LABELS[persona.role] ?? "" : "";
+
+  function signOut() {
+    // Clear any local session state and return to the entry page.
+    // (Server-side session invalidation lands with real auth.)
+    try {
+      localStorage.removeItem("mira_setup");
+      localStorage.removeItem("mira_token");
+    } catch {}
+    window.location.href = "/mira";
   }
 
   return (
@@ -82,79 +75,114 @@ export default function MiraAccount() {
           Good to see you.
         </h1>
         <p style={{ color: "var(--mira-graphite)", fontSize: 15.5, margin: "8px 0 0" }}>
-          {STUB_ACCOUNT.assistantName} is your {STUB_ACCOUNT.role}, and she&apos;s doing well.
+          You&apos;re early — Mira is opening in waves, and your spot is being saved.
         </p>
       </header>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
-        {/* Plan card */}
+        {/* Waitlist / plan status — honest pre-launch state (no fake subscription) */}
         <section style={{ ...card, padding: 24, display: "grid", gridTemplateColumns: "1fr auto", gap: 16, alignItems: "center" }}>
           <div>
             <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-deep)", fontWeight: 600, margin: 0 }}>
-              Current plan
+              Your status
             </p>
-            <p className="display" style={{ fontSize: 28, fontWeight: 400, margin: "6px 0 2px", display: "flex", alignItems: "baseline", gap: 6 }}>
-              {plan.name}
-              <span style={{ fontSize: 16, color: "var(--mira-slate)" }}>{plan.price}{plan.per}</span>
+            <p className="display" style={{ fontSize: 26, fontWeight: 400, margin: "6px 0 4px", display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+              You&apos;re on the waitlist
+              <span style={{ fontSize: 14, color: "var(--mira-slate)" }}>Free preview</span>
             </p>
-            <p style={{ fontSize: 13, color: "var(--mira-slate)", margin: 0 }}>Renews {STUB_ACCOUNT.renews}</p>
+            <p style={{ fontSize: 13.5, color: "var(--mira-graphite)", margin: 0 }}>
+              No plan, no card, no charges yet. Paid plans open at launch — you&apos;ll be first through the door.
+            </p>
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            {canUpgrade && (
-              <button type="button" className="btn-mira" onClick={() => checkout(nextPlan.id)} style={{ padding: "11px 20px", fontSize: 14, cursor: "pointer" }}>
-                Upgrade to {nextPlan.name} →
-              </button>
-            )}
-            <button type="button" className="btn-mira-soft" onClick={openBilling} style={{ padding: "10px 18px", fontSize: 14, cursor: "pointer" }}>
-              Manage billing
-            </button>
-          </div>
-        </section>
-
-        {/* Usage card */}
-        <section style={{ ...card, padding: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 18 }}>
-            <h2 className="display" style={{ fontSize: 20, fontWeight: 400, margin: 0 }}>Your month so far</h2>
-            <span style={{ fontSize: 12, color: "var(--mira-slate)" }}>Resets {STUB_ACCOUNT.renews}</span>
-          </div>
-          <div style={{ display: "grid", gap: 18 }}>
-            <Meter used={u.messages.used} cap={u.messages.cap} label={u.messages.label} />
-            <Meter used={u.voice.used} cap={u.voice.cap} label={u.voice.label} />
-            <Meter used={u.builds.used} cap={u.builds.cap} label={u.builds.label} />
-          </div>
-          <p style={{ fontSize: 12.5, color: "var(--mira-slate)", margin: "18px 0 0" }}>
-            {/* TODO(backend): live usage from metering service. */}
-            Plenty left. She&apos;ll let you know long before you run low.
-          </p>
-        </section>
-
-        {/* Manage card */}
-        <section style={{ ...card, padding: 24, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <h2 className="display" style={{ fontSize: 18, fontWeight: 400, margin: "0 0 2px" }}>Make her more yours</h2>
-            <p style={{ fontSize: 13.5, color: "var(--mira-graphite)", margin: 0 }}>Reshape her vibe, role, or name anytime.</p>
-          </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Link className="btn-mira-soft" href="/mira/start" style={{ padding: "10px 18px", fontSize: 14 }}>
-              Reshape Mira
+            {/* Plans are waitlist-only pre-launch → the one honest action is joining the list. */}
+            <Link className="btn-mira" href="/mira/signup" style={{ padding: "11px 20px", fontSize: 14 }}>
+              Join the waitlist →
             </Link>
+            {/* No billing exists yet → clearly disabled, never a dead click or a freeze. */}
             <button
               type="button"
               className="btn-mira-soft"
-              style={{ padding: "10px 18px", fontSize: 14, background: "transparent", color: "var(--mira-slate)" }}
-              onClick={() => {
-                // Clear any local session state and return to the entry page.
-                // (Server-side session invalidation lands with real auth.)
-                try {
-                  localStorage.removeItem("mira_setup");
-                  localStorage.removeItem("mira_token");
-                } catch {}
-                window.location.href = "/mira";
-              }}
+              disabled
+              aria-disabled="true"
+              title="Billing opens after launch"
+              style={{ padding: "10px 18px", fontSize: 14, cursor: "not-allowed", opacity: 0.55 }}
             >
-              Sign out
+              Manage billing · after launch
             </button>
           </div>
+        </section>
+
+        {/* Persona card — surface what the /mira/start wizard saved (TASK-05) */}
+        <section style={{ ...card, padding: 24 }}>
+          <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-deep)", fontWeight: 600, margin: 0 }}>
+            Your Mira
+          </p>
+          {!loaded ? (
+            <p style={{ color: "var(--mira-slate)", fontSize: 14.5, margin: "10px 0 0" }}>Loading…</p>
+          ) : persona ? (
+            <>
+              <p className="display" style={{ fontSize: 24, fontWeight: 400, margin: "6px 0 4px" }}>
+                {assistantName}
+              </p>
+              <p style={{ fontSize: 14.5, color: "var(--mira-graphite)", margin: 0 }}>
+                {[vibeLabel, roleLabel].filter(Boolean).join(" · ") || "Shaped and ready"}
+              </p>
+              <div style={{ marginTop: 16 }}>
+                <Link className="btn-mira-soft" href="/mira/start" style={{ padding: "10px 18px", fontSize: 14 }}>
+                  Reshape {assistantName}
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="display" style={{ fontSize: 22, fontWeight: 400, margin: "6px 0 4px" }}>
+                Shape your Mira
+              </p>
+              <p style={{ fontSize: 14.5, color: "var(--mira-graphite)", margin: 0 }}>
+                Give her a name, a vibe, and a role. It takes a minute, and you can change any of it later.
+              </p>
+              <div style={{ marginTop: 16 }}>
+                <Link className="btn-mira" href="/mira/start" style={{ padding: "11px 20px", fontSize: 14 }}>
+                  Shape your Mira →
+                </Link>
+              </div>
+            </>
+          )}
+        </section>
+
+        {/* What you'll get — illustrative preview, clearly not live usage (TASK-04) */}
+        <section style={{ ...card, padding: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8, gap: 12, flexWrap: "wrap" }}>
+            <h2 className="display" style={{ fontSize: 20, fontWeight: 400, margin: 0 }}>What your free preview includes</h2>
+            <span style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--mira-slate)" }}>
+              Preview · not billed
+            </span>
+          </div>
+          <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: 14.5, color: "var(--mira-graphite)", display: "grid", gap: 8 }}>
+            <li style={{ padding: "2px 0" }}>✓ A million tokens free, every month</li>
+            <li style={{ padding: "2px 0" }}>✓ Chat and voice notes, remembered across conversations</li>
+            <li style={{ padding: "2px 0" }}>✓ A persona you shape — hers to keep</li>
+          </ul>
+          <p style={{ fontSize: 12.5, color: "var(--mira-slate)", margin: "16px 0 0" }}>
+            Live usage meters arrive when plans go live. Nothing here is charged.
+          </p>
+        </section>
+
+        {/* Sign out */}
+        <section style={{ ...card, padding: 24, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <h2 className="display" style={{ fontSize: 18, fontWeight: 400, margin: "0 0 2px" }}>Signed in on this device</h2>
+            <p style={{ fontSize: 13.5, color: "var(--mira-graphite)", margin: 0 }}>Your setup lives on this device until real accounts land.</p>
+          </div>
+          <button
+            type="button"
+            className="btn-mira-soft"
+            style={{ padding: "10px 18px", fontSize: 14, background: "transparent", color: "var(--mira-slate)", cursor: "pointer" }}
+            onClick={signOut}
+          >
+            Sign out
+          </button>
         </section>
       </div>
     </main>

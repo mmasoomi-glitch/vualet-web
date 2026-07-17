@@ -7,8 +7,8 @@ const fraunces = Fraunces({ subsets: ["latin"], weight: ["300", "400", "500"], v
 const interMira = Inter({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-mira-ui", display: "swap" });
 
 export const metadata = {
-  title: "Contact us — Veridian",
-  description: "Get in touch with the Veridian team. Send us a message and we'll get back to you.",
+  title: "Contact us — Mira",
+  description: "Get in touch with the Mira team. Send us a message and we'll get back to you.",
 };
 
 const field: React.CSSProperties = {
@@ -59,7 +59,7 @@ export default async function ContactPage({
             Contact <span className="grad">us</span>
           </h1>
           <p style={{ color: "var(--mira-graphite)", fontSize: 16, lineHeight: 1.6, maxWidth: "46ch", margin: "0 auto" }}>
-            Questions, partnerships, or feedback — send us a message and the Veridian team will get back to you.
+            Questions, partnerships, or feedback — send us a message and the Mira team will get back to you.
           </p>
         </header>
 
@@ -148,7 +148,7 @@ export default async function ContactPage({
             className="mira-navlink"
             style={{ color: "var(--mira-graphite)", fontSize: 14 }}
           >
-            ← Back to the Veridian demo
+            ← Back to the Mira demo
           </Link>
         </div>
       </div>

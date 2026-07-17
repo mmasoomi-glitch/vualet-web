@@ -182,7 +182,7 @@ export default function MiraPage() {
         <div className="mha-wrap">
           <span className="mha-eyebrow">Backing</span>
           <h3>Backed by Satellite Electronic Trading</h3>
-          <p>A Dubai technology company backing Veridian&rsquo;s work to build AI that would rather say &ldquo;I don&rsquo;t know&rdquo; than guess.</p>
+          <p>A Dubai technology company backing Mira to build AI that would rather say &ldquo;I don&rsquo;t know&rdquo; than guess.</p>
         </div>
       </section>
 

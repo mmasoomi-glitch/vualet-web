@@ -50,6 +50,27 @@ export default async function SignupPage({
               placeholder="you@company.com"
               className="w-full px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-sm focus:outline-none focus:border-[var(--color-vualet-indigo)]"
             />
+            <label className="flex items-start gap-2 text-sm text-[var(--muted)]">
+              <input
+                type="checkbox"
+                name="accept_terms"
+                value="yes"
+                required
+                className="mt-0.5 shrink-0 accent-[var(--color-vualet-indigo)]"
+              />
+              <span>
+                I agree to the{" "}
+                <a
+                  href="/legal/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-[var(--color-vualet-indigo)]"
+                >
+                  Terms &amp; Conditions
+                </a>
+                .
+              </span>
+            </label>
             <button
               type="submit"
               className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white bg-[var(--color-vualet-indigo)] hover:bg-[var(--color-vualet-indigo-hover)] transition-colors"

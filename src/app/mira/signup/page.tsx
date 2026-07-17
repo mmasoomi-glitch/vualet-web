@@ -1,5 +1,3 @@
-import { Stepper } from "../_components/Stepper";
-
 export const metadata = { title: "Join the waitlist" };
 
 const card: React.CSSProperties = {
@@ -28,7 +26,7 @@ const input: React.CSSProperties = {
 export default function MiraSignup() {
   return (
     <main style={{ maxWidth: 480, margin: "0 auto", padding: "48px 24px 80px" }}>
-      <Stepper current={1} />
+      {/* waitlist is a single step — no plan/payment stepper pre-launch */}
       <header style={{ textAlign: "center", marginBottom: 24 }}>
         <h1 className="display" style={{ fontSize: "clamp(28px,4.5vw,40px)", margin: "0 0 6px" }}>
           Join the <span className="grad">waitlist</span>
@@ -44,6 +42,37 @@ export default function MiraSignup() {
         <input style={input} name="name" placeholder="Maya" required autoFocus />
         <label style={{ display: "block", fontSize: 13, color: "var(--mira-graphite)", margin: "16px 0 6px" }}>Email</label>
         <input style={input} type="email" name="email" placeholder="you@email.com" required />
+        <label
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 9,
+            margin: "18px 0 0",
+            fontSize: 13,
+            lineHeight: 1.5,
+            color: "var(--mira-graphite)",
+          }}
+        >
+          <input
+            type="checkbox"
+            name="accept_terms"
+            value="yes"
+            required
+            style={{ marginTop: 2, flexShrink: 0, accentColor: "var(--mira-aether-ink)" }}
+          />
+          <span>
+            I agree to the{" "}
+            <a
+              href="/legal/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "var(--mira-aether-ink)", textDecoration: "underline" }}
+            >
+              Terms &amp; Conditions
+            </a>
+            .
+          </span>
+        </label>
         <button
           type="submit"
           className="btn-mira"
