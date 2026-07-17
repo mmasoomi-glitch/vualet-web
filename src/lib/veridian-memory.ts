@@ -27,7 +27,13 @@ export type VisitorMemory = {
   name?: string;
   facts: string[];
   turns: VisitorTurn[];
+  /** How many user messages this visitor has sent (drives the soft free-trial gate). */
+  count?: number;
+  /** Self-declared email captured at the free-trial gate. Lets them keep chatting. */
+  email?: string;
 };
+
+const EMAIL_MAX_LEN = 254;
 
 // Keep the stored footprint small: last N turns, a handful of durable facts.
 const MAX_TURNS = 16;
@@ -84,6 +90,11 @@ export async function getMemory(id: string): Promise<VisitorMemory> {
             .slice(-MAX_TURNS)
             .map((t) => ({ q: String(t.q), a: String(t.a), at: String(t.at ?? "") }))
         : [],
+      count: typeof parsed.count === "number" && parsed.count >= 0 ? Math.floor(parsed.count) : 0,
+      email:
+        typeof parsed.email === "string" && parsed.email.includes("@")
+          ? parsed.email.slice(0, EMAIL_MAX_LEN)
+          : undefined,
     };
   } catch {
     // No file yet, or unreadable/corrupt → treat as a brand-new visitor.
@@ -102,6 +113,8 @@ async function save(mem: VisitorMemory): Promise<void> {
       name: mem.name ? mem.name.slice(0, NAME_MAX_LEN) : undefined,
       facts: mem.facts.slice(-MAX_FACTS),
       turns: mem.turns.slice(-MAX_TURNS),
+      count: typeof mem.count === "number" && mem.count > 0 ? Math.floor(mem.count) : 0,
+      email: mem.email ? mem.email.slice(0, EMAIL_MAX_LEN) : undefined,
     };
     // Write to a temp file then rename, so a concurrent reader never sees a
     // half-written file. Best-effort: rename failures fall back to nothing.
@@ -150,6 +163,36 @@ export async function setName(id: string, name: string): Promise<void> {
   const mem = await getMemory(safe);
   if (mem.name && mem.name.toLowerCase() === clean.toLowerCase()) return;
   mem.name = clean;
+  await save(mem);
+}
+
+/**
+ * Increment this visitor's lifetime user-message count and return the new value.
+ * Drives the SOFT free-trial gate. Never throws — returns 0 on any error so the
+ * chat is never blocked by a counting failure.
+ */
+export async function bumpCount(id: string): Promise<number> {
+  const safe = safeId(id);
+  if (!safe) return 0;
+  const mem = await getMemory(safe);
+  mem.count = (mem.count ?? 0) + 1;
+  await save(mem);
+  return mem.count;
+}
+
+/**
+ * Save the visitor's self-declared email (captured at the free-trial gate). This
+ * is the only PII beyond a first name the demo stores, and only because the
+ * visitor typed it to keep chatting. Deliberately soft: a throwaway is accepted.
+ */
+export async function setEmail(id: string, email: string): Promise<void> {
+  const safe = safeId(id);
+  if (!safe) return;
+  const clean = email.trim().slice(0, EMAIL_MAX_LEN);
+  if (!clean || !clean.includes("@")) return;
+  const mem = await getMemory(safe);
+  if (mem.email && mem.email.toLowerCase() === clean.toLowerCase()) return;
+  mem.email = clean;
   await save(mem);
 }
 

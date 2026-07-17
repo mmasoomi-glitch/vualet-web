@@ -87,7 +87,7 @@ export default function WhatsAppStandin() {
                 <div className="msa-reply">
                   <span className="msa-tag">Mira</span>
                   <div className="msa-b mira">
-                    The revised quote by Thursday &mdash; AED 42,000, locked. You said it on Tuesday&rsquo;s call.
+                    The revised quote by Thursday &mdash; AED 42,000, locked. You sent me that note on Tuesday.
                     <div className="msa-meta">09:07 <Ticks /></div>
                   </div>
                 </div>
@@ -101,7 +101,7 @@ export default function WhatsAppStandin() {
             <ul className="msa-list">
               <li><span className="msa-ck"><Tick /></span> No new app &mdash; she&rsquo;s in the WhatsApp you already use.</li>
               <li><span className="msa-ck"><Tick /></span> No third party in the thread. It&rsquo;s a private line to her.</li>
-              <li><span className="msa-ck"><Tick /></span> Discreet by design &mdash; messages stay between you and Mira.</li>
+              <li><span className="msa-ck"><Tick /></span> She reads only what you send her &mdash; never listens to anything else.</li>
             </ul>
           </div>
         </div>

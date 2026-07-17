@@ -54,7 +54,7 @@ export default function MiraPage() {
                 <div className="mha-entry">
                   <div className="mha-entry-meta"><span className="mha-idx">#0143</span> · logged 02 Feb 2026, 16:40</div>
                   <div className="mha-q">&ldquo;What did I set the budget cap at?&rdquo;</div>
-                  <div className="mha-a">AED 42,000. You said it out loud on the call.</div>
+                  <div className="mha-a">AED 42,000 &mdash; you sent it to me on the 2nd.</div>
                   <span className="mha-stamp mha-ok"><span className="mha-ck"><Check size={13} /></span> Verified verbatim</span>
                 </div>
                 <div className="mha-entry">
