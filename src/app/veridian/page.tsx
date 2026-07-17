@@ -48,7 +48,7 @@ export default function VeridianPage() {
             className="display"
             style={{ fontSize: "clamp(32px,6vw,52px)", lineHeight: 1.08, margin: "18px auto 12px", maxWidth: "16ch" }}
           >
-            Ask Veridian <span className="grad">anything it knows</span>
+            Ask Mira <span className="grad">anything it knows</span>
           </h1>
           <p style={{ color: "var(--mira-graphite)", fontSize: 16, lineHeight: 1.6, maxWidth: "52ch", margin: "0 auto" }}>
             This demo answers only from a curated set of facts about the product. If it doesn&apos;t know
@@ -144,7 +144,7 @@ export default function VeridianPage() {
         >
           <span aria-hidden style={{ fontSize: 16, lineHeight: 1.4 }}>🔒</span>
           <span>
-            <strong style={{ color: "var(--mira-ink)", fontWeight: 500 }}>Sandboxed demo.</strong> Veridian can
+            <strong style={{ color: "var(--mira-ink)", fontWeight: 500 }}>Sandboxed demo.</strong> Mira can
             answer anything it knows, but it cannot act — it can&apos;t run code, browse, send messages, or
             change anything. It&apos;s read-only, on purpose.
           </span>

@@ -501,20 +501,62 @@
 }
 .mira-root .vvc-voice-toggle:hover { background: rgba(255,255,255,.28); }
 
-/* press-and-talk mic — the one bold element: a living "presence" orb */
-.mira-root .vvc-mic {
-  flex: none; width: 46px; height: 46px; border-radius: 50%; border: none; cursor: pointer;
+/* ================= Killer hold-to-talk composer (VVC) =================
+   One rounded field on the left; ONE big presence orb on the right that
+   morphs mic <-> send by input state. Press-and-hold arms it (pulse rings +
+   live waveform tray + slide-to-cancel). WhatsApp-familiar, Mira-premium. */
+.mira-root .vvc-composer {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; border-top: 1px solid var(--mira-fog);
+}
+.mira-root .vvc-field {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  min-height: 50px; padding: 4px 8px 4px 16px; border-radius: var(--mira-radius-full);
+  border: 1px solid var(--mira-fog); background: var(--mira-cream);
+  transition: border-color .2s, background .2s, box-shadow .2s;
+}
+.mira-root .vvc-field:focus-within { border-color: var(--mira-lavender); box-shadow: 0 0 0 3px rgba(199,184,240,.3); }
+.mira-root .vvc-field input {
+  flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+  color: var(--mira-ink); font-size: 14.5px; font-family: inherit; padding: 11px 0;
+}
+.mira-root .vvc-field input::placeholder { color: var(--mira-slate); }
+.mira-root .vvc-field.is-rec { border-color: var(--mira-rose-deep); background: #fff; }
+.mira-root .vvc-field.is-cancel { border-color: var(--mira-rose-ink); background: rgba(181,74,69,.07); }
+/* subtle "hold to talk" affordance next to the mic (idle + empty only) */
+.mira-root .vvc-holdhint { flex: none; font-size: 11.5px; font-weight: 500; color: var(--mira-slate); white-space: nowrap; }
+
+/* recording tray — replaces the input while holding */
+.mira-root .vvc-rectray { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 5px 2px; }
+.mira-root .vvc-rectime { flex: none; font-family: var(--mira-mono); font-size: 13px; color: var(--mira-rose-ink); font-variant-numeric: tabular-nums; }
+.mira-root .vvc-rechint { min-width: 0; flex: 1; font-size: 12.5px; color: var(--mira-graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mira-root .vvc-field.is-cancel .vvc-rechint { color: var(--mira-rose-ink); font-weight: 600; }
+
+/* the hero: one round control (mic <-> send) */
+.mira-root .vvc-primary {
+  flex: none; width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer;
   display: grid; place-items: center; color: #fff; background: var(--mira-grad-presence);
-  box-shadow: var(--mira-shadow-md); touch-action: none; user-select: none;
-  transition: transform .2s cubic-bezier(.16,1,.3,1), box-shadow .2s;
+  box-shadow: var(--mira-shadow-md); position: relative; touch-action: none; user-select: none;
+  transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .2s, background .25s;
 }
-.mira-root .vvc-mic:hover { transform: translateY(-1px); box-shadow: var(--mira-shadow-aura); }
-.mira-root .vvc-mic:disabled { opacity: .5; cursor: default; }
-.mira-root .vvc-mic.is-rec { animation: vvc-micpulse 1200ms ease-out infinite; }
-@keyframes vvc-micpulse {
-  0% { box-shadow: 0 0 0 0 rgba(181,74,69,.5); }
-  100% { box-shadow: 0 0 0 15px rgba(181,74,69,0); }
-}
+.mira-root .vvc-primary svg { width: 22px; height: 22px; }
+.mira-root .vvc-primary:hover { transform: translateY(-1px) scale(1.03); box-shadow: var(--mira-shadow-aura); }
+.mira-root .vvc-primary:active { transform: scale(.95); }
+.mira-root .vvc-primary:disabled { opacity: .5; cursor: default; box-shadow: var(--mira-shadow-md); transform: none; }
+/* quiet "press me" breathing ring — mic, idle only */
+.mira-root .vvc-mic-btn::after { content: ""; position: absolute; inset: 0; border-radius: 50%; animation: vvc-invite 2800ms ease-out infinite; pointer-events: none; }
+@keyframes vvc-invite { 0% { box-shadow: 0 0 0 0 rgba(181,74,69,.4); } 70%,100% { box-shadow: 0 0 0 12px rgba(181,74,69,0); } }
+/* armed: enlarged, concentric pulse */
+.mira-root .vvc-primary.is-rec { transform: scale(1.08); animation: vvc-armed 1250ms ease-out infinite; }
+.mira-root .vvc-primary.is-rec::after { animation: none; }
+@keyframes vvc-armed { 0% { box-shadow: 0 0 0 0 rgba(181,74,69,.5); } 100% { box-shadow: 0 0 0 17px rgba(181,74,69,0); } }
+/* slide-to-cancel armed */
+.mira-root .vvc-primary.is-cancel { background: var(--mira-rose-ink); animation: none; transform: scale(1.08); }
+
+/* certified micro-line under the composer — the trust seal, hairline-quiet */
+.mira-root .vvc-certify { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 7px; padding: 0 16px 14px; font-family: var(--mira-mono); font-size: 10px; letter-spacing: .13em; text-transform: uppercase; color: var(--mira-graphite); text-align: center; }
+.mira-root .vvc-certify .tick { flex: none; width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center; background: rgba(18,120,78,.14); color: var(--mira-verify-deep); font-size: 9px; letter-spacing: 0; }
+.mira-root .vvc-certify b { color: var(--mira-verify-deep); font-weight: 600; }
 
 /* live recording banner: dot + waveform + interim transcript */
 .mira-root .vvc-reclive {
@@ -591,8 +633,9 @@
   outline: 2px solid var(--aether); outline-offset: 2px;
 }
 
-@media (max-width: 380px) {
-  .mira-root .vvc-mic { width: 42px; height: 42px; }
+@media (max-width: 440px) { .mira-root .vvc-holdhint { display: none; } }
+@media (max-width: 360px) {
+  .mira-root .vvc-primary { width: 48px; height: 48px; }
   .mira-root .vvc-voice-toggle span:last-child { display: none; } /* icon-only on tiny screens */
 }
 
@@ -603,8 +646,29 @@
   transition: background .2s;
 }
 .mira-root .mbv-voice-toggle:hover { background: rgba(255,255,255,.32); }
-.mira-root .mbv-mic { touch-action: none; user-select: none; }
-.mira-root .mbv-mic.is-rec { animation: vvc-micpulse 1200ms ease-out infinite; }
+/* compact hold-to-talk composer inside the floating MiraBot */
+.mira-root .mira-bot-foot .mbv-field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 3px 6px 3px 14px; border-radius: var(--mira-radius-full); border: 1px solid var(--mira-fog); background: var(--mira-cream); transition: border-color .2s, background .2s; }
+.mira-root .mira-bot-foot .mbv-field:focus-within { border-color: var(--mira-lavender); }
+.mira-root .mira-bot-foot .mbv-field input { flex: 1; min-width: 0; border: none; background: transparent; outline: none; color: var(--mira-ink); font-size: 14px; font-family: inherit; padding: 9px 0; }
+.mira-root .mira-bot-foot .mbv-field.is-rec { border-color: var(--mira-rose-deep); background: #fff; }
+.mira-root .mira-bot-foot .mbv-field.is-cancel { border-color: var(--mira-rose-ink); background: rgba(181,74,69,.07); }
+.mira-root .mbv-holdhint { flex: none; font-size: 10.5px; font-weight: 500; color: var(--mira-slate); white-space: nowrap; }
+.mira-root .mbv-rectray { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 4px 2px; }
+.mira-root .mbv-rectime { flex: none; font-family: var(--mira-mono); font-size: 12px; color: var(--mira-rose-ink); font-variant-numeric: tabular-nums; }
+.mira-root .mbv-rechint { min-width: 0; flex: 1; font-size: 11.5px; color: var(--mira-graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mira-root .mira-bot-foot .mbv-field.is-cancel .mbv-rechint { color: var(--mira-rose-ink); font-weight: 600; }
+.mira-root .mira-bot-foot .mbv-primary { flex: none; width: 46px; height: 46px; border-radius: 50%; border: none; cursor: pointer; display: grid; place-items: center; color: #fff; background: var(--mira-grad-presence); box-shadow: var(--mira-shadow-sm); position: relative; touch-action: none; user-select: none; transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .2s, background .25s; }
+.mira-root .mira-bot-foot .mbv-primary svg { width: 19px; height: 19px; }
+.mira-root .mira-bot-foot .mbv-primary:hover { transform: scale(1.04); box-shadow: var(--mira-shadow-aura); }
+.mira-root .mira-bot-foot .mbv-primary:active { transform: scale(.95); }
+.mira-root .mira-bot-foot .mbv-primary:disabled { opacity: .5; cursor: default; transform: none; }
+.mira-root .mbv-mic-btn::after { content: ""; position: absolute; inset: 0; border-radius: 50%; animation: vvc-invite 2800ms ease-out infinite; pointer-events: none; }
+.mira-root .mira-bot-foot .mbv-primary.is-rec { transform: scale(1.07); animation: vvc-armed 1250ms ease-out infinite; }
+.mira-root .mbv-primary.is-rec::after { animation: none; }
+.mira-root .mira-bot-foot .mbv-primary.is-cancel { background: var(--mira-rose-ink); animation: none; transform: scale(1.07); }
+.mira-root .mbv-certify { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; padding: 0 12px 11px; font-family: var(--mira-mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--mira-graphite); text-align: center; }
+.mira-root .mbv-certify .tick { flex: none; width: 13px; height: 13px; border-radius: 50%; display: grid; place-items: center; background: rgba(18,120,78,.14); color: var(--mira-verify-deep); font-size: 8px; letter-spacing: 0; }
+.mira-root .mbv-certify b { color: var(--mira-verify-deep); font-weight: 600; }
 
 .mira-root .mbv-reclive {
   display: flex; align-items: center; gap: 8px; padding: 8px 12px;
@@ -630,10 +694,12 @@
 
 /* WCAG 2.2.2 — stop the ambient voice/recording animations for reduced-motion users */
 @media (prefers-reduced-motion: reduce) {
-  .mira-root .vvc-mic.is-rec, .mira-root .mbv-mic.is-rec,
+  .mira-root .vvc-primary.is-rec, .mira-root .mbv-primary.is-rec,
+  .mira-root .vvc-mic-btn::after, .mira-root .mbv-mic-btn::after,
   .mira-root .vvc-reclive-dot, .mira-root .mbv-reclive-dot,
   .mira-root .vvc-wave i, .mira-root .mbv-wave i,
   .mira-root .vvc-vn.is-playing .vvc-vn-wave i,
   .mira-root .mbv-vn.is-playing .mbv-vn-wave i { animation: none; }
+  .mira-root .vvc-primary.is-rec, .mira-root .mbv-primary.is-rec { transform: none; }
   .mira-root .vvc-wave i, .mira-root .mbv-wave i { transform: scaleY(.7); }
 }

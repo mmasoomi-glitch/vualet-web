@@ -37,7 +37,7 @@ function getSR(): SRCtor | null {
 type Msg = { id: number; role: "me" | "her"; text: string; audioUrl?: string; autoplay?: boolean };
 
 const SUGGESTIONS = [
-  "What can Veridian do?",
+  "What can Mira do?",
   "Do you remember me?",
   "How does voice work?",
   "What are the pricing tiers?",
@@ -148,6 +148,8 @@ export default function VeridianChat() {
   const [supportsMic, setSupportsMic] = useState(false);
   const [recording, setRecording] = useState(false);
   const [interim, setInterim] = useState("");
+  const [recSecs, setRecSecs] = useState(0);
+  const [cancelArmed, setCancelArmed] = useState(false);
   const [trialOpen, setTrialOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
@@ -157,7 +159,7 @@ export default function VeridianChat() {
       id: 0,
       role: "her",
       text:
-        "Hi — I'm Veridian. You can talk to me: hold the mic and speak like a voice note, or just type. Turn my voice on and I'll reply out loud. Tell me your name or a detail about yourself, come back later, and watch me remember — I only recall what you actually tell me, and I never make things up.",
+        "Hi — I'm Mira. You can talk to me: hold the mic and speak like a voice note, or just type. Turn my voice on and I'll reply out loud. Tell me your name or a detail about yourself, come back later, and watch me remember — I only recall what you actually tell me, and I never make things up.",
     },
   ]);
 
@@ -169,6 +171,9 @@ export default function VeridianChat() {
   const sentRef = useRef(false);
   const voiceOnRef = useRef(voiceOn);
   const urlsRef = useRef<string[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recStartXRef = useRef(0);
+  const cancelRef = useRef(false);
 
   useEffect(() => {
     voiceOnRef.current = voiceOn;
@@ -183,6 +188,7 @@ export default function VeridianChat() {
     const urls = urlsRef.current;
     return () => {
       urls.forEach((u) => URL.revokeObjectURL(u));
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
@@ -278,6 +284,23 @@ export default function VeridianChat() {
     }
   }, []);
 
+  // Slide-away / cancel: drop the take without sending it.
+  const cancelRecognition = useCallback(() => {
+    cancelRef.current = true;
+    sentRef.current = true;
+    finalRef.current = "";
+    interimRef.current = "";
+    setInterim("");
+    const rec = recRef.current;
+    if (rec) {
+      try {
+        rec.abort();
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
   const startRecognition = useCallback(() => {
     if (recording || busy) return;
     const SR = getSR();
@@ -306,7 +329,12 @@ export default function VeridianChat() {
       /* mic denied / no-speech / network — end quietly */
     };
     rec.onend = () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       setRecording(false);
+      setCancelArmed(false);
       recRef.current = null;
       if (sentRef.current) return;
       sentRef.current = true;
@@ -319,6 +347,11 @@ export default function VeridianChat() {
     try {
       rec.start();
       setRecording(true);
+      setRecSecs(0);
+      setCancelArmed(false);
+      cancelRef.current = false;
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => setRecSecs((s) => s + 1), 1000);
     } catch {
       recRef.current = null;
     }
@@ -331,17 +364,32 @@ export default function VeridianChat() {
     } catch {
       /* ignore */
     }
+    recStartXRef.current = e.clientX;
+    cancelRef.current = false;
+    setCancelArmed(false);
     startRecognition();
+  };
+  const onMicPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!recording) return;
+    const canceling = e.clientX - recStartXRef.current < -70;
+    if (canceling !== cancelRef.current) {
+      cancelRef.current = canceling;
+      setCancelArmed(canceling);
+    }
   };
   const onMicPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    stopRecognition();
+    if (cancelRef.current) cancelRecognition();
+    else stopRecognition();
   };
   const onMicKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       if (recording) stopRecognition();
       else startRecognition();
+    } else if (e.key === "Escape" && recording) {
+      e.preventDefault();
+      cancelRecognition();
     }
   };
 
@@ -419,10 +467,10 @@ export default function VeridianChat() {
             fontWeight: 600,
           }}
         >
-          V
+          M
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <strong style={{ fontWeight: 500 }}>Veridian</strong>
+          <strong style={{ fontWeight: 500 }}>Mira</strong>
           <div style={{ fontSize: 12, opacity: 0.9 }}>live demo · hold to talk · remembers you</div>
         </div>
         <button
@@ -443,7 +491,7 @@ export default function VeridianChat() {
         ref={logRef}
         role="log"
         aria-live="polite"
-        aria-label="Conversation with the Veridian demo"
+        aria-label="Conversation with the Mira demo"
         style={{
           flex: 1,
           overflowY: "auto",
@@ -538,19 +586,6 @@ export default function VeridianChat() {
         )}
       </div>
 
-      {/* Recording banner */}
-      {recording && (
-        <div className="vvc-reclive" role="status" aria-live="assertive">
-          <span className="vvc-reclive-dot" aria-hidden />
-          <div className="vvc-wave" aria-hidden>
-            {Array.from({ length: 16 }).map((_, i) => (
-              <i key={i} style={{ animationDelay: `${(i % 8) * 90}ms` }} />
-            ))}
-          </div>
-          <span className="vvc-reclive-txt">{interim || "Listening… release to send"}</span>
-        </div>
-      )}
-
       {/* Suggestions */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "10px 16px 0" }}>
         {SUGGESTIONS.map((s) => (
@@ -575,72 +610,99 @@ export default function VeridianChat() {
         ))}
       </div>
 
-      {/* Composer */}
-      <form
-        onSubmit={onSubmit}
-        style={{
-          display: "flex",
-          gap: 8,
-          alignItems: "center",
-          padding: 16,
-          borderTop: "1px solid var(--mira-fog)",
-          marginTop: 12,
-        }}
-      >
+      {/* Composer — WhatsApp-style: one field, one hero control that morphs
+          mic ↔ send. Hold the mic to talk; slide away to cancel. */}
+      <form onSubmit={onSubmit} className="vvc-composer">
         <label
           htmlFor="veridian-input"
           className="sr-only"
           style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}
         >
-          Ask the Veridian demo a question
+          Ask the Mira demo a question
         </label>
 
-        {supportsMic && (
+        <div className={`vvc-field ${recording ? "is-rec" : ""} ${cancelArmed ? "is-cancel" : ""}`}>
+          {recording ? (
+            <div className="vvc-rectray" role="status" aria-live="assertive">
+              <span className="vvc-reclive-dot" aria-hidden />
+              <span className="vvc-rectime">{fmtTime(recSecs)}</span>
+              <div className="vvc-wave" aria-hidden>
+                {Array.from({ length: 14 }).map((_, i) => (
+                  <i key={i} style={{ animationDelay: `${(i % 7) * 90}ms` }} />
+                ))}
+              </div>
+              <span className="vvc-rechint">
+                {cancelArmed ? "Release to cancel" : interim || "‹ slide to cancel · release to send"}
+              </span>
+            </div>
+          ) : (
+            <>
+              <input
+                id="veridian-input"
+                value={input}
+                maxLength={MSG_MAX_LEN}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={supportsMic ? "Hold the mic to talk, or type…" : "Type a message…"}
+                autoComplete="off"
+              />
+              {supportsMic && !input.trim() && (
+                <span className="vvc-holdhint" aria-hidden>
+                  Hold to talk
+                </span>
+              )}
+            </>
+          )}
+        </div>
+
+        {supportsMic && !input.trim() ? (
           <button
             type="button"
-            className={`vvc-mic ${recording ? "is-rec" : ""}`}
+            className={`vvc-primary vvc-mic-btn ${recording ? "is-rec" : ""} ${cancelArmed ? "is-cancel" : ""}`}
             onPointerDown={onMicPointerDown}
+            onPointerMove={onMicPointerMove}
             onPointerUp={onMicPointerUp}
             onPointerCancel={onMicPointerUp}
             onKeyDown={onMicKeyDown}
             onContextMenu={(e) => e.preventDefault()}
-            aria-label={recording ? "Release to send your voice note" : "Hold to talk, or press Space to start"}
+            aria-label={
+              recording
+                ? "Recording — release to send, or slide away to cancel"
+                : "Hold to talk, or press Space to start recording"
+            }
             aria-pressed={recording}
             disabled={busy}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="9" y="2" width="6" height="12" rx="3" />
               <path d="M5 10a7 7 0 0 0 14 0" />
               <line x1="12" y1="17" x2="12" y2="22" />
               <line x1="8" y1="22" x2="16" y2="22" />
             </svg>
           </button>
+        ) : (
+          <button
+            type="submit"
+            className="vvc-primary vvc-send-btn"
+            disabled={busy || !input.trim()}
+            aria-label="Send message"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 2 11 13" />
+              <path d="M22 2 15 22l-4-9-9-4 20-7z" />
+            </svg>
+          </button>
         )}
-
-        <input
-          id="veridian-input"
-          value={input}
-          maxLength={MSG_MAX_LEN}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={recording ? "Listening…" : "Hold the mic, or type…"}
-          autoComplete="off"
-          disabled={recording}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            padding: "12px 14px",
-            borderRadius: "var(--mira-radius-full)",
-            border: "1px solid var(--mira-fog)",
-            background: "var(--mira-cream)",
-            color: "var(--mira-ink)",
-            fontSize: 14,
-            outline: "none",
-          }}
-        />
-        <button type="submit" className="btn-mira" disabled={busy} aria-label="Send message" style={{ padding: "12px 20px" }}>
-          {busy ? "…" : "Send"}
-        </button>
       </form>
+
+      {/* Certified touch — grounded · verified, in the seal aesthetic */}
+      <div className="vvc-certify" aria-label="Mira is grounded and verified — it cannot fabricate">
+        <span className="tick" aria-hidden>
+          ✓
+        </span>
+        <span>
+          <b>Mira</b> · grounded · verified · cannot fabricate
+        </span>
+      </div>
     </div>
   );
 }

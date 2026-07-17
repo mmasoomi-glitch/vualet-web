@@ -99,6 +99,8 @@ export default function MiraBot() {
   const [supportsMic, setSupportsMic] = useState(false);
   const [recording, setRecording] = useState(false);
   const [interim, setInterim] = useState("");
+  const [recSecs, setRecSecs] = useState(0);
+  const [cancelArmed, setCancelArmed] = useState(false);
   const [trialOpen, setTrialOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
@@ -114,6 +116,9 @@ export default function MiraBot() {
   const sentRef = useRef(false);
   const voiceOnRef = useRef(voiceOn);
   const urlsRef = useRef<string[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recStartXRef = useRef(0);
+  const cancelRef = useRef(false);
 
   useEffect(() => {
     voiceOnRef.current = voiceOn;
@@ -123,7 +128,10 @@ export default function MiraBot() {
   useEffect(() => {
     setSupportsMic(getSR() !== null);
     const urls = urlsRef.current;
-    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+    return () => {
+      urls.forEach((u) => URL.revokeObjectURL(u));
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -208,6 +216,19 @@ export default function MiraBot() {
     }
   }, []);
 
+  const cancelRec = useCallback(() => {
+    cancelRef.current = true;
+    sentRef.current = true;
+    finalRef.current = "";
+    interimRef.current = "";
+    setInterim("");
+    try {
+      recRef.current?.abort();
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const startRec = useCallback(() => {
     if (recording || busy) return;
     const SR = getSR();
@@ -234,7 +255,12 @@ export default function MiraBot() {
     };
     rec.onerror = () => {};
     rec.onend = () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       setRecording(false);
+      setCancelArmed(false);
       recRef.current = null;
       if (sentRef.current) return;
       sentRef.current = true;
@@ -247,10 +273,51 @@ export default function MiraBot() {
     try {
       rec.start();
       setRecording(true);
+      setRecSecs(0);
+      setCancelArmed(false);
+      cancelRef.current = false;
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => setRecSecs((s) => s + 1), 1000);
     } catch {
       recRef.current = null;
     }
   }, [recording, busy, send]);
+
+  const onMicDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    recStartXRef.current = e.clientX;
+    cancelRef.current = false;
+    setCancelArmed(false);
+    startRec();
+  };
+  const onMicMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!recording) return;
+    const canceling = e.clientX - recStartXRef.current < -60;
+    if (canceling !== cancelRef.current) {
+      cancelRef.current = canceling;
+      setCancelArmed(canceling);
+    }
+  };
+  const onMicUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (cancelRef.current) cancelRec();
+    else stopRec();
+  };
+  const onMicKey = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (recording) stopRec();
+      else startRec();
+    } else if (e.key === "Escape" && recording) {
+      e.preventDefault();
+      cancelRec();
+    }
+  };
 
   async function submitEmail(e: React.FormEvent) {
     e.preventDefault();
@@ -348,71 +415,87 @@ export default function MiraBot() {
         )}
       </div>
 
-      {recording && (
-        <div className="mbv-reclive" role="status" aria-live="assertive">
-          <span className="mbv-reclive-dot" aria-hidden />
-          <div className="mbv-wave" aria-hidden>
-            {Array.from({ length: 12 }).map((_, i) => (
-              <i key={i} style={{ animationDelay: `${(i % 6) * 90}ms` }} />
-            ))}
-          </div>
-          <span className="mbv-reclive-txt">{interim || "Listening… release to send"}</span>
-        </div>
-      )}
-
       <div className="mira-bot-foot">
-        {supportsMic && (
+        <div className={`mbv-field ${recording ? "is-rec" : ""} ${cancelArmed ? "is-cancel" : ""}`}>
+          {recording ? (
+            <div className="mbv-rectray" role="status" aria-live="assertive">
+              <span className="mbv-reclive-dot" aria-hidden />
+              <span className="mbv-rectime">{fmtTime(recSecs)}</span>
+              <div className="mbv-wave" aria-hidden>
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <i key={i} style={{ animationDelay: `${(i % 5) * 90}ms` }} />
+                ))}
+              </div>
+              <span className="mbv-rechint">
+                {cancelArmed ? "Release to cancel" : interim || "‹ slide to cancel"}
+              </span>
+            </div>
+          ) : (
+            <>
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && send(input)}
+                placeholder={supportsMic ? "Hold the mic, or type…" : "Type a message…"}
+                aria-label="Message Mira"
+              />
+              {supportsMic && !input.trim() && (
+                <span className="mbv-holdhint" aria-hidden>
+                  Hold to talk
+                </span>
+              )}
+            </>
+          )}
+        </div>
+
+        {supportsMic && !input.trim() ? (
           <button
             type="button"
-            className={`mbv-mic ${recording ? "is-rec" : ""}`}
-            onPointerDown={(e) => {
-              e.preventDefault();
-              try {
-                e.currentTarget.setPointerCapture(e.pointerId);
-              } catch {
-                /* ignore */
-              }
-              startRec();
-            }}
-            onPointerUp={(e) => {
-              e.preventDefault();
-              stopRec();
-            }}
-            onPointerCancel={(e) => {
-              e.preventDefault();
-              stopRec();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                if (recording) stopRec();
-                else startRec();
-              }
-            }}
+            className={`mbv-primary mbv-mic-btn ${recording ? "is-rec" : ""} ${cancelArmed ? "is-cancel" : ""}`}
+            onPointerDown={onMicDown}
+            onPointerMove={onMicMove}
+            onPointerUp={onMicUp}
+            onPointerCancel={onMicUp}
+            onKeyDown={onMicKey}
             onContextMenu={(e) => e.preventDefault()}
-            aria-label={recording ? "Release to send your voice note" : "Hold to talk, or press Space to start"}
+            aria-label={
+              recording
+                ? "Recording — release to send, or slide away to cancel"
+                : "Hold to talk, or press Space to start recording"
+            }
             aria-pressed={recording}
             disabled={busy}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="9" y="2" width="6" height="12" rx="3" />
               <path d="M5 10a7 7 0 0 0 14 0" />
               <line x1="12" y1="17" x2="12" y2="22" />
               <line x1="8" y1="22" x2="16" y2="22" />
             </svg>
           </button>
+        ) : (
+          <button
+            type="button"
+            className="mbv-primary mbv-send-btn"
+            onClick={() => send(input)}
+            aria-label="Send"
+            disabled={busy || !input.trim()}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 2 11 13" />
+              <path d="M22 2 15 22l-4-9-9-4 20-7z" />
+            </svg>
+          </button>
         )}
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send(input)}
-          placeholder={recording ? "Listening…" : "Type a message…"}
-          aria-label="Message Mira"
-          disabled={recording}
-        />
-        <button onClick={() => send(input)} aria-label="Send" disabled={busy}>
-          →
-        </button>
+      </div>
+
+      <div className="mbv-certify" aria-label="Mira is grounded and verified — it cannot fabricate">
+        <span className="tick" aria-hidden>
+          ✓
+        </span>
+        <span>
+          <b>Mira</b> · grounded · verified
+        </span>
       </div>
     </div>
   );
