@@ -9,7 +9,7 @@ const interMira = Inter({ subsets: ["latin"], weight: ["400", "500", "600"], var
 
 export const metadata: Metadata = {
   title: "Mira — your assistant, by reflection",
-  description: "Your own AI assistant, in the chat you already use. No app to install. Mira talks, remembers you, and gets things done on Telegram or WhatsApp.",
+  description: "Your own AI assistant, in the chat you already use. No app to install. Mira talks, remembers you, and gets things done — on Telegram today, with WhatsApp coming soon.",
   icons: {
     icon: [
       { url: "/mira/mira-logo-color.svg", type: "image/svg+xml" },

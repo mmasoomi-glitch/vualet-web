@@ -17,11 +17,12 @@ export const runtime = "nodejs"; // fs access needs the Node runtime, not edge
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMAIL_MAX_LEN = 254;
 const SOURCE_MAX_LEN = 60;
+const NAME_MAX_LEN = 120;
 
 const WAITLIST_FILE =
   process.env.WAITLIST_FILE || path.join(process.cwd(), "data", "waitlist.jsonl");
 
-type Entry = { email: string; source: string; at: string };
+type Entry = { name: string; email: string; source: string; at: string };
 
 async function appendWaitlist(entry: Entry): Promise<void> {
   await fs.mkdir(path.dirname(WAITLIST_FILE), { recursive: true });
@@ -38,16 +39,22 @@ function seeOther(pathAndQuery: string) {
 
 export async function POST(req: Request) {
   const form = await req.formData().catch(() => null);
+  const name = String(form?.get("name") ?? "").trim().slice(0, NAME_MAX_LEN);
   const email = String(form?.get("email") ?? "").trim().toLowerCase();
   const source = String(form?.get("source") ?? form?.get("product") ?? "")
     .trim()
     .slice(0, SOURCE_MAX_LEN);
 
+  // Mira-sourced signups return to the warm, Mira-branded page — not the cold
+  // Vualet /signup. Any other source keeps the default Vualet target.
+  const isMira = source.toLowerCase().includes("mira");
+  const back = isMira ? "/mira/signup" : "/signup";
+
   if (!email || email.length > EMAIL_MAX_LEN || !EMAIL_RE.test(email)) {
-    return seeOther("/signup?error=1");
+    return seeOther(`${back}?error=1`);
   }
 
-  const entry: Entry = { email, source, at: new Date().toISOString() };
+  const entry: Entry = { name, email, source, at: new Date().toISOString() };
 
   // Durable file is the source of truth. If it fails, fall through to the kv
   // mirror; only report an error to the user if BOTH persistence paths fail.
@@ -66,9 +73,9 @@ export async function POST(req: Request) {
   }
 
   if (!persisted) {
-    return seeOther("/signup?error=2");
+    return seeOther(`${back}?error=2`);
   }
-  return seeOther("/signup?joined=1");
+  return seeOther(`${back}?joined=1`);
 }
 
 // Owner export: GET /api/waitlist?key=<WAITLIST_EXPORT_KEY> → { count, entries }.

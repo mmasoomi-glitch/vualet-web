@@ -9,9 +9,9 @@ import Stripe from "stripe";
  *
  * Required env (see .env.example):
  *   STRIPE_SECRET_KEY       — secret API key (sk_test_… / sk_live_…)
- *   STRIPE_PRICE_COMPANION  — Stripe price id for the $19 plan
- *   STRIPE_PRICE_ASSISTANT  — Stripe price id for the $59 plan
- *   STRIPE_PRICE_STUDIO     — Stripe price id for the $199 plan
+ *   STRIPE_PRICE_COMPANION  — Stripe price id for the $14.99 plan
+ *   STRIPE_PRICE_ASSISTANT  — Stripe price id for the $39 plan
+ *   STRIPE_PRICE_STUDIO     — Stripe price id for the $79 plan
  *   STRIPE_WEBHOOK_SECRET   — signing secret for the events webhook
  */
 

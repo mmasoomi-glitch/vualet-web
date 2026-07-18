@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { headers } from "next/headers";
 import styles from "./legal.module.css";
 import MiraNav from "../mira/_components/MiraNav";
+import MiraBot from "../mira/_components/MiraBot";
 import "../mira/mira-theme.css";
 
 // Shared chrome for every /legal/* trust page (privacy, terms, refund,
@@ -20,7 +21,8 @@ export default async function LegalLayout({ children }: { children: ReactNode })
     <div className={styles.page}>
       {isMiraHost && (
         <div className="mira-root">
-          <MiraNav cta={false} />
+          <MiraNav cta />
+          <MiraBot />
         </div>
       )}
       <div className={styles.container}>{children}</div>

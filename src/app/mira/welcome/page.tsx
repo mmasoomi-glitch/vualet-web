@@ -18,7 +18,11 @@ function Welcome() {
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((d: Connect) => {
         setData(d);
-        if (d.customerId) localStorage.setItem("mira_customer", d.customerId);
+        // Durably save the Stripe customer id for /mira/account to read later.
+        // Wrapped so a storage exception (private mode, quota) can't break the flow.
+        try {
+          if (d.customerId) localStorage.setItem("mira_customer", d.customerId);
+        } catch {}
       })
       .catch(() => setErr(true));
   }, [token]);

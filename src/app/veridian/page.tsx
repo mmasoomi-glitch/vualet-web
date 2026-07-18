@@ -51,9 +51,9 @@ export default function VeridianPage() {
             Ask Mira <span className="grad">anything it knows</span>
           </h1>
           <p style={{ color: "var(--mira-graphite)", fontSize: 16, lineHeight: 1.6, maxWidth: "52ch", margin: "0 auto" }}>
-            This demo answers only from a curated set of facts about the product. If it doesn&apos;t know
-            something, it says so instead of guessing — a small illustration of grounded AI that doesn&apos;t
-            make things up.
+            This demo answers your questions, and won&apos;t invent product details it doesn&apos;t have — if
+            it doesn&apos;t know a product fact, it says so instead of guessing. A small illustration of an
+            assistant designed not to fabricate, a standard we hold ourselves to.
           </p>
         </header>
 
@@ -105,10 +105,10 @@ export default function VeridianPage() {
               Canonical Memory
             </div>
             <div style={{ fontSize: 14, lineHeight: 1.55, color: "var(--mira-ink)" }}>
-              The first AI that remembers you — and can prove it. Tell her your name or a detail about
-              yourself, then come back later:{" "}
-              <strong style={{ fontWeight: 600 }}>she recalls exactly what you told her</strong>, and never
-              invents what she doesn&apos;t know.
+              Designed to remember you faithfully — a standard we hold ourselves to. Tell her your name or a
+              detail about yourself, then come back later:{" "}
+              <strong style={{ fontWeight: 600 }}>she recalls exactly what you told her</strong>, and is built
+              not to invent what she doesn&apos;t know.
               <span
                 style={{
                   display: "block",
@@ -119,7 +119,7 @@ export default function VeridianPage() {
                   color: "var(--mira-graphite)",
                 }}
               >
-                Verified · tamper-evident · grounded
+                Grounded · faithful recall · designed not to fabricate
               </span>
             </div>
           </div>

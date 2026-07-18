@@ -53,6 +53,10 @@ function reserveDailyCall(): boolean {
 }
 
 function clientIp(req: Request): string {
+  // Behind Cloudflare, cf-connecting-ip is the trustworthy client IP; XFF can be
+  // spoofed/chained, so prefer CF's header when present for the rate limiter.
+  const cf = req.headers.get("cf-connecting-ip");
+  if (cf) return cf.trim();
   const xff = req.headers.get("x-forwarded-for");
   if (xff) return xff.split(",")[0].trim();
   return req.headers.get("x-real-ip") || "unknown";

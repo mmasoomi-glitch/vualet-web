@@ -12,7 +12,7 @@ export default function PrivacyPolicyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      lastUpdated="July 16, 2026"
+      lastUpdated="July 17, 2026"
       activeHref="/legal/privacy"
       intro="This Privacy Policy explains what information Vualet and Mira (“we,” “us,” “our”) collect when you use our products, why we collect it, who we share it with, and the rights you have over it."
     >

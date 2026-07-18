@@ -15,7 +15,7 @@
   --color-vualet-text-dark: #FFF8F0;      /* cream text on dark */
   --color-vualet-text-light: #2A1F2D;
   --color-vualet-muted-dark: #B8AEBC;
-  --color-vualet-muted-light: #8C8190;    /* Mira slate */
+  --color-vualet-muted-light: #6B6270;    /* Mira slate — darkened to pass WCAG AA (≥4.5:1 on cream) */
   --color-vualet-border-dark: #3A2F3D;
   --color-vualet-border-light: #E8E0EA;   /* Mira fog */
   --color-vualet-success: #6BCE9B;        /* Mira success */
@@ -32,7 +32,7 @@
   --foreground: #2A1F2D;                   /* Mira ink */
   --surface: #FEFAF6;                      /* Mira canvas */
   --surface-2: #F2EAF0;                    /* Mira frost */
-  --muted: #8C8190;                        /* Mira slate */
+  --muted: #6B6270;                        /* Mira slate — darkened to pass WCAG AA (≥4.5:1 on cream) */
   --border: #E8E0EA;                       /* Mira fog */
 }
 
@@ -42,7 +42,7 @@
     --foreground: #2A1F2D;
     --surface: #FEFAF6;
     --surface-2: #F2EAF0;
-    --muted: #8C8190;
+    --muted: #6B6270;
     --border: #E8E0EA;
   }
 }
@@ -61,4 +61,20 @@ body {
 ::selection {
   background: var(--color-vualet-indigo);
   color: #FFFFFF;
+}
+
+/* Accessibility: a visible keyboard focus ring on every focusable element. */
+:focus-visible {
+  outline: 2px solid var(--color-vualet-indigo);
+  outline-offset: 2px;
+}
+
+/* Accessibility: honour the OS "reduce motion" preference site-wide. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

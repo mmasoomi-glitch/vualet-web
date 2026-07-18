@@ -49,7 +49,9 @@ export async function POST(req: Request) {
       customer_email: email || undefined,
       metadata: { connect_token: token, plan, persona: persona ?? "" },
       // Carry the token onto the subscription too, so renewal webhooks can find it.
-      subscription_data: { metadata: { connect_token: token, plan } },
+      // 14-day free trial: card is collected but not charged until day 14, which
+      // is what the Refund Policy + marketing promise ("no charge during trial").
+      subscription_data: { metadata: { connect_token: token, plan }, trial_period_days: 14 },
       automatic_tax: { enabled: true },
       billing_address_collection: "required",
       success_url: `${appUrl()}/mira/welcome?token=${token}`,

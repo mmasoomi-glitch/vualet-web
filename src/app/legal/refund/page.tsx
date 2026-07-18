@@ -12,17 +12,24 @@ export default function RefundPolicyPage() {
   return (
     <LegalPage
       title="Refund Policy"
-      lastUpdated="July 16, 2026"
+      lastUpdated="July 17, 2026"
       activeHref="/legal/refund"
       intro="This Refund Policy explains how our free trial works, when subscription fees are refundable, and how to cancel."
     >
       <h2>1. Free trial</h2>
       <p>
-        New accounts start with a <strong>7-day free trial</strong>. You will
-        not be charged anything during the trial. If you cancel before the
-        trial ends, you will not be billed at all. If you take no action, your
-        selected subscription plan begins automatically at the end of the
-        trial and your card will be charged.
+        <strong>Pre-launch note:</strong> Mira is currently in a waitlist /
+        pre-launch phase. We do <strong>not</strong> collect card details and
+        no charges are made during this phase. The terms below describe how
+        billing will work once paid subscriptions go live.
+      </p>
+      <p>
+        When paid plans launch, new accounts start with a{" "}
+        <strong>14-day free trial</strong>. You will not be charged anything
+        during the trial. If you cancel before the trial ends, you will not be
+        billed at all. If you take no action, your selected subscription plan
+        begins automatically at the end of the trial and your card will be
+        charged.
       </p>
 
       <h2>2. Subscription refunds</h2>
@@ -74,8 +81,8 @@ export default function RefundPolicyPage() {
       </p>
 
       <div className={styles.callout}>
-        This Refund Policy is part of our{" "}
-        <a href="/legal/terms">Terms of Service</a>, Section 5. See also our{" "}
+        This Refund Policy is incorporated into our{" "}
+        <a href="/legal/terms">Terms of Service</a>. See also our{" "}
         <a href="/legal/privacy">Privacy Policy</a> for how billing data is
         handled.
       </div>

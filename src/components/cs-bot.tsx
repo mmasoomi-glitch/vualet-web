@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 
 type Msg = { role: "user" | "bot"; text: string };
 
@@ -10,11 +9,8 @@ export function CsBot() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role: "bot", text: "Hi — I'm Vualet support. I can help with refunds, billing, cancellations, and any issue. Sign in and ask away." },
+    { role: "bot", text: "Hi — I'm Vualet support. I can help with refunds, billing, cancellations, and any issue. Ask away." },
   ]);
-
-  // Placeholder auth gate — replace with the real session check when auth lands.
-  const loggedIn = typeof window !== "undefined" && !!window.localStorage.getItem("vualet_session");
 
   async function send() {
     const text = input.trim();
@@ -96,31 +92,23 @@ export function CsBot() {
             ))}
           </div>
 
-          {loggedIn ? (
-            <div className="p-2 border-t border-[var(--border)] flex gap-2">
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && send()}
-                placeholder="Ask about a refund, billing…"
-                className="flex-1 px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)] text-sm outline-none focus:border-[var(--color-vualet-indigo)]"
-              />
-              <button
-                onClick={send}
-                disabled={busy}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo)] disabled:opacity-50"
-              >
-                Send
-              </button>
-            </div>
-          ) : (
-            <div className="p-3 border-t border-[var(--border)] text-center">
-              <p className="text-sm text-[var(--muted)]">Please sign in to chat with support.</p>
-              <Link href="/login" className="mt-2 inline-flex px-4 py-2 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo)]">
-                Sign in
-              </Link>
-            </div>
-          )}
+          <div className="p-2 border-t border-[var(--border)] flex gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && send()}
+              aria-label="Ask support a question"
+              placeholder="Ask about a refund, billing…"
+              className="flex-1 px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)] text-sm outline-none focus:border-[var(--color-vualet-indigo)]"
+            />
+            <button
+              onClick={send}
+              disabled={busy}
+              className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo)] disabled:opacity-50"
+            >
+              Send
+            </button>
+          </div>
         </div>
       )}
     </>

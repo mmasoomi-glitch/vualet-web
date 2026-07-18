@@ -148,7 +148,7 @@ export default function MiraPage() {
               <div className="mha-qitem">
                 <img className="mha-qthumb" src="/brand/card-voice.png" alt="" aria-hidden width={600} height={400} />
                 <h4>Voice notes, where you already are</h4>
-                <p>Talk to her on WhatsApp or Telegram. Ramble a voice note; she keeps every word of it exact.</p>
+                <p>Talk to her on Telegram today &mdash; WhatsApp is coming soon. Ramble a voice note; she keeps every word of it exact.</p>
               </div>
               <div className="mha-qitem">
                 <img className="mha-qthumb" src="/brand/card-memory.png" alt="" aria-hidden width={600} height={400} />
@@ -198,7 +198,7 @@ export default function MiraPage() {
               <Link href="/legal/privacy">Privacy</Link>
             </nav>
           </div>
-          <p className="mha-foot-legal">Mira by Primaion. Photographic memory, zero hallucination &mdash; claims we hold ourselves to.</p>
+          <p className="mha-foot-legal">Mira, a Veridian product &mdash; operated by Afaq Alnaseem Trading LLC. Photographic memory, zero hallucination: claims we hold ourselves to.</p>
         </div>
       </footer>
     </div>

@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { stripe, appUrl, paymentsConfigured } from "@/lib/stripe";
+import { getSubscription } from "@/lib/store";
 
 // Returns a Stripe billing-portal link so a subscriber can manage/cancel billing.
-// Body: { customer_id }  (until auth lands, the account page passes this through).
+// Body: { customer_id }. Full auth lands with real accounts; until then we at
+// least refuse portals for any customer id we have no subscription record for,
+// so a guessed/scraped cus_… can't open a stranger's billing (was an open IDOR).
 export async function POST(req: Request) {
   if (!paymentsConfigured()) {
     return NextResponse.json({ error: "not_configured" }, { status: 503 });
@@ -16,6 +19,12 @@ export async function POST(req: Request) {
   }
   if (!customerId) {
     return NextResponse.json({ error: "missing customer_id" }, { status: 400 });
+  }
+
+  // Only customers we actually recorded (via the Stripe webhook) may open a portal.
+  const known = await getSubscription(customerId);
+  if (!known) {
+    return NextResponse.json({ error: "not_a_customer" }, { status: 403 });
   }
 
   try {

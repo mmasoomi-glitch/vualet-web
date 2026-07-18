@@ -12,7 +12,7 @@ export default function AiDisclosurePage() {
   return (
     <LegalPage
       title="AI Disclosure"
-      lastUpdated="July 16, 2026"
+      lastUpdated="July 17, 2026"
       activeHref="/legal/ai-disclosure"
       intro="Short version, up front: Mira is an AI. Read this before you rely on anything she tells you. This is the same plain-language notice shown on the consent screen before your first conversation with Mira."
     >

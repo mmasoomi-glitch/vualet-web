@@ -35,8 +35,8 @@ export default function NotFound() {
           <Link className="btn-mira" href="/mira">
             Back to Mira
           </Link>
-          <Link className="btn-mira-soft" href="/">
-            Vualet home
+          <Link className="btn-mira-soft" href="/mira/signup">
+            Join the waitlist
           </Link>
         </div>
       </main>

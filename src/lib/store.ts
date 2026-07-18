@@ -2,24 +2,68 @@
  * Tiny key-value store for subscription state + the Telegram "connect token"
  * that bridges a web purchase to the actual Mira bot.
  *
- * Uses Upstash Redis over REST when configured (UPSTASH_REDIS_REST_URL +
- * UPSTASH_REDIS_REST_TOKEN — what Vercel KV provisions). With no env it falls
- * back to an in-process Map so dev/build works; that fallback is NOT durable
- * across serverless instances, so configure Upstash before real traffic.
+ * Three tiers, in priority order:
+ *   1. Upstash Redis over REST when UPSTASH_REDIS_REST_URL + _TOKEN are set
+ *      (what Vercel KV provisions) — for serverless/multi-instance hosting.
+ *   2. A durable JSON file when MIRA_STORE_FILE is set — for a single-process
+ *      self-hosted deploy (our GPU box). Atomic temp+rename writes; survives
+ *      restarts/redeploys. This is what makes live payments safe off Vercel.
+ *   3. A bare in-process Map (dev/build only) — NOT durable; a startup warning
+ *      fires in production so this can never be the silent state under load.
  */
+
+import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync } from "fs";
+import path from "path";
 
 const URL = process.env.UPSTASH_REDIS_REST_URL;
 const TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
-const memory = new Map<string, string>();
+const useUpstash = Boolean(URL && TOKEN);
 
-if (!URL && process.env.NODE_ENV === "production") {
+const STORE_FILE = process.env.MIRA_STORE_FILE || "";
+type Entry = { v: string; exp?: number };
+const memory = new Map<string, Entry>();
+let loaded = false;
+
+function loadOnce(): void {
+  if (loaded) return;
+  loaded = true;
+  if (STORE_FILE && existsSync(STORE_FILE)) {
+    try {
+      const obj = JSON.parse(readFileSync(STORE_FILE, "utf8")) as Record<string, Entry>;
+      const now = Date.now();
+      for (const [k, e] of Object.entries(obj)) {
+        if (!e.exp || e.exp > now) memory.set(k, e);
+      }
+    } catch {
+      /* corrupt/missing → start empty */
+    }
+  }
+}
+
+function persist(): void {
+  if (!STORE_FILE) return;
+  try {
+    const obj: Record<string, Entry> = {};
+    const now = Date.now();
+    for (const [k, e] of memory) if (!e.exp || e.exp > now) obj[k] = e;
+    mkdirSync(path.dirname(STORE_FILE), { recursive: true });
+    const tmp = STORE_FILE + ".tmp";
+    writeFileSync(tmp, JSON.stringify(obj));
+    renameSync(tmp, STORE_FILE); // atomic on same volume
+  } catch (err) {
+    console.error("[store] persist failed:", err);
+  }
+}
+
+if (!useUpstash && !STORE_FILE && process.env.NODE_ENV === "production") {
   console.warn(
-    "[mira] UPSTASH_REDIS_REST_URL/_TOKEN unset in production — connect records live in-memory and will NOT survive redeploys or scale-out. Configure Vercel KV/Upstash.",
+    "[mira] No durable store (UPSTASH_* or MIRA_STORE_FILE) in production — connect/subscription records live in-memory and will NOT survive a restart. Set MIRA_STORE_FILE.",
   );
 }
 
+/** True when writes are durable (Upstash OR a store file). Gate live payments on this. */
 export function storeConfigured(): boolean {
-  return Boolean(URL && TOKEN);
+  return useUpstash || Boolean(STORE_FILE);
 }
 
 async function upstash(cmd: (string | number)[]): Promise<unknown> {
@@ -36,15 +80,30 @@ async function upstash(cmd: (string | number)[]): Promise<unknown> {
 
 export async function kvSet(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
   const v = JSON.stringify(value);
-  if (storeConfigured()) {
+  if (useUpstash) {
     await upstash(ttlSeconds ? ["SET", key, v, "EX", ttlSeconds] : ["SET", key, v]);
-  } else {
-    memory.set(key, v);
+    return;
   }
+  loadOnce();
+  memory.set(key, { v, exp: ttlSeconds ? Date.now() + ttlSeconds * 1000 : undefined });
+  persist();
 }
 
 export async function kvGet<T = unknown>(key: string): Promise<T | null> {
-  const raw = storeConfigured() ? ((await upstash(["GET", key])) as string | null) : memory.get(key) ?? null;
+  let raw: string | null;
+  if (useUpstash) {
+    raw = (await upstash(["GET", key])) as string | null;
+  } else {
+    loadOnce();
+    const e = memory.get(key);
+    if (!e) return null;
+    if (e.exp && e.exp <= Date.now()) {
+      memory.delete(key);
+      persist();
+      return null;
+    }
+    raw = e.v;
+  }
   if (raw == null) return null;
   try {
     return JSON.parse(raw) as T;
@@ -85,8 +144,6 @@ export async function getConnect(token: string): Promise<ConnectRecord | null> {
 /**
  * Single-use claim binding: the first Telegram id to claim a token owns it.
  * The same id may re-read (idempotent rebind); any other id is rejected.
- * Not atomic across concurrent claims on Upstash REST — acceptable for the
- * onboarding flow where one human taps one deep link.
  */
 export async function claimConnect(
   token: string,

@@ -107,7 +107,9 @@ function Checkout() {
           Almost <span className="grad">hers</span>
         </h1>
         <p style={{ color: "var(--mira-graphite)", fontSize: 15.5, margin: 0 }}>
-          {isTrial ? "Review your plan — no card needed. Cancel anytime." : "Review your plan and continue to secure checkout. Cancel anytime."}
+          {isTrial
+            ? "Review your plan — no card needed. Cancel anytime."
+            : `14-day free trial, then ${plan.price}${plan.per ?? "/mo"} — no charge for 14 days. Cancel anytime.`}
         </p>
       </header>
 
@@ -129,8 +131,13 @@ function Checkout() {
           </ul>
           <div style={{ borderTop: "1px solid var(--mira-fog)", margin: "16px 0 0", paddingTop: 14, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <span style={{ fontSize: 14, color: "var(--mira-graphite)" }}>Due today</span>
-            <span className="display" style={{ fontSize: 22 }}>{plan.price === "Free" ? "$0" : plan.price}</span>
+            <span className="display" style={{ fontSize: 22 }}>$0</span>
           </div>
+          {!isTrial && (
+            <p style={{ fontSize: 12.5, color: "var(--mira-slate)", margin: "6px 0 0", textAlign: "right" }}>
+              then {plan.price}{plan.per} after your 14-day free trial
+            </p>
+          )}
           <Link href="/mira/plans" style={{ fontSize: 13, color: "var(--mira-rose-deep)", display: "inline-block", marginTop: 12 }}>
             ← Change plan
           </Link>
@@ -168,12 +175,12 @@ function Checkout() {
               ? "Confirming…"
               : isTrial
                 ? "Start free & meet Mira →"
-                : `Pay ${plan.price} & meet Mira →`}
+                : "Start free trial & meet Mira →"}
           </button>
           <p style={{ textAlign: "center", fontSize: 12, color: "var(--mira-slate)", margin: "12px 0 0" }}>
             {isTrial
               ? "No card required — cancel anytime."
-              : "You'll complete payment on Stripe's secure checkout page. Cancel anytime."}
+              : `14-day free trial, then ${plan.price}${plan.per ?? "/mo"} — no charge for 14 days. You'll confirm your card on Stripe's secure checkout. Cancel anytime.`}
           </p>
         </form>
       </div>

@@ -129,12 +129,15 @@ export default function ShapeYourMira() {
     }
   }, [name, role, vibe, vibeText, roleLabel]);
 
-  // TODO(backend): replace with the real Telegram bot deep-link once provisioning exists.
+  // TODO(backend): the ?start= payload below is still a mock — replace with the
+  // real linking code once provisioning exists. The bot handle, however, matches
+  // the rest of the app (NEXT_PUBLIC_TELEGRAM_BOT), falling back to the live bot.
   const telegramLink = useMemo(() => {
+    const bot = process.env.NEXT_PUBLIC_TELEGRAM_BOT || "ballerina_10840_bot";
     const payload = encodeURIComponent(
       `name=${name || "Mira"};vibe=${vibe};role=${role}`,
     );
-    return `https://t.me/MiraAssistantBot?start=${payload}`;
+    return `https://t.me/${bot}?start=${payload}`;
   }, [name, vibe, role]);
 
   const canAdvance =

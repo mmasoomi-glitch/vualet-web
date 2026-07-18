@@ -111,14 +111,16 @@ export default async function ProductPage({
                 className="mt-2 text-3xl font-semibold tracking-tight"
                 style={{ fontFamily: "var(--font-display)" }}
               >
-                From ${product.startingPriceUsd}
+                {product.slug === "mira" ? "" : "From "}${product.startingPriceUsd}
                 <span className="text-lg text-[var(--muted)] font-normal">
                   {" "}
-                  /user/mo
+                  {product.slug === "mira" ? "/mo" : "/user/mo"}
                 </span>
               </p>
               <p className="mt-2 text-sm text-[var(--muted)]">
-                14-day free trial. No credit card.
+                {product.slug === "mira"
+                  ? "14-day free trial. Card required at signup — you won't be charged until the trial ends."
+                  : "14-day free trial. No credit card."}
               </p>
             </div>
             <Link

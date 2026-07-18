@@ -43,17 +43,18 @@ export default function TermsAndConditionsPage() {
         the Service.
       </p>
 
-      <h2>2. How Mira answers — our guarantee</h2>
+      <h2>2. How Mira answers — our design commitment</h2>
       <p>
-        Mira is built on Veridian with one core promise:{" "}
-        <strong>it does not fabricate or invent.</strong> Mira answers from what
-        it is actually given, and where it does not have a grounded answer it is
-        built to tell you that it does not know rather than guess or make
-        something up. This is a deliberate product guarantee about how Mira
-        behaves: it is designed not to invent facts to fill a gap.
+        Mira is built on Veridian with one core commitment:{" "}
+        <strong>it is designed not to fabricate or invent.</strong> Mira answers
+        from what it is actually given, and where it does not have a grounded
+        answer it is built to tell you that it does not know rather than guess or
+        make something up. This is a deliberate design commitment about how Mira
+        behaves — a standard we hold ourselves to: it is designed not to invent
+        facts to fill a gap.
       </p>
       <p>
-        This is a guarantee about not inventing — it is not a promise that every
+        This is a commitment about not inventing — it is not a promise that every
         answer will be correct in every case, because correctness also depends
         on the information you provide (see Section 3). Veridian is our
         proprietary technology; how it achieves this is confidential and is not

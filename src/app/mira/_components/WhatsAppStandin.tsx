@@ -97,9 +97,9 @@ export default function WhatsAppStandin() {
 
           {/* copy beside the phone */}
           <div className="msa-copy">
-            <h3 className="display msa-h3">She lives in your WhatsApp. Just yours.</h3>
+            <h3 className="display msa-h3">She lives in your chat. Just yours.</h3>
             <ul className="msa-list">
-              <li><span className="msa-ck"><Tick /></span> No new app &mdash; she&rsquo;s in the WhatsApp you already use.</li>
+              <li><span className="msa-ck"><Tick /></span> No new app &mdash; she&rsquo;s in the chat you already use. Telegram today, WhatsApp soon.</li>
               <li><span className="msa-ck"><Tick /></span> No third party in the thread. It&rsquo;s a private line to her.</li>
               <li><span className="msa-ck"><Tick /></span> She reads only what you send her &mdash; never listens to anything else.</li>
             </ul>

@@ -15,12 +15,19 @@ export const runtime = "nodejs"; // fs access needs the Node runtime, not edge
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMAIL_MAX_LEN = 254;
 const NAME_MAX_LEN = 120;
+const COMPANY_MAX_LEN = 160;
 const MESSAGE_MAX_LEN = 4000;
 
 const CONTACT_FILE =
   process.env.CONTACT_FILE || path.join(process.cwd(), "data", "contact.jsonl");
 
-type Entry = { name: string; email: string; message: string; at: string };
+type Entry = {
+  name: string;
+  email: string;
+  company?: string;
+  message: string;
+  at: string;
+};
 
 async function appendContact(entry: Entry): Promise<void> {
   await fs.mkdir(path.dirname(CONTACT_FILE), { recursive: true });
@@ -38,7 +45,13 @@ export async function POST(req: Request) {
   const form = await req.formData().catch(() => null);
   const name = String(form?.get("name") ?? "").trim().slice(0, NAME_MAX_LEN);
   const email = String(form?.get("email") ?? "").trim().toLowerCase();
+  const company = String(form?.get("company") ?? "").trim().slice(0, COMPANY_MAX_LEN);
   const message = String(form?.get("message") ?? "").trim().slice(0, MESSAGE_MAX_LEN);
+
+  // Only the sales form carries a `company` field. Route sales enquiries back to
+  // the sales page, not the Mira consumer contact/demo page.
+  const isSales = form?.has("company") ?? false;
+  const back = isSales ? "/contact-sales" : "/contact";
 
   if (
     !name ||
@@ -47,19 +60,25 @@ export async function POST(req: Request) {
     !EMAIL_RE.test(email) ||
     !message
   ) {
-    return seeOther("/contact?error=1");
+    return seeOther(`${back}?error=1`);
   }
 
-  const entry: Entry = { name, email, message, at: new Date().toISOString() };
+  const entry: Entry = {
+    name,
+    email,
+    ...(company ? { company } : {}),
+    message,
+    at: new Date().toISOString(),
+  };
 
   try {
     await appendContact(entry);
   } catch (err) {
     console.error("[contact] file persist failed:", err);
-    return seeOther("/contact?error=2");
+    return seeOther(`${back}?error=2`);
   }
 
-  return seeOther("/contact?sent=1");
+  return seeOther(`${back}?sent=1`);
 }
 
 // Owner export: GET /api/contact?key=<CONTACT_EXPORT_KEY> → { count, entries }.
