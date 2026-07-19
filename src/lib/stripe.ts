@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { planForPriceId as planForPriceIdCore } from "@/lib/plan-core.mjs";
 
 /**
  * Stripe client + plan→price mapping.
@@ -44,11 +45,15 @@ export function priceIdFor(plan: PaidPlan): string {
  * next bind. Returns null for an unknown/unconfigured price id (caller must not guess a plan).
  */
 export function planForPriceId(priceId: string | null | undefined): PaidPlan | null {
-  if (!priceId) return null;
-  for (const plan of Object.keys(PRICE_ENV) as PaidPlan[]) {
-    if (process.env[PRICE_ENV[plan]] === priceId) return plan;
-  }
-  return null;
+  // Delegate to the pure core (shared with scripts/tier-map-test.mjs) so the
+  // mapping is tested exactly as production runs it. We only supply the live
+  // env price ids here; the core does the priceId -> plan reverse lookup.
+  const priceByPlan: Record<PaidPlan, string | undefined> = {
+    companion: process.env[PRICE_ENV.companion],
+    assistant: process.env[PRICE_ENV.assistant],
+    studio: process.env[PRICE_ENV.studio],
+  };
+  return planForPriceIdCore(priceId, priceByPlan);
 }
 
 let _client: Stripe | null = null;

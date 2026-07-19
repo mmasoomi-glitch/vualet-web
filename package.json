@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test:privacy": "node --test scripts/admin-privacy-test.mjs",
     "test:audit": "node --test scripts/admin-audit-test.mjs",
-    "test:promo": "node --test scripts/promo-validate-test.mjs"
+    "test:promo": "node --test scripts/promo-validate-test.mjs",
+    "test:tier": "node --test scripts/tier-map-test.mjs"
   },
   "dependencies": {
     "next": "16.2.6",
