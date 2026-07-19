@@ -16,13 +16,9 @@ function devFallbackSecret(): string | null {
   return process.env.NODE_ENV === "production" ? null : "mira-dev-admin-secret-not-for-production";
 }
 
-async function sha256(bytes: Uint8Array): Promise<Uint8Array> {
-  return new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
-}
-
 // Derived signing key = SHA256(`${secret}::sign:session`) — mirrors admin-crypto.derivedKey.
 async function signingKey(secret: string): Promise<CryptoKey> {
-  const keyBytes = await sha256(new TextEncoder().encode(`${secret}::sign:session`));
+  const keyBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${secret}::sign:session`));
   return crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
 }
 
