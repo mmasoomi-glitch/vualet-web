@@ -3,48 +3,72 @@ import type { NextRequest } from "next/server";
 
 const ADMIN_COOKIE = "mira_admin";
 
-// Edge-runtime twin of src/lib/admin-session.ts verifyAdminSession (Node
-// crypto isn't available here, so Web Crypto).
-async function verifyAdminCookie(value: string | undefined): Promise<boolean> {
-  const secret = process.env.ADMIN_SESSION_SECRET;
-  if (!value || !secret) return false;
-  const dot = value.indexOf(".");
-  if (dot <= 0) return false;
-  const exp = value.slice(0, dot);
-  if (!/^\d+$/.test(exp) || Number(exp) < Date.now()) return false;
+/**
+ * Edge-runtime COARSE gate for /admin (defense in depth). It verifies the
+ * signed admin session cookie's HMAC + expiry + MFA flag using Web Crypto — the
+ * twin of src/lib/admin-session.ts. It does NOT (and cannot from the edge) check
+ * the server session record, account status, or role: that authoritative check
+ * happens in every route via requireAdmin(). This gate only stops unauthenticated
+ * HTML from ever rendering. The obscure URL is never the security.
+ */
+
+function devFallbackSecret(): string | null {
+  return process.env.NODE_ENV === "production" ? null : "mira-dev-admin-secret-not-for-production";
+}
+
+async function sha256(bytes: Uint8Array): Promise<Uint8Array> {
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+}
+
+// Derived signing key = SHA256(`${secret}::sign:session`) — mirrors admin-crypto.derivedKey.
+async function signingKey(secret: string): Promise<CryptoKey> {
+  const keyBytes = await sha256(new TextEncoder().encode(`${secret}::sign:session`));
+  return crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+}
+
+function b64url(bytes: Uint8Array): string {
+  let s = "";
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  const ab = new TextEncoder().encode(a);
+  const bb = new TextEncoder().encode(b);
+  if (ab.length !== bb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
+  return diff === 0;
+}
+
+function decodeB64UrlJson(b64: string): { exp?: number; mfa?: boolean; sid?: string; aid?: string } | null {
   try {
-    const key = await crypto.subtle.importKey(
-      "raw",
-      new TextEncoder().encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
-    );
-    const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(exp)));
-    let b64 = "";
-    for (const byte of mac) b64 += String.fromCharCode(byte);
-    const expect = btoa(b64).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    return timingSafeEqual(expect, value.slice(dot + 1));
+    const pad = b64.length % 4 ? "=".repeat(4 - (b64.length % 4)) : "";
+    const std = b64.replace(/-/g, "+").replace(/_/g, "/") + pad;
+    const json = atob(std);
+    return JSON.parse(json);
   } catch {
-    return false;
+    return null;
   }
 }
 
-// Constant-time string compare (base64url signatures). Avoids the short-circuit
-// `===` comparison, which leaks timing information proportional to the number
-// of matching leading characters and lets an attacker brute-force the
-// signature byte-by-byte. Decodes both sides to equal-length byte arrays
-// (return false immediately, without inspecting content, on length mismatch)
-// and XOR-accumulates every byte before returning a single boolean.
-function timingSafeEqual(a: string, b: string): boolean {
-  const aBytes = new TextEncoder().encode(a);
-  const bBytes = new TextEncoder().encode(b);
-  if (aBytes.length !== bBytes.length) return false;
-  let diff = 0;
-  for (let i = 0; i < aBytes.length; i++) {
-    diff |= aBytes[i] ^ bBytes[i];
+async function verifyAdminCookie(value: string | undefined): Promise<boolean> {
+  const secret = process.env.ADMIN_SESSION_SECRET || devFallbackSecret();
+  if (!value || !secret) return false;
+  const dot = value.indexOf(".");
+  if (dot <= 0) return false;
+  const b64 = value.slice(0, dot);
+  const sig = value.slice(dot + 1);
+  try {
+    const key = await signingKey(secret);
+    const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(b64)));
+    if (!timingSafeEqual(b64url(mac), sig)) return false;
+    const data = decodeB64UrlJson(b64);
+    if (!data || typeof data.exp !== "number" || data.exp < Date.now()) return false;
+    return data.mfa === true && Boolean(data.sid) && Boolean(data.aid);
+  } catch {
+    return false;
   }
-  return diff === 0;
 }
 
 export async function middleware(req: NextRequest) {
