@@ -112,6 +112,16 @@ export async function kvGet<T = unknown>(key: string): Promise<T | null> {
   }
 }
 
+/** Delete a key (used for single-use magic-link consumption). */
+export async function kvDel(key: string): Promise<void> {
+  if (useUpstash) {
+    await upstash(["DEL", key]);
+    return;
+  }
+  loadOnce();
+  if (memory.delete(key)) persist();
+}
+
 // ---- Domain helpers ----------------------------------------------------
 
 export type ConnectRecord = {
