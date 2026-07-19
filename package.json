@@ -8,7 +8,8 @@
     "start": "next start -p 3000",
     "lint": "eslint",
     "test:privacy": "node --test scripts/admin-privacy-test.mjs",
-    "test:audit": "node --test scripts/admin-audit-test.mjs"
+    "test:audit": "node --test scripts/admin-audit-test.mjs",
+    "test:promo": "node --test scripts/promo-validate-test.mjs"
   },
   "dependencies": {
     "next": "16.2.6",

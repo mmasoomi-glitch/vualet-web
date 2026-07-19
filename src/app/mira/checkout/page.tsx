@@ -6,6 +6,26 @@ import Link from "next/link";
 import { Stepper } from "../_components/Stepper";
 import { tierById, TIERS } from "../_components/tiers";
 
+type AppliedPromo = {
+  code: string;
+  subtotal: number;
+  discount: number;
+  total: number;
+  currency: string;
+  label: string;
+};
+
+function fmtMoney(cents: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).format(cents / 100);
+  } catch {
+    return `${(cents / 100).toFixed(2)} ${currency.toUpperCase()}`;
+  }
+}
+
 const card: React.CSSProperties = {
   background: "var(--mira-canvas)",
   border: "1px solid var(--mira-fog)",
@@ -32,6 +52,52 @@ function Checkout() {
   const [paying, setPaying] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Promotion code: validated server-side against Stripe before it's applied.
+  const [promoInput, setPromoInput] = useState("");
+  const [promoPending, setPromoPending] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [applied, setApplied] = useState<AppliedPromo | null>(null);
+
+  async function applyPromo() {
+    const code = promoInput.trim();
+    if (!code || promoPending) return; // repeated clicks are safe
+    setPromoPending(true);
+    setPromoError(null);
+    try {
+      const res = await fetch("/api/promo/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, plan: plan.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.valid) {
+        setApplied({
+          code: data.code,
+          subtotal: data.subtotal,
+          discount: data.discount,
+          total: data.total,
+          currency: data.currency,
+          label: data.label,
+        });
+        setPromoError(null);
+      } else {
+        setApplied(null);
+        setPromoError(data.reason || "That code isn't valid.");
+      }
+    } catch {
+      // Network fail — keep the original total, don't wipe an existing discount.
+      setPromoError("Couldn't reach us to check that code. Try again.");
+    } finally {
+      setPromoPending(false);
+    }
+  }
+
+  function removePromo() {
+    setApplied(null);
+    setPromoError(null);
+    setPromoInput("");
+  }
 
   function readSetup(): Record<string, unknown> {
     try {
@@ -74,6 +140,7 @@ function Checkout() {
           plan: plan.id,
           email: email || undefined,
           persona: typeof setup.persona === "string" ? setup.persona : undefined,
+          promoCode: applied?.code,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -165,6 +232,125 @@ function Checkout() {
               {error}
             </p>
           )}
+
+          {!isTrial && (
+            <div style={{ marginTop: 18 }}>
+              <label style={{ display: "block", fontSize: 13, color: "var(--mira-graphite)", marginBottom: 6 }}>
+                Promotion or discount code
+              </label>
+              {!applied ? (
+                <>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      style={{ ...input, flex: 1 }}
+                      type="text"
+                      inputMode="text"
+                      autoCapitalize="characters"
+                      autoComplete="off"
+                      placeholder="e.g. MIRA-PRO-30"
+                      value={promoInput}
+                      onChange={(e) => setPromoInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          applyPromo();
+                        }
+                      }}
+                      disabled={promoPending}
+                      aria-label="Promotion or discount code"
+                    />
+                    <button
+                      type="button"
+                      onClick={applyPromo}
+                      disabled={promoPending || promoInput.trim() === ""}
+                      style={{
+                        padding: "0 18px",
+                        fontSize: 14,
+                        fontWeight: 600,
+                        borderRadius: "var(--mira-radius-md)",
+                        border: "1px solid var(--mira-rose-deep)",
+                        background: "transparent",
+                        color: "var(--mira-rose-deep)",
+                        cursor: promoPending || promoInput.trim() === "" ? "not-allowed" : "pointer",
+                        opacity: promoPending || promoInput.trim() === "" ? 0.55 : 1,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {promoPending ? "Checking…" : "Apply"}
+                    </button>
+                  </div>
+                  {promoError && (
+                    <p role="alert" style={{ fontSize: 12.5, color: "var(--mira-rose-deep)", margin: "8px 0 0" }}>
+                      {promoError}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div
+                  style={{
+                    border: "1px solid var(--mira-fog)",
+                    borderRadius: "var(--mira-radius-md)",
+                    background: "var(--mira-cream)",
+                    padding: "14px 16px",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <span style={{ fontSize: 12, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--mira-success)", fontWeight: 600 }}>
+                      Code applied
+                    </span>
+                    <button
+                      type="button"
+                      onClick={removePromo}
+                      style={{
+                        fontSize: 12.5,
+                        background: "none",
+                        border: "none",
+                        color: "var(--mira-slate)",
+                        textDecoration: "underline",
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <dl style={{ margin: 0, fontSize: 13.5, color: "var(--mira-graphite)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
+                      <dt>Subtotal</dt>
+                      <dd style={{ margin: 0 }}>{fmtMoney(applied.subtotal, applied.currency)}{plan.per}</dd>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
+                      <dt>Promotion code</dt>
+                      <dd style={{ margin: 0, fontWeight: 600 }}>{applied.code}</dd>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: "var(--mira-success)" }}>
+                      <dt>Discount{applied.label ? ` (${applied.label})` : ""}</dt>
+                      <dd style={{ margin: 0 }}>−{fmtMoney(applied.discount, applied.currency)}</dd>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "8px 0 0",
+                        marginTop: 6,
+                        borderTop: "1px solid var(--mira-fog)",
+                        fontWeight: 700,
+                        color: "var(--mira-ink)",
+                        fontSize: 15,
+                      }}
+                    >
+                      <dt>Final total</dt>
+                      <dd style={{ margin: 0 }}>{fmtMoney(applied.total, applied.currency)}{plan.per}</dd>
+                    </div>
+                  </dl>
+                  <p style={{ fontSize: 12, color: "var(--mira-slate)", margin: "8px 0 0" }}>
+                    Applied after your 14-day free trial. No charge today.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           <button
             type="submit"
             className="btn-mira"

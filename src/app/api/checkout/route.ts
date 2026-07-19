@@ -2,18 +2,20 @@ import { NextResponse } from "next/server";
 import { stripe, priceIdFor, isPaidPlan, appUrl, paymentsConfigured } from "@/lib/stripe";
 import { putConnect, type ConnectRecord } from "@/lib/store";
 import { mintConnectToken } from "@/lib/connect-token";
+import { validatePromo } from "@/lib/promo";
+import type Stripe from "stripe";
 
 // Creates a Stripe Checkout session (subscription) for a Mira plan and returns its url.
-// Body: { plan: "companion" | "assistant" | "studio", email?, persona? }
+// Body: { plan: "companion" | "assistant" | "studio", email?, persona?, promoCode? }
 export async function POST(req: Request) {
-  let body: { plan?: string; email?: string; persona?: string };
+  let body: { plan?: string; email?: string; persona?: string; promoCode?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { plan, email, persona } = body;
+  const { plan, email, persona, promoCode } = body;
   if (!isPaidPlan(plan)) {
     return NextResponse.json(
       { error: "Unknown plan. Pick companion, assistant, or studio." },
@@ -40,10 +42,25 @@ export async function POST(req: Request) {
     createdAt: new Date().toISOString(),
   };
 
+  // Re-validate any pre-entered promo code SERVER-SIDE (never trust the browser).
+  // If a code was supplied but no longer checks out, stop rather than silently
+  // charging full price — the client re-checks and shows the reason.
+  let appliedPromoId: string | null = null;
+  if (typeof promoCode === "string" && promoCode.trim() !== "") {
+    const promo = await validatePromo(promoCode, plan);
+    if (!promo.valid) {
+      return NextResponse.json(
+        { error: "promo_invalid", message: promo.reason || "That promotion code is no longer valid." },
+        { status: 400 },
+      );
+    }
+    appliedPromoId = promo.promotion_code_id;
+  }
+
   try {
     await putConnect(record);
 
-    const session = await stripe().checkout.sessions.create({
+    const params: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       line_items: [{ price: priceIdFor(plan), quantity: 1 }],
       customer_email: email || undefined,
@@ -56,7 +73,19 @@ export async function POST(req: Request) {
       billing_address_collection: "required",
       success_url: `${appUrl()}/mira/welcome?token=${token}`,
       cancel_url: `${appUrl()}/mira/plans`,
-    });
+    };
+
+    if (appliedPromoId) {
+      // Pre-apply the validated code so the Stripe page needs no re-entry.
+      // discounts and allow_promotion_codes are mutually exclusive.
+      params.discounts = [{ promotion_code: appliedPromoId }];
+    } else {
+      // No pre-applied code: still let testers/customers enter one on the
+      // Stripe-hosted checkout — validated server-side by Stripe.
+      params.allow_promotion_codes = true;
+    }
+
+    const session = await stripe().checkout.sessions.create(params);
 
     const url = session.url;
     if (!url) throw new Error("Stripe returned no checkout url.");
