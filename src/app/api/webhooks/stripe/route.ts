@@ -10,24 +10,25 @@ import {
   kvSet,
   type ConnectRecord,
 } from "@/lib/store";
+import {
+  activateCheckout,
+  wasEventProcessed as coreWasEventProcessed,
+  markEventProcessed as coreMarkEventProcessed,
+} from "@/lib/webhook-core.mjs";
 
 // Stripe posts subscription/payment lifecycle events here.
 // Configure this URL + STRIPE_WEBHOOK_SECRET in the Stripe dashboard.
 // Signature is verified against the RAW body; crypto needs the Node runtime.
 export const runtime = "nodejs";
 
-// Durable idempotency: dedupe on event.id using the store's generic kv helpers.
-// The `mira:evt:` namespace can never collide with connect tokens (`mira:connect:`)
-// or subscription records (`mira:sub:`). TTL comfortably outlives Stripe's retry
-// window (Stripe retries for up to ~3 days).
-const EVENT_TTL_SECONDS = 60 * 60 * 24 * 4;
-const eventKey = (id: string) => `mira:evt:${id}`;
-
+// Durable idempotency: dedupe on event.id via the pure core's `mira:evt:` helpers
+// (shared with scripts/webhook-checkout-test.mjs so the exact dedupe code is
+// tested). We inject the store's generic kv helpers here.
 async function wasEventProcessed(id: string): Promise<boolean> {
-  return (await kvGet<number>(eventKey(id))) != null;
+  return coreWasEventProcessed(kvGet, id);
 }
 async function markEventProcessed(id: string): Promise<void> {
-  await kvSet(eventKey(id), Date.now(), EVENT_TTL_SECONDS);
+  await coreMarkEventProcessed(kvSet, id);
 }
 
 // Stripe fields are `id | expanded object | null`; normalise to the id string.
@@ -65,29 +66,19 @@ function invoiceSubscriptionId(invoice: Stripe.Invoice): string | undefined {
 // ---- side effects (mirror src/app/api/webhooks/dodo/route.ts) -------------
 
 // Initial purchase: session carries the connect_token we set at checkout.
+// Delegates the tier decision + writes to the pure core (activateCheckout), so
+// the SAME activation code the $0/idempotency test exercises runs in production.
+// The core reads plan from the pre-stored connect record or session.metadata.plan
+// and NEVER gates on amount_total — a $0 / 100%-off / trialing order activates
+// exactly like a paid one.
 async function activateFromCheckout(session: Stripe.Checkout.Session): Promise<void> {
-  const token = session.metadata?.connect_token || undefined;
-  const customerId = idOf(session.customer);
-  const subscriptionId = idOf(session.subscription);
-  const base: ConnectRecord | null = token ? await getConnect(token) : null;
-
-  const rec: ConnectRecord = {
-    token: token ?? subscriptionId ?? customerId ?? "unknown",
-    plan: base?.plan ?? session.metadata?.plan ?? "companion",
-    email: base?.email ?? session.customer_details?.email ?? undefined,
-    status: "active",
-    customerId,
-    subscriptionId,
-    telegramId: base?.telegramId,
-    persona: base?.persona,
-    role: base?.role,
-    assistantName: base?.assistantName,
-    createdAt: base?.createdAt ?? new Date().toISOString(),
-  };
-  if (token) await putConnect(rec);
-  if (customerId) await putSubscription(customerId, rec);
+  const rec: ConnectRecord = await activateCheckout(session, {
+    getConnect,
+    putConnect,
+    putSubscription,
+  });
   console.log("[stripe-webhook] checkout.session.completed → active", {
-    customerId,
+    customerId: rec.customerId,
     plan: rec.plan,
   });
 }
