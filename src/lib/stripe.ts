@@ -37,6 +37,20 @@ export function priceIdFor(plan: PaidPlan): string {
   return id;
 }
 
+/**
+ * Reverse of priceIdFor: given a Stripe price id, which plan is it? Used by the webhook to
+ * detect an UPGRADE/DOWNGRADE (customer.subscription.updated carries the new price) so the
+ * stored connect record's plan can be corrected and the engine picks up the new tier on its
+ * next bind. Returns null for an unknown/unconfigured price id (caller must not guess a plan).
+ */
+export function planForPriceId(priceId: string | null | undefined): PaidPlan | null {
+  if (!priceId) return null;
+  for (const plan of Object.keys(PRICE_ENV) as PaidPlan[]) {
+    if (process.env[PRICE_ENV[plan]] === priceId) return plan;
+  }
+  return null;
+}
+
 let _client: Stripe | null = null;
 
 export function stripe(): Stripe {

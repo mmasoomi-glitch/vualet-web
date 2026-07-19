@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
+import { stripe, planForPriceId } from "@/lib/stripe";
 import {
   getConnect,
   putConnect,
@@ -146,6 +146,35 @@ async function refreshFromInvoice(invoice: Stripe.Invoice): Promise<void> {
   });
 }
 
+// Upgrade / downgrade: an active customer.subscription.updated whose price no longer matches
+// the stored plan. jury #67: the purchased tier must stay correct end-to-end, so when Stripe
+// reports a new price we rewrite the stored connect + subscription record's `plan`. The engine
+// reads this plan on its next bind (telegram-bot bindFromConnectToken → entitlementForPlan), so
+// the new tier propagates without a manual edit. Idempotent: a no-op when the plan is unchanged
+// or the price is unknown (we never guess a plan). Does NOT touch status — that stays whatever
+// the active/cancel branches set.
+async function changePlanFromSubscription(sub: Stripe.Subscription): Promise<void> {
+  const customerId = idOf(sub.customer);
+  if (!customerId) return;
+  const priceId = sub.items?.data?.[0]?.price?.id ?? null;
+  const newPlan = planForPriceId(priceId);
+  if (!newPlan) {
+    console.log("[stripe-webhook] subscription.updated: price not mapped to a plan — skipping", { customerId, priceId });
+    return;
+  }
+  const existing = await getSubscription(customerId);
+  if (!existing) {
+    console.log("[stripe-webhook] subscription.updated: no stored record yet — skipping plan sync", { customerId });
+    return;
+  }
+  if (existing.plan === newPlan) return; // idempotent no-op
+  const prev = existing.plan;
+  existing.plan = newPlan;
+  await putSubscription(customerId, existing);
+  if (existing.token) await putConnect(existing);
+  console.log("[stripe-webhook] subscription.updated → plan changed", { customerId, from: prev, to: newPlan });
+}
+
 // Cancel / lapse: flip the stored record to "cancelled" — identical to dodo.
 async function cancelFromSubscription(sub: Stripe.Subscription, type: string): Promise<void> {
   const customerId = idOf(sub.customer);
@@ -206,7 +235,8 @@ export async function POST(req: Request) {
         if (CANCEL_STATUSES.has(sub.status)) {
           await cancelFromSubscription(sub, event.type);
         } else {
-          console.log(`[stripe-webhook] ignored: ${event.type} status=${sub.status}`);
+          // Active (or trialing) update — the interesting case is a plan upgrade/downgrade.
+          await changePlanFromSubscription(sub);
         }
         break;
       }
