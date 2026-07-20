@@ -68,9 +68,16 @@ export function stripe(): Stripe {
   return _client;
 }
 
-/** True when payments are configured — lets the UI degrade gracefully pre-keys. */
+/**
+ * True only when payments are switched ON. Fail-safe by design: a live Stripe key is
+ * NOT sufficient — the checkout stays gated (UI shows "coming soon") unless
+ * PAYMENTS_LIVE=1 is explicitly set. This keeps mira.vualet.com off the money path until
+ * counsel clears the legal pages (req #39) and merchant-of-record/tax posture (req #40),
+ * without touching the AFAQ store's separate payment surface. To go live post-counsel:
+ * set PAYMENTS_LIVE=1 in runtime.conf and restart.
+ */
 export function paymentsConfigured(): boolean {
-  return Boolean(process.env.STRIPE_SECRET_KEY);
+  return Boolean(process.env.STRIPE_SECRET_KEY) && process.env.PAYMENTS_LIVE === "1";
 }
 
 /** Absolute app origin for success_url / cancel_url redirects. */
