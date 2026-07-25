@@ -133,8 +133,7 @@ export default function PrivacyPolicyPage() {
       </ul>
       <p>
         To exercise any of these rights, contact us at{" "}
-        {/* TODO: confirm contact address with counsel */}
-        <a href="mailto:privacy@vualet.com">privacy@vualet.com</a>. We will
+        <a href="mailto:info@vualet.com">info@vualet.com</a>. We will
         respond within the timeframe required by applicable law.
       </p>
 
@@ -183,8 +182,7 @@ export default function PrivacyPolicyPage() {
       <p>
         For any questions about this Privacy Policy or how we handle your
         data, contact <strong>Afaq Alnaseem Trading LLC</strong> at{" "}
-        {/* TODO: confirm contact address with counsel */}
-        <a href="mailto:privacy@vualet.com">privacy@vualet.com</a>.
+        <a href="mailto:info@vualet.com">info@vualet.com</a>.
       </p>
 
       <div className={styles.callout}>
