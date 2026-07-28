@@ -33,6 +33,7 @@ export default function MiraPlans() {
 
   return (
     <main
+      id="mira-main"
       className="mira-plans-pad"
       style={{ maxWidth: 1080, width: "100%", minWidth: 0, boxSizing: "border-box", margin: "0 auto", padding: "48px 24px 80px" }}
     >
@@ -44,7 +45,7 @@ export default function MiraPlans() {
             fontWeight: 600,
             letterSpacing: ".14em",
             textTransform: "uppercase",
-            color: "var(--mira-rose-deep)",
+            color: "var(--mira-ink)",
             background: "var(--mira-rose-light)",
             border: "1px solid var(--mira-rose-light)",
             borderRadius: 999,
@@ -64,7 +65,7 @@ export default function MiraPlans() {
       </header>
 
       {error && (
-        <p role="alert" style={{ textAlign: "center", fontSize: 13.5, color: "var(--mira-rose-deep)", margin: "0 0 20px" }}>
+        <p role="alert" style={{ textAlign: "center", fontSize: 13.5, color: "var(--mira-rose-ink)", margin: "0 0 20px" }}>
           {error}
         </p>
       )}
@@ -109,7 +110,7 @@ export default function MiraPlans() {
                   Most complete
                 </span>
               )}
-              <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-deep)", fontWeight: 600, margin: 0 }}>{t.name}</p>
+              <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-ink)", fontWeight: 600, margin: 0 }}>{t.name}</p>
               <p className="display" style={{ fontSize: 34, fontWeight: 400, margin: "8px 0 0", display: "flex", alignItems: "baseline", gap: 4 }}>
                 {t.price}
                 {t.per && <span style={{ fontSize: 14, color: "var(--mira-slate)" }}>{t.per}</span>}

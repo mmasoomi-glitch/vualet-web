@@ -376,7 +376,7 @@ export default function MiraBot() {
         <button
           onClick={() => setOpen(false)}
           aria-label="Close"
-          style={{ background: "transparent", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", lineHeight: 1 }}
+          style={{ width: 32, height: 32, display: "grid", placeItems: "center", background: "transparent", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", lineHeight: 1 }}
         >
           ×
         </button>

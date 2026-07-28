@@ -20,9 +20,11 @@ const nextConfig: NextConfig = {
   },
   // Defense-in-depth duplicate of the security headers nginx/Cloudflare are
   // expected to set in front of this app — kept here so they still apply if
-  // the app is ever fronted differently. Intentionally NO Content-Security-Policy:
-  // a strict CSP would break inline scripts/styles this app currently relies on;
-  // introducing one needs its own audit + report-only rollout, not a drive-by add.
+  // the app is ever fronted differently. CSP rollout (jury verdict #83, 2026-07-27):
+  // ship the strict policy in REPORT-ONLY first (it never blocks) so we observe what
+  // Next.js's inline hydration scripts trigger, before enforcing it with per-request
+  // nonces via middleware. style-src keeps 'unsafe-inline' as the tracked exception
+  // until the inline-style refactor lands.
   async headers() {
     return [
       {
@@ -32,6 +34,26 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // Scope powerful features: microphone stays enabled for same-origin
+          // (MiraBot voice input) — this matches the spec default allowlist, so it
+          // does not restrict the app itself — while unused features are disabled.
+          { key: "Permissions-Policy", value: "geolocation=(), camera=(), microphone=(self), payment=(), usb=()" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          {
+            key: "Content-Security-Policy-Report-Only",
+            value: [
+              "default-src 'self'",
+              "script-src 'self'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https:",
+              "font-src 'self' data:",
+              "connect-src 'self' https:",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "frame-ancestors 'none'",
+              "form-action 'self'",
+            ].join("; "),
+          },
         ],
       },
     ];

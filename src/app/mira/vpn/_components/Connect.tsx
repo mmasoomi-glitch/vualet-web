@@ -153,7 +153,7 @@ export default function Connect() {
       />
 
       {showResult && !parsed.ok && (
-        <p role="alert" style={{ color: "var(--mira-rose-deep)", fontSize: 14, margin: "12px 2px 0" }}>
+        <p role="alert" style={{ color: "var(--mira-rose-ink)", fontSize: 14, margin: "12px 2px 0" }}>
           {parsed.reason}
         </p>
       )}

@@ -37,7 +37,7 @@ function Login() {
   }
 
   return (
-    <main style={{ maxWidth: 460, margin: "0 auto", padding: "72px 24px 90px" }}>
+    <main id="mira-main" style={{ maxWidth: 460, margin: "0 auto", padding: "72px 24px 90px" }}>
       <h1 className="display" style={{ fontSize: "clamp(28px,5vw,40px)", margin: 0, textAlign: "center" }}>
         Sign in to Mira
       </h1>
@@ -46,7 +46,7 @@ function Login() {
       </p>
 
       {expired && !sent && (
-        <p role="alert" style={{ marginTop: 20, textAlign: "center", fontSize: 14, color: "var(--mira-rose-deep)" }}>
+        <p role="alert" style={{ marginTop: 20, textAlign: "center", fontSize: 14, color: "var(--mira-rose-ink)" }}>
           That link expired or was already used. Enter your email for a fresh one.
         </p>
       )}
@@ -58,7 +58,7 @@ function Login() {
           <p style={{ fontSize: 14.5, color: "var(--mira-graphite)", margin: "10px 0 0", lineHeight: 1.6 }}>
             If <strong>{email}</strong> has a Mira account, a sign-in link is on its way. It works once and expires in 15 minutes.
           </p>
-          <button type="button" onClick={() => setSent(false)} style={{ marginTop: 18, background: "transparent", border: 0, color: "var(--mira-rose-deep)", fontSize: 14, cursor: "pointer" }}>
+          <button type="button" onClick={() => setSent(false)} style={{ marginTop: 18, background: "transparent", border: 0, color: "var(--mira-rose-ink)", fontSize: 14, cursor: "pointer" }}>
             Use a different email
           </button>
         </section>

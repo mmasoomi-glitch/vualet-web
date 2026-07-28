@@ -81,7 +81,7 @@ export default function MiraAccount() {
   // ---- Not signed in: NO "good to see you", just a sign-in prompt ----
   if (!me.authenticated) {
     return (
-      <main style={{ maxWidth: 560, margin: "0 auto", padding: "72px 24px 90px" }}>
+      <main id="mira-main" style={{ maxWidth: 560, margin: "0 auto", padding: "72px 24px 90px" }}>
         <p style={{ fontSize: 13, color: "var(--mira-slate)", margin: 0 }}>Your account</p>
         <h1 className="display" style={{ fontSize: "clamp(26px,4.5vw,38px)", margin: "4px 0 0" }}>Sign in to Mira</h1>
         <p style={{ color: "var(--mira-graphite)", fontSize: 15.5, margin: "10px 0 0", lineHeight: 1.6 }}>
@@ -106,7 +106,7 @@ export default function MiraAccount() {
   const roleLabel = persona?.role ? ROLE_LABELS[persona.role] ?? "" : "";
 
   return (
-    <main style={{ maxWidth: 880, margin: "0 auto", padding: "48px 24px 80px" }}>
+    <main id="mira-main" style={{ maxWidth: 880, margin: "0 auto", padding: "48px 24px 80px" }}>
       <header style={{ marginBottom: 28 }}>
         <p style={{ fontSize: 13, color: "var(--mira-slate)", margin: 0 }}>Signed in as {me.email}</p>
         <h1 className="display" style={{ fontSize: "clamp(28px,4.5vw,40px)", margin: "4px 0 0" }}>Good to see you.</h1>
@@ -123,7 +123,7 @@ export default function MiraAccount() {
         {ent.active && ent.customerId ? (
           <section style={{ ...card, padding: 24, display: "grid", gridTemplateColumns: "1fr auto", gap: 16, alignItems: "center" }}>
             <div>
-              <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-deep)", fontWeight: 600, margin: 0 }}>Your plan</p>
+              <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-ink)", fontWeight: 600, margin: 0 }}>Your plan</p>
               <p className="display" style={{ fontSize: 26, fontWeight: 400, margin: "6px 0 4px", display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                 {planName ? `Mira ${planName}` : "Mira plan"}
                 <span style={{ fontSize: 14, color: "var(--mira-slate)" }}>
@@ -131,7 +131,7 @@ export default function MiraAccount() {
                 </span>
               </p>
               <p style={{ fontSize: 13.5, color: "var(--mira-graphite)", margin: 0 }}>Update payment, view invoices, or cancel anytime in the billing portal.</p>
-              {portalError && <p role="alert" style={{ fontSize: 13, color: "var(--mira-rose-deep)", margin: "8px 0 0" }}>{portalError}</p>}
+              {portalError && <p role="alert" style={{ fontSize: 13, color: "var(--mira-rose-ink)", margin: "8px 0 0" }}>{portalError}</p>}
             </div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
               <button type="button" className="btn-mira" onClick={() => openBillingPortal(ent.customerId!)} disabled={portalBusy} style={{ padding: "11px 20px", fontSize: 14, opacity: portalBusy ? 0.7 : 1, cursor: portalBusy ? "wait" : "pointer" }}>
@@ -142,7 +142,7 @@ export default function MiraAccount() {
         ) : (
           <section style={{ ...card, padding: 24, display: "grid", gridTemplateColumns: "1fr auto", gap: 16, alignItems: "center" }}>
             <div>
-              <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-deep)", fontWeight: 600, margin: 0 }}>Your status</p>
+              <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-ink)", fontWeight: 600, margin: 0 }}>Your status</p>
               <p className="display" style={{ fontSize: 26, fontWeight: 400, margin: "6px 0 4px" }}>No active plan</p>
               <p style={{ fontSize: 13.5, color: "var(--mira-graphite)", margin: 0 }}>Start a 14-day free trial — no charge for 14 days, cancel anytime.</p>
             </div>
@@ -154,7 +154,7 @@ export default function MiraAccount() {
 
         {/* Persona (cosmetic, device-local) */}
         <section style={{ ...card, padding: 24 }}>
-          <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-deep)", fontWeight: 600, margin: 0 }}>Your Mira</p>
+          <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-ink)", fontWeight: 600, margin: 0 }}>Your Mira</p>
           {persona ? (
             <>
               <p className="display" style={{ fontSize: 24, fontWeight: 400, margin: "6px 0 4px" }}>{assistantName}</p>

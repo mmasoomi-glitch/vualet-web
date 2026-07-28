@@ -13,7 +13,7 @@ export default function MiraNav({ cta = true }: { cta?: boolean }) {
         borderBottom: "1px solid var(--mira-fog)",
       }}
     >
-      <nav className="mira-navbar-row">
+      <nav className="mira-navbar-row" aria-label="Primary">
         <Link href="/mira" aria-label="Mira home" style={{ display: "inline-flex", alignItems: "center", minWidth: 0, flexShrink: 0 }}>
           <img src="/mira/mira-wordmark-color.svg" alt="Mira" style={{ height: 22, maxWidth: "100%" }} />
         </Link>

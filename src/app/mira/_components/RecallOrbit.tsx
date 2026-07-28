@@ -38,7 +38,7 @@ export default function RecallOrbit({
           const x = Math.cos(a) * r;
           const y = Math.sin(a) * r;
           // alternate the two brand accents
-          const c = i % 2 === 0 ? "var(--mira-rose, #B54A45)" : "var(--mira-aether, #3538A8)";
+          const c = i % 2 === 0 ? "var(--mira-rose, #E4A130)" : "var(--aether, #4F46E5)";
           return (
             <span
               key={i}
@@ -67,7 +67,7 @@ export default function RecallOrbit({
           width: Math.max(3, size * 0.14),
           height: Math.max(3, size * 0.14),
           borderRadius: "50%",
-          background: "var(--mira-ink, #2A1F2D)",
+          background: "var(--mira-ink, #1C1830)",
         }}
       />
 

@@ -25,7 +25,7 @@ const input: React.CSSProperties = {
 // live checkout — a native form so it works even without JS.
 export default function MiraSignup() {
   return (
-    <main style={{ maxWidth: 480, margin: "0 auto", padding: "48px 24px 80px" }}>
+    <main id="mira-main" style={{ maxWidth: 480, margin: "0 auto", padding: "48px 24px 80px" }}>
       {/* waitlist is a single step — no plan/payment stepper pre-launch */}
       <header style={{ textAlign: "center", marginBottom: 24 }}>
         <h1 className="display" style={{ fontSize: "clamp(28px,4.5vw,40px)", margin: "0 0 6px" }}>
@@ -38,10 +38,10 @@ export default function MiraSignup() {
 
       <form action="/api/waitlist" method="post" style={card}>
         <input type="hidden" name="source" value="mira" />
-        <label style={{ display: "block", fontSize: 13, color: "var(--mira-graphite)", marginBottom: 6 }}>Your name</label>
-        <input style={input} name="name" placeholder="Maya" required autoFocus />
-        <label style={{ display: "block", fontSize: 13, color: "var(--mira-graphite)", margin: "16px 0 6px" }}>Email</label>
-        <input style={input} type="email" name="email" placeholder="you@email.com" required />
+        <label htmlFor="mira-name" style={{ display: "block", fontSize: 13, color: "var(--mira-graphite)", marginBottom: 6 }}>Your name</label>
+        <input id="mira-name" style={input} name="name" placeholder="Maya" required autoFocus />
+        <label htmlFor="mira-email" style={{ display: "block", fontSize: 13, color: "var(--mira-graphite)", margin: "16px 0 6px" }}>Email</label>
+        <input id="mira-email" style={input} type="email" name="email" placeholder="you@email.com" required />
         <label
           style={{
             display: "flex",

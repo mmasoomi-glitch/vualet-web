@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import WhatsAppStandin from "./_components/WhatsAppStandin";
+
+// Canonical for the Mira home (resolves against metadataBase = https://mira.vualet.com).
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 /* Design A — "Recall Ledger". Ported faithfully from the approved mock.
    Styling lives in mira-theme.css (scoped .mira-root .mha-*); the layout already
@@ -16,7 +22,7 @@ function Check({ size = 24 }: { size?: number }) {
 export default function MiraPage() {
   return (
     <div className="mha-page">
-      <main>
+      <main id="mira-main">
         {/* HERO */}
         <section className="mha-hero">
           <img className="mha-hero-orb" src="/brand/motif-orb.png" alt="" aria-hidden width={620} height={620} />
@@ -66,7 +72,7 @@ export default function MiraPage() {
                 <div className="mha-seal" aria-hidden>
                   <svg viewBox="0 0 132 132">
                     <path id="mha-sc" d="M66,66 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" fill="none" />
-                    <text fontFamily="'IBM Plex Mono', ui-monospace, monospace" fontSize="8.2" letterSpacing="2.4" fill="#B54A45">
+                    <text fontFamily="'IBM Plex Mono', ui-monospace, monospace" fontSize="8.2" letterSpacing="2.4" fill="#935312">
                       <textPath href="#mha-sc" startOffset="0">CERTIFIED · CANNOT FABRICATE · CERTIFIED · CANNOT FABRICATE · </textPath>
                     </text>
                   </svg>

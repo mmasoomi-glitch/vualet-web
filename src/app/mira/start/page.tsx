@@ -215,7 +215,7 @@ export default function ShapeYourMira() {
 
   /* ---------- builder ---------- */
   return (
-    <main style={{ maxWidth: 760, margin: "0 auto", padding: "48px 24px 80px" }}>
+    <main id="mira-main" style={{ maxWidth: 760, margin: "0 auto", padding: "48px 24px 80px" }}>
       <header style={{ textAlign: "center", marginBottom: 28 }}>
         <h1 className="display" style={{ fontSize: "clamp(30px,5vw,46px)", margin: "0 0 8px" }}>
           Shape your <span className="grad">Mira</span>
@@ -237,7 +237,7 @@ export default function ShapeYourMira() {
                 transition: "background .3s",
               }}
             />
-            <span style={{ fontSize: 11, color: i === step ? "var(--mira-rose-deep)" : "var(--mira-slate)", display: "block", marginTop: 6, textAlign: "center" }}>
+            <span style={{ fontSize: 11, color: i === step ? "var(--mira-rose-ink)" : "var(--mira-slate)", display: "block", marginTop: 6, textAlign: "center" }}>
               {label}
             </span>
           </div>

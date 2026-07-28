@@ -71,13 +71,13 @@ function Mark() {
     <svg width="40" height="40" viewBox="0 0 200 200" aria-hidden="true">
       <defs>
         <linearGradient id="mg" x1="40" y1="40" x2="160" y2="160" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#F8A5A0" />
+          <stop offset="0" stopColor="#E4A130" />
           <stop offset="0.55" stopColor="#C7B8F0" />
           <stop offset="1" stopColor="#6366F1" />
         </linearGradient>
         <radialGradient id="mc" cx="100" cy="100" r="35" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#FFEDEB" />
-          <stop offset="0.4" stopColor="#F8A5A0" />
+          <stop offset="0" stopColor="#FFF3D9" />
+          <stop offset="0.4" stopColor="#E4A130" />
           <stop offset="1" stopColor="#C7B8F0" />
         </radialGradient>
       </defs>

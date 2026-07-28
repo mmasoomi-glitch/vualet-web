@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function MiraVpnPage() {
   return (
-    <main style={{ maxWidth: 640, margin: "0 auto", padding: "56px 24px 90px" }}>
+    <main id="mira-main" style={{ maxWidth: 640, margin: "0 auto", padding: "56px 24px 90px" }}>
       <header style={{ textAlign: "center", marginBottom: 28 }}>
         <span
           style={{

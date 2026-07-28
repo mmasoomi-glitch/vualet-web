@@ -167,7 +167,7 @@ function Checkout() {
   }
 
   return (
-    <main style={{ maxWidth: 920, margin: "0 auto", padding: "48px 24px 80px" }}>
+    <main id="mira-main" style={{ maxWidth: 920, margin: "0 auto", padding: "48px 24px 80px" }}>
       <Stepper current={3} />
       <header style={{ textAlign: "center", marginBottom: 28 }}>
         <h1 className="display" style={{ fontSize: "clamp(28px,4.5vw,40px)", margin: "0 0 6px" }}>
@@ -183,7 +183,7 @@ function Checkout() {
       <div className="mira-2col">
         {/* Order summary */}
         <section style={card}>
-          <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-deep)", fontWeight: 600, margin: 0 }}>
+          <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-ink)", fontWeight: 600, margin: 0 }}>
             Your plan
           </p>
           <p className="display" style={{ fontSize: 30, fontWeight: 400, margin: "8px 0 0", display: "flex", alignItems: "baseline", gap: 6 }}>
@@ -205,7 +205,7 @@ function Checkout() {
               then {plan.price}{plan.per} after your 14-day free trial
             </p>
           )}
-          <Link href="/mira/plans" style={{ fontSize: 13, color: "var(--mira-rose-deep)", display: "inline-block", marginTop: 12 }}>
+          <Link href="/mira/plans" style={{ fontSize: 13, color: "var(--mira-rose-ink)", display: "inline-block", marginTop: 12 }}>
             ← Change plan
           </Link>
         </section>
@@ -228,7 +228,7 @@ function Checkout() {
             autoComplete="email"
           />
           {error && (
-            <p role="alert" style={{ fontSize: 13, color: "var(--mira-rose-deep)", margin: "12px 0 0" }}>
+            <p role="alert" style={{ fontSize: 13, color: "var(--mira-rose-ink)", margin: "12px 0 0" }}>
               {error}
             </p>
           )}
@@ -270,7 +270,7 @@ function Checkout() {
                         borderRadius: "var(--mira-radius-md)",
                         border: "1px solid var(--mira-rose-deep)",
                         background: "transparent",
-                        color: "var(--mira-rose-deep)",
+                        color: "var(--mira-rose-ink)",
                         cursor: promoPending || promoInput.trim() === "" ? "not-allowed" : "pointer",
                         opacity: promoPending || promoInput.trim() === "" ? 0.55 : 1,
                         whiteSpace: "nowrap",
@@ -280,7 +280,7 @@ function Checkout() {
                     </button>
                   </div>
                   {promoError && (
-                    <p role="alert" style={{ fontSize: 12.5, color: "var(--mira-rose-deep)", margin: "8px 0 0" }}>
+                    <p role="alert" style={{ fontSize: 12.5, color: "var(--mira-rose-ink)", margin: "8px 0 0" }}>
                       {promoError}
                     </p>
                   )}
