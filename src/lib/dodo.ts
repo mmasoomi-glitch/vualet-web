@@ -75,6 +75,7 @@ export function appUrl(): string {
 export interface DodoCheckoutInput {
   plan: PaidPlan;
   email?: string;
+  name?: string;
   connectToken: string;
   /** ISO country code for MoR tax (billing.country is required by Dodo). */
   country?: string;
@@ -92,13 +93,26 @@ export async function createDodoCheckout(input: DodoCheckoutInput): Promise<{ ur
   const productId = productIdFor(input.plan);
   if (!productId) throw new Error(`no Dodo product id configured for plan ${input.plan}`);
 
+  // Dodo's `customer` is an untagged enum: a NEW customer needs email + name +
+  // create_new_customer:true (bare {email} is rejected 422). Derive a display
+  // name from the email local-part when the caller didn't supply one.
+  const email = input.email;
+  const name = input.name || (email ? email.split("@")[0] : "Mira Subscriber");
   const body = {
     product_id: productId,
     quantity: 1,
     payment_link: true,
     return_url: `${appUrl()}/mira/welcome?token=${input.connectToken}`,
-    customer: input.email ? { email: input.email } : undefined,
-    billing: { country: input.country || "AE" },
+    customer: email
+      ? { email, name, create_new_customer: true }
+      : { email: "guest@vualet.com", name: "Mira Subscriber", create_new_customer: true },
+    billing: {
+      country: input.country || "AE",
+      city: "NA",
+      state: "NA",
+      street: "NA",
+      zipcode: "00000",
+    },
     metadata: { connect_token: input.connectToken, plan: input.plan },
   };
 

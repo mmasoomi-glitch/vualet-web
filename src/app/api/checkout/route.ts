@@ -10,14 +10,14 @@ import { mintConnectToken } from "@/lib/connect-token";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  let body: { plan?: string; email?: string; persona?: string; country?: string };
+  let body: { plan?: string; email?: string; name?: string; persona?: string; country?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { plan, email, persona, country } = body;
+  const { plan, email, name, persona, country } = body;
   if (!isPaidPlan(plan)) {
     return NextResponse.json(
       { error: "Unknown plan. Pick companion, assistant, or studio." },
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
   try {
     await putConnect(record);
-    const { url } = await createDodoCheckout({ plan, email, connectToken: token, country });
+    const { url } = await createDodoCheckout({ plan, email, name, connectToken: token, country });
     return NextResponse.json({ url });
   } catch (err) {
     console.error("[checkout] dodo failed:", err);
