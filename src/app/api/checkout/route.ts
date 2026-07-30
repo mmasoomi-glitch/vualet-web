@@ -1,21 +1,23 @@
 import { NextResponse } from "next/server";
-import { stripe, priceIdFor, isPaidPlan, appUrl, paymentsConfigured } from "@/lib/stripe";
+import { createDodoCheckout, dodoConfigured, isPaidPlan } from "@/lib/dodo";
 import { putConnect, type ConnectRecord } from "@/lib/store";
 import { mintConnectToken } from "@/lib/connect-token";
-import { validatePromo } from "@/lib/promo";
-import type Stripe from "stripe";
 
-// Creates a Stripe Checkout session (subscription) for a Mira plan and returns its url.
-// Body: { plan: "companion" | "assistant" | "studio", email?, persona?, promoCode? }
+// Creates a Dodo Payments subscription checkout for a Mira plan and returns its url.
+// Merchant-of-Record provider (replaced Stripe). Carries a connect_token so the
+// purchase binds to the Telegram bot after payment (see /api/webhooks/dodo).
+// Body: { plan: "companion" | "assistant" | "studio", email?, persona?, country? }
+export const runtime = "nodejs";
+
 export async function POST(req: Request) {
-  let body: { plan?: string; email?: string; persona?: string; promoCode?: string };
+  let body: { plan?: string; email?: string; persona?: string; country?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { plan, email, persona, promoCode } = body;
+  const { plan, email, persona, country } = body;
   if (!isPaidPlan(plan)) {
     return NextResponse.json(
       { error: "Unknown plan. Pick companion, assistant, or studio." },
@@ -23,8 +25,10 @@ export async function POST(req: Request) {
     );
   }
 
-  if (!paymentsConfigured()) {
-    // Pre-keys: don't 500 the funnel — tell the UI to show "coming soon".
+  if (!dodoConfigured(plan)) {
+    // Fail-safe: pre-keys / product-ids-unset → don't 500 the funnel; the UI
+    // shows "coming soon". Money path opens only when DODO_API_KEY + the plan's
+    // DODO_PRODUCT_* id exist AND DODO_PAYMENTS_LIVE=1.
     return NextResponse.json(
       { error: "not_configured", message: "Payments aren't switched on yet." },
       { status: 503 },
@@ -42,56 +46,12 @@ export async function POST(req: Request) {
     createdAt: new Date().toISOString(),
   };
 
-  // Re-validate any pre-entered promo code SERVER-SIDE (never trust the browser).
-  // If a code was supplied but no longer checks out, stop rather than silently
-  // charging full price — the client re-checks and shows the reason.
-  let appliedPromoId: string | null = null;
-  if (typeof promoCode === "string" && promoCode.trim() !== "") {
-    const promo = await validatePromo(promoCode, plan);
-    if (!promo.valid) {
-      return NextResponse.json(
-        { error: "promo_invalid", message: promo.reason || "That promotion code is no longer valid." },
-        { status: 400 },
-      );
-    }
-    appliedPromoId = promo.promotion_code_id;
-  }
-
   try {
     await putConnect(record);
-
-    const params: Stripe.Checkout.SessionCreateParams = {
-      mode: "subscription",
-      line_items: [{ price: priceIdFor(plan), quantity: 1 }],
-      customer_email: email || undefined,
-      metadata: { connect_token: token, plan, persona: persona ?? "" },
-      // Carry the token onto the subscription too, so renewal webhooks can find it.
-      // 14-day free trial: card is collected but not charged until day 14, which
-      // is what the Refund Policy + marketing promise ("no charge during trial").
-      subscription_data: { metadata: { connect_token: token, plan }, trial_period_days: 14 },
-      automatic_tax: { enabled: true },
-      billing_address_collection: "required",
-      success_url: `${appUrl()}/mira/welcome?token=${token}`,
-      cancel_url: `${appUrl()}/mira/plans`,
-    };
-
-    if (appliedPromoId) {
-      // Pre-apply the validated code so the Stripe page needs no re-entry.
-      // discounts and allow_promotion_codes are mutually exclusive.
-      params.discounts = [{ promotion_code: appliedPromoId }];
-    } else {
-      // No pre-applied code: still let testers/customers enter one on the
-      // Stripe-hosted checkout — validated server-side by Stripe.
-      params.allow_promotion_codes = true;
-    }
-
-    const session = await stripe().checkout.sessions.create(params);
-
-    const url = session.url;
-    if (!url) throw new Error("Stripe returned no checkout url.");
+    const { url } = await createDodoCheckout({ plan, email, connectToken: token, country });
     return NextResponse.json({ url });
   } catch (err) {
-    console.error("[checkout] failed:", err);
+    console.error("[checkout] dodo failed:", err);
     return NextResponse.json(
       { error: "checkout_failed", message: "Couldn't start checkout. Try again." },
       { status: 502 },
