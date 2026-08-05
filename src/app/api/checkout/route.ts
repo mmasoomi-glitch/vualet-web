@@ -25,6 +25,20 @@ export async function POST(req: Request) {
     );
   }
 
+  // A paid order MUST carry a real customer email. Without one, dodo.ts falls
+  // back to a shared hardcoded identity ("guest@vualet.com"), which collapses
+  // every paying customer into one fake record — unidentifiable, unable to sign
+  // in, and impossible to resolve entitlement for. /mira/checkout marks the
+  // field required, but a browser-side attribute is not a guard: this is the
+  // server-side one. Fail closed. (Defect B, jury #101.)
+  const cleanEmail = typeof email === "string" ? email.trim() : "";
+  if (!/^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(cleanEmail) || cleanEmail.length > 200) {
+    return NextResponse.json(
+      { error: "email_required", message: "Enter your email address to continue." },
+      { status: 400 },
+    );
+  }
+
   if (!dodoConfigured(plan)) {
     // Fail-safe: pre-keys / product-ids-unset → don't 500 the funnel; the UI
     // shows "coming soon". Money path opens only when DODO_API_KEY + the plan's
@@ -40,7 +54,7 @@ export async function POST(req: Request) {
   const record: ConnectRecord = {
     token,
     plan,
-    email,
+    email: cleanEmail,
     status: "pending",
     persona,
     createdAt: new Date().toISOString(),
@@ -48,7 +62,7 @@ export async function POST(req: Request) {
 
   try {
     await putConnect(record);
-    const { url } = await createDodoCheckout({ plan, email, name, connectToken: token, country });
+    const { url } = await createDodoCheckout({ plan, email: cleanEmail, name, connectToken: token, country });
     return NextResponse.json({ url });
   } catch (err) {
     console.error("[checkout] dodo failed:", err);

@@ -1,36 +1,19 @@
-"use client";
-
 import Link from "next/link";
-import { useState } from "react";
 import { TIERS } from "../_components/tiers";
 
-// Live selling state: paid tiers start a 14-day free trial via Stripe Checkout
-// (card collected, not charged for 14 days). The free tier stays a no-card start.
+// Every tier — paid and free — routes to /mira/checkout, which collects the
+// customer's email before starting payment.
+//
+// This page used to POST straight to /api/checkout with only { plan }. That
+// worked under Stripe Checkout, which collected the email on its own hosted
+// page. Dodo requires the email up-front, so with no email supplied, dodo.ts
+// fell back to a hardcoded "guest@vualet.com" — and because this page is the
+// main paid entry point, EVERY paying customer collapsed into that one fake
+// identity, unable to be identified, sign in, or have entitlement resolved.
+//
+// /mira/checkout already collects the email and already handles promo codes,
+// so routing here reuses a working path rather than duplicating it. Jury #101.
 export default function MiraPlans() {
-  const [loading, setLoading] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function choose(planId: string) {
-    setError(null);
-    setLoading(planId);
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: planId }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.url) {
-        window.location.href = data.url;
-        return;
-      }
-      setError(data.message || "Couldn't start checkout. Please try again.");
-    } catch {
-      setError("Something went wrong. Please try again.");
-    }
-    setLoading(null);
-  }
-
   return (
     <main
       id="mira-main"
@@ -64,12 +47,6 @@ export default function MiraPlans() {
         </p>
       </header>
 
-      {error && (
-        <p role="alert" style={{ textAlign: "center", fontSize: 13.5, color: "var(--mira-rose-ink)", margin: "0 0 20px" }}>
-          {error}
-        </p>
-      )}
-
       <div
         style={{
           display: "grid",
@@ -80,7 +57,6 @@ export default function MiraPlans() {
       >
         {TIERS.map((t) => {
           const paid = t.id !== "free";
-          const busy = loading === t.id;
           return (
             <div
               key={t.id}
@@ -123,15 +99,13 @@ export default function MiraPlans() {
               </ul>
               <div style={{ marginTop: 18 }}>
                 {paid ? (
-                  <button
-                    type="button"
+                  <Link
+                    href={`/mira/checkout?plan=${t.id}`}
                     className="btn-mira"
-                    onClick={() => choose(t.id)}
-                    disabled={Boolean(loading)}
-                    style={{ width: "100%", justifyContent: "center", display: "inline-flex", fontSize: 14, opacity: loading && !busy ? 0.6 : 1, cursor: busy ? "wait" : "pointer" }}
+                    style={{ width: "100%", justifyContent: "center", display: "inline-flex", fontSize: 14, textDecoration: "none" }}
                   >
-                    {busy ? "Starting…" : t.cta}
-                  </button>
+                    {t.cta}
+                  </Link>
                 ) : (
                   <Link
                     href="/mira/checkout?plan=free"

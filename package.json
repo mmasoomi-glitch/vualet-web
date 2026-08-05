@@ -12,7 +12,8 @@
     "test:promo": "node --test scripts/promo-validate-test.mjs",
     "test:tier": "node --test scripts/tier-map-test.mjs",
     "test:zero": "node --test scripts/webhook-checkout-test.mjs",
-    "test:dodo": "node --test scripts/dodo-webhook-test.mjs"
+    "test:dodo": "node --test scripts/dodo-webhook-test.mjs",
+    "test:email": "node --test scripts/checkout-email-test.mjs"
   },
   "dependencies": {
     "next": "16.2.6",
