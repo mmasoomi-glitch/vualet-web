@@ -133,3 +133,82 @@ export async function createDodoCheckout(input: DodoCheckoutInput): Promise<{ ur
   if (!json.payment_link) throw new Error("Dodo returned no payment_link");
   return { url: json.payment_link, subscriptionId: json.subscription_id };
 }
+
+/**
+ * Cancel a Dodo subscription (defect E, jury #102).
+ *
+ * Defaults to cancel_at_next_billing_date=true so the customer keeps what they
+ * already paid for until the end of the period they bought — cancelling should
+ * stop future billing, not confiscate the current month.
+ *
+ * PATCH /subscriptions/{id} — see Dodo API reference. cancel_reason is an enum;
+ * "cancelled_by_customer" is the correct value for a self-serve cancellation.
+ */
+export async function cancelDodoSubscription(
+  subscriptionId: string,
+  opts: { atPeriodEnd?: boolean; comment?: string } = {},
+): Promise<{ ok: true }> {
+  const apiKey = process.env.DODO_API_KEY;
+  if (!apiKey) throw new Error("DODO_API_KEY unset");
+  if (!subscriptionId) throw new Error("subscriptionId required");
+
+  const body: Record<string, unknown> = {
+    cancel_at_next_billing_date: opts.atPeriodEnd !== false,
+    cancel_reason: "cancelled_by_customer",
+  };
+  if (opts.comment) body.cancellation_comment = opts.comment.slice(0, 3000);
+
+  const res = await fetch(`${dodoBaseUrl()}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`Dodo cancel-subscription failed ${res.status}: ${detail.slice(0, 300)}`);
+  }
+  return { ok: true };
+}
+
+/**
+ * Refund a Dodo payment (defect E, jury #102).
+ *
+ * DELIBERATELY NOT REACHABLE FROM A CUSTOMER-FACING ROUTE. The jury ruled that
+ * cancellation is the customer's own right and may be self-serve, but a refund
+ * moves real money OUT and is a fraud surface — so it stays behind human
+ * approval. This function exists so an authorised operator path can call it;
+ * do not wire it directly to an unauthenticated or customer-triggered endpoint.
+ *
+ * POST /refunds — payment_id is required; omitting items refunds the whole payment.
+ */
+export async function refundDodoPayment(
+  paymentId: string,
+  opts: { reason?: string } = {},
+): Promise<{ refundId?: string; status?: string }> {
+  const apiKey = process.env.DODO_API_KEY;
+  if (!apiKey) throw new Error("DODO_API_KEY unset");
+  if (!paymentId) throw new Error("paymentId required");
+
+  const body: Record<string, unknown> = { payment_id: paymentId };
+  if (opts.reason) body.reason = opts.reason.slice(0, 3000);
+
+  const res = await fetch(`${dodoBaseUrl()}/refunds`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`Dodo refund failed ${res.status}: ${detail.slice(0, 300)}`);
+  }
+  const json = (await res.json()) as { refund_id?: string; status?: string };
+  return { refundId: json.refund_id, status: json.status };
+}

@@ -141,6 +141,8 @@ export type ConnectRecord = {
 
 const connectKey = (token: string) => `mira:connect:${token}`;
 const subByCustomer = (customerId: string) => `mira:sub:${customerId}`;
+// Email is normalised so a session email and a stored email always agree.
+const subIdByEmail = (email: string) => `mira:subemail:${email.trim().toLowerCase()}`;
 
 export async function putConnect(rec: ConnectRecord): Promise<void> {
   // 7-day TTL on the connect token; the durable sub record (below) has none.
@@ -174,8 +176,34 @@ export async function claimConnect(
 
 export async function putSubscription(customerId: string, rec: ConnectRecord): Promise<void> {
   await kvSet(subByCustomer(customerId), rec);
+  // Reverse index so a logged-in customer can find their OWN subscription from
+  // their session email alone. Without this there is no email -> subscription
+  // path at all (Dodo exposes no list-by-email endpoint), which is what left
+  // customers unable to cancel. Writing the index here means it is maintained
+  // by the same call that already owns subscription persistence.
+  if (rec.email) await kvSet(subIdByEmail(rec.email), customerId);
 }
 
 export async function getSubscription(customerId: string): Promise<ConnectRecord | null> {
   return kvGet<ConnectRecord>(subByCustomer(customerId));
+}
+
+/**
+ * Resolve a subscription from a VERIFIED session email — never from a
+ * client-supplied customer id. This is the anti-IDOR shape: the caller cannot
+ * name whose subscription to act on, only prove which inbox they control.
+ * Returns null for customers who predate the index (they fall back to the
+ * human support path rather than getting a wrong record).
+ */
+export async function getSubscriptionByEmail(
+  email: string,
+): Promise<{ customerId: string; rec: ConnectRecord } | null> {
+  if (!email) return null;
+  const customerId = await kvGet<string>(subIdByEmail(email));
+  if (!customerId) return null;
+  const rec = await getSubscription(customerId);
+  if (!rec) return null;
+  // Defence in depth: the record's own email must still match the session.
+  if ((rec.email || "").trim().toLowerCase() !== email.trim().toLowerCase()) return null;
+  return { customerId, rec };
 }

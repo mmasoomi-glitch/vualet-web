@@ -30,6 +30,9 @@ export default function MiraAccount() {
   const [persona, setPersona] = useState<Persona | null>(null);
   const [portalBusy, setPortalBusy] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [refundBusy, setRefundBusy] = useState(false);
+  const [cancelMsg, setCancelMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me", { cache: "no-store" })
@@ -64,6 +67,52 @@ export default function MiraAccount() {
       setPortalError("Something went wrong. Please try again.");
     }
     setPortalBusy(false);
+  }
+
+  // Defect E (jury #102). The server resolves WHICH subscription from the
+  // session alone, so this sends no identifiers — there is nothing here for a
+  // caller to tamper with.
+  async function cancelPlan() {
+    if (!window.confirm("Cancel your Mira plan? You'll keep access until the end of your current billing period, and you won't be charged again.")) return;
+    setPortalError(null);
+    setCancelMsg(null);
+    setCancelBusy(true);
+    try {
+      const res = await fetch("/api/subscription/cancel", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setCancelMsg(data.message || "Cancelled. You won't be charged again.");
+      } else {
+        setPortalError(data.message || "Couldn't cancel automatically. Please contact us.");
+      }
+    } catch {
+      setPortalError("Something went wrong. Please contact us and we'll cancel it for you.");
+    }
+    setCancelBusy(false);
+  }
+
+  // A refund is a request, not an action: a person reviews every one.
+  async function requestRefund() {
+    const reason = window.prompt("What's the reason for the refund? (optional)") ?? "";
+    setPortalError(null);
+    setCancelMsg(null);
+    setRefundBusy(true);
+    try {
+      const res = await fetch("/api/subscription/refund-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setCancelMsg(data.message || "Refund request received — we'll be in touch shortly.");
+      } else {
+        setPortalError(data.message || "Couldn't file that. Please email info@vualet.com.");
+      }
+    } catch {
+      setPortalError("Something went wrong. Please email info@vualet.com and we'll handle it.");
+    }
+    setRefundBusy(false);
   }
 
   async function signOut() {
@@ -130,12 +179,21 @@ export default function MiraAccount() {
                   {ent.status === "trialing" ? "Free trial active" : "Subscription active"}
                 </span>
               </p>
-              <p style={{ fontSize: 13.5, color: "var(--mira-graphite)", margin: 0 }}>Update payment, view invoices, or cancel anytime in the billing portal.</p>
+              <p style={{ fontSize: 13.5, color: "var(--mira-graphite)", margin: 0 }}>Update payment or view invoices in the billing portal. You can cancel any time — you keep everything you&rsquo;ve paid for until the end of your current period.</p>
               {portalError && <p role="alert" style={{ fontSize: 13, color: "var(--mira-rose-ink)", margin: "8px 0 0" }}>{portalError}</p>}
+              {cancelMsg && <p role="status" style={{ fontSize: 13, color: "var(--mira-graphite)", margin: "8px 0 0" }}>{cancelMsg}</p>}
             </div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
               <button type="button" className="btn-mira" onClick={() => openBillingPortal(ent.customerId!)} disabled={portalBusy} style={{ padding: "11px 20px", fontSize: 14, opacity: portalBusy ? 0.7 : 1, cursor: portalBusy ? "wait" : "pointer" }}>
                 {portalBusy ? "Opening…" : "Manage billing →"}
+              </button>
+              {/* Defect E (jury #102): a customer must always have a way out.
+                  Cancelling is self-serve; a refund is a request a human reviews. */}
+              <button type="button" className="btn-mira-soft" onClick={cancelPlan} disabled={cancelBusy} style={{ padding: "11px 20px", fontSize: 14, opacity: cancelBusy ? 0.7 : 1, cursor: cancelBusy ? "wait" : "pointer" }}>
+                {cancelBusy ? "Cancelling…" : "Cancel plan"}
+              </button>
+              <button type="button" onClick={requestRefund} disabled={refundBusy} style={{ padding: "11px 16px", fontSize: 13.5, background: "transparent", border: 0, color: "var(--mira-slate)", textDecoration: "underline", cursor: refundBusy ? "wait" : "pointer" }}>
+                {refundBusy ? "Sending…" : "Request a refund"}
               </button>
             </div>
           </section>
