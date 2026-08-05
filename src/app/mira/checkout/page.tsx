@@ -53,7 +53,7 @@ function Checkout() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Promotion code: validated server-side against Stripe before it's applied.
+  // Promotion code: validated server-side before it's applied.
   const [promoInput, setPromoInput] = useState("");
   const [promoPending, setPromoPending] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
@@ -129,8 +129,9 @@ function Checkout() {
     }
   }
 
-  async function payWithStripe() {
-    // Real charge: create a Stripe hosted-checkout session and hand off to it.
+  async function payWithProvider() {
+    // Real charge: create a hosted-checkout session with the payment provider
+    // (Dodo Payments) and hand off to it.
     const setup = readSetup();
     try {
       const res = await fetch("/api/checkout", {
@@ -161,7 +162,7 @@ function Checkout() {
     if (isTrial) {
       await payTrial();
     } else {
-      await payWithStripe();
+      await payWithProvider();
     }
     setPaying(false);
   }
@@ -210,11 +211,11 @@ function Checkout() {
           </Link>
         </section>
 
-        {/* Email capture + handoff to Stripe's hosted checkout */}
+        {/* Email capture + handoff to the provider's hosted checkout */}
         <form onSubmit={pay} style={card}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--mira-slate)", marginBottom: 14 }}>
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--mira-success)" }} />
-            {isTrial ? "No card needed to start" : "Secure checkout · powered by Stripe"}
+            {isTrial ? "No card needed to start" : "Secure checkout"}
           </div>
           <label style={{ display: "block", fontSize: 13, color: "var(--mira-graphite)", marginBottom: 6 }}>Email</label>
           <input
@@ -366,7 +367,7 @@ function Checkout() {
           <p style={{ textAlign: "center", fontSize: 12, color: "var(--mira-slate)", margin: "12px 0 0" }}>
             {isTrial
               ? "No card required — cancel anytime."
-              : `14-day free trial, then ${plan.price}${plan.per ?? "/mo"} — no charge for 14 days. You'll confirm your card on Stripe's secure checkout. Cancel anytime.`}
+              : `14-day free trial, then ${plan.price}${plan.per ?? "/mo"} — no charge for 14 days. You'll confirm your card on our payment provider's secure checkout. Cancel anytime.`}
           </p>
         </form>
       </div>

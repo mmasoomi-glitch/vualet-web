@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 /* ---------- presets / option data ---------- */
 
@@ -129,16 +129,18 @@ export default function ShapeYourMira() {
     }
   }, [name, role, vibe, vibeText, roleLabel]);
 
-  // TODO(backend): the ?start= payload below is still a mock — replace with the
-  // real linking code once provisioning exists. The bot handle, however, matches
-  // the rest of the app (NEXT_PUBLIC_TELEGRAM_BOT), falling back to the live bot.
-  const telegramLink = useMemo(() => {
-    const bot = process.env.NEXT_PUBLIC_TELEGRAM_BOT || "ballerina_10840_bot";
-    const payload = encodeURIComponent(
-      `name=${name || "Mira"};vibe=${vibe};role=${role}`,
-    );
-    return `https://t.me/${bot}?start=${payload}`;
-  }, [name, vibe, role]);
+  // The real Telegram deep link, issued by the server on submit. Until then it
+  // is null and no link is shown — we never hand the customer a link that
+  // cannot actually bind them.
+  //
+  // This replaces a mock: the page used to build a fake `?start=name=X;vibe=Y`
+  // payload and tell the user outright that it was a placeholder, so everything
+  // they configured here went nowhere. /api/begin already mints a real signed
+  // single-use connect token and returns the real bot URL, so submit() now
+  // simply uses it.
+  const [telegramLink, setTelegramLink] = useState<string | null>(null);
+  const [submitBusy, setSubmitBusy] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const canAdvance =
     (step === 0 && name.trim().length > 0) ||
@@ -154,10 +156,49 @@ export default function ShapeYourMira() {
     setStep((s) => Math.max(0, s - 1));
   }
 
-  function submit() {
-    // TODO(backend): POST the assistant config to create the Mira instance,
-    // then issue a real deep-link / linking code. For now we just confirm.
-    setDone(true);
+  // Actually create the assistant. Everything the customer just shaped is sent
+  // to /api/begin, which mints a real signed single-use connect token and
+  // returns the real Telegram deep link that binds this setup to their chat.
+  //
+  // Note we deliberately reuse /api/begin rather than adding a new field to the
+  // connect record: the engine's identity plumbing is being rebuilt in
+  // parallel, and touching that shape here would risk a conflict (jury #105).
+  async function submit() {
+    setSubmitError(null);
+    setSubmitBusy(true);
+    const assistantName = name.trim() || "Mira";
+    const roleText = (roleLabel || "personal assistant").toLowerCase();
+    const vibeBlurb = VIBES.find((v) => v.id === vibe)?.blurb ?? "";
+    const vibe_ = vibeText.trim() || vibeBlurb;
+    const persona =
+      `You are ${assistantName}, a ${roleText}. ${vibe_} ` +
+      `Talk warmly and in character, keep replies short and natural, ` +
+      `never mention being an AI, a model, or any company/technology.`;
+
+    try {
+      const res = await fetch("/api/begin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ setup: { assistantName, role, vibe, persona } }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.botUrl) {
+        setTelegramLink(data.botUrl);
+        try {
+          localStorage.setItem("mira_bot_url", data.botUrl);
+        } catch {
+          /* ignore (e.g. storage disabled) */
+        }
+        setDone(true);
+        return;
+      }
+      setSubmitError(
+        data.message || "We couldn't set her up just then. Try once more?",
+      );
+    } catch {
+      setSubmitError("Something went wrong on our side. Try once more?");
+    }
+    setSubmitBusy(false);
   }
 
   function skip() {
@@ -192,12 +233,13 @@ export default function ShapeYourMira() {
             <p style={{ color: "var(--mira-graphite)", fontSize: 15.5, lineHeight: 1.6, margin: "0 auto 26px", maxWidth: 420 }}>
               Open her in Telegram and say hello. She already knows she&apos;s your {roleLabel.toLowerCase()} — {vibeLabel.toLowerCase()}.
             </p>
-            <a className="btn-mira" href={telegramLink} target="_blank" rel="noopener noreferrer" style={{ width: "100%", maxWidth: 320 }}>
-              Open {name || "Mira"} in Telegram →
-            </a>
+            {telegramLink && (
+              <a className="btn-mira" href={telegramLink} target="_blank" rel="noopener noreferrer" style={{ width: "100%", maxWidth: 320 }}>
+                Open {name || "Mira"} in Telegram →
+              </a>
+            )}
             <p style={{ fontSize: 12.5, color: "var(--mira-slate)", margin: "14px 0 0" }}>
-              {/* TODO(backend): this is a placeholder deep-link. */}
-              A placeholder link for now — your real Mira link arrives at launch.
+              This link is yours alone — it connects her to your chat the first time you open it.
             </p>
             <div style={{ marginTop: 22, paddingTop: 22, borderTop: "1px solid var(--mira-fog)", display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
               <Link className="btn-mira-soft" href="/mira/plans">
@@ -384,11 +426,16 @@ export default function ShapeYourMira() {
               Continue →
             </button>
           ) : (
-            <button type="button" onClick={submit} className="btn-mira">
-              Bring her to life →
+            <button type="button" onClick={submit} disabled={submitBusy} className="btn-mira" style={{ opacity: submitBusy ? 0.7 : 1, cursor: submitBusy ? "wait" : "pointer" }}>
+              {submitBusy ? "Bringing her to life…" : "Bring her to life →"}
             </button>
           )}
         </div>
+        {submitError && (
+          <p role="alert" style={{ textAlign: "center", fontSize: 13.5, color: "var(--mira-rose-ink)", margin: "14px 0 0" }}>
+            {submitError}
+          </p>
+        )}
       </div>
     </main>
   );
