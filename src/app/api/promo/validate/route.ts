@@ -18,6 +18,24 @@ export async function POST(req: Request) {
   if (!isPaidPlan(plan)) {
     return NextResponse.json({ valid: false, reason: "Pick a paid plan first." }, { status: 400 });
   }
+
+  // KILL SWITCH (jury verdict #96, 2026-08-04) — DEFAULT OFF, deliberately.
+  //
+  // This route validates codes against STRIPE, but production charges through
+  // DODO, and /api/checkout does not forward promoCode to the charge at all.
+  // The result was a live mischarge trap: a customer entered a 100%-off code,
+  // this route told them the total was $0, and their card was then charged the
+  // full price. Refusing every code is honest and safe; quoting a discount we
+  // cannot honour is neither.
+  //
+  // Re-enable ONLY once /api/checkout actually applies the discount end-to-end
+  // (defect A), by setting PROMO_CODES_ENABLED=1.
+  if (process.env.PROMO_CODES_ENABLED !== "1") {
+    return NextResponse.json({
+      valid: false,
+      reason: "Discount codes are temporarily unavailable. Contact us and we'll apply it manually.",
+    });
+  }
   if (!paymentsConfigured()) {
     return NextResponse.json(
       { valid: false, reason: "Payments aren't switched on yet." },
