@@ -14,6 +14,22 @@ type Me =
   | { authenticated: false }
   | { authenticated: true; email: string; entitlement: { active: boolean; status: string | null; plan: string | null; customerId: string | null } };
 
+/* The customer-safe summary of THEIR OWN order, straight from
+   /api/support/order-status. The server decides whose order that is from the
+   session cookie alone, so this page sends no identifier and has none to send.
+   Every field here is already plain language — src/lib/support-core.mjs throws
+   before it will hand back an internal id or a provider name. */
+type OrderSummary = {
+  found: boolean;
+  planLabel: string;
+  statusLabel: string;
+  headline: string;
+  statusLine: string;
+  sinceLine: string;
+  cancelLine: string;
+  text: string;
+};
+
 type Persona = { assistantName?: string; role?: string; vibe?: string; persona?: string };
 const VIBE_LABELS: Record<string, string> = { warm: "Warm & gentle", bright: "Bright & playful", calm: "Calm & grounded", sharp: "Sharp & direct" };
 const ROLE_LABELS: Record<string, string> = { friend: "Friend", tutor: "Tutor", assistant: "Assistant", coach: "Coach" };
@@ -28,6 +44,7 @@ const card: React.CSSProperties = {
 export default function MiraAccount() {
   const [me, setMe] = useState<Me | null>(null); // null = loading
   const [persona, setPersona] = useState<Persona | null>(null);
+  const [order, setOrder] = useState<OrderSummary | null>(null);
   const [portalBusy, setPortalBusy] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
@@ -39,6 +56,14 @@ export default function MiraAccount() {
       .then((r) => r.json())
       .then((d: Me) => setMe(d))
       .catch(() => setMe({ authenticated: false }));
+    // Their own order, in their own words. Same shape as the /api/auth/me call
+    // above: no body, no query, no identifier — the session says who is asking.
+    // A 401 or a 404 still parses; a 404 carries the same warm summary, and an
+    // unsigned-in caller simply has none, so the card stays away.
+    fetch("/api/support/order-status", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: { summary?: OrderSummary }) => setOrder(d?.summary ?? null))
+      .catch(() => setOrder(null));
     try {
       const raw = localStorage.getItem("mira_setup");
       const parsed = raw ? (JSON.parse(raw) as Persona) : null;
@@ -149,7 +174,10 @@ export default function MiraAccount() {
   // Purchased tier name, from the SAME tier source of truth as /mira/plans.
   // planForPriceId already reversed the live Stripe price to a slug server-side;
   // here we just resolve its display name ("Companion" | "Assistant" | "Studio").
-  const planName = tierById(ent.plan)?.name ?? null;
+  const purchasedTier = tierById(ent.plan);
+  const planName = purchasedTier?.name ?? null;
+  // What the plan actually gives them, from the same tier source of truth.
+  const includedItems = purchasedTier?.items ?? [];
   const assistantName = persona?.assistantName?.trim() || "Mira";
   const vibeLabel = persona?.vibe ? VIBE_LABELS[persona.vibe] ?? "" : "";
   const roleLabel = persona?.role ? ROLE_LABELS[persona.role] ?? "" : "";
@@ -207,6 +235,32 @@ export default function MiraAccount() {
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
               <Link className="btn-mira" href="/mira/plans" style={{ padding: "11px 20px", fontSize: 14 }}>See plans →</Link>
             </div>
+          </section>
+        )}
+
+        {/* Where their order actually stands, read from /api/support/order-status.
+            That endpoint and src/lib/support-core.mjs were built and then never
+            called by anything, so a customer got nothing out of them — this is
+            the wire. It only ever READS: the plan, where it stands, what it
+            includes, and what cancelling would cost them. It forms no opinion
+            about them, and it never will (jury #107). */}
+        {order && (
+          <section style={{ ...card, padding: 24 }}>
+            <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-ink)", fontWeight: 600, margin: 0 }}>Where things stand</p>
+            <p className="display" style={{ fontSize: 22, fontWeight: 400, margin: "6px 0 6px" }}>{order.headline}</p>
+            <p style={{ fontSize: 14.5, color: "var(--mira-graphite)", margin: 0, lineHeight: 1.6 }}>{order.statusLine}</p>
+            {order.sinceLine && <p style={{ fontSize: 13.5, color: "var(--mira-slate)", margin: "6px 0 0" }}>{order.sinceLine}</p>}
+            {order.found && includedItems.length > 0 && (
+              <>
+                <p style={{ fontSize: 13.5, color: "var(--mira-graphite)", margin: "16px 0 6px" }}>What that includes:</p>
+                <ul style={{ margin: 0, padding: "0 0 0 18px", fontSize: 14, color: "var(--mira-graphite)", lineHeight: 1.7 }}>
+                  {includedItems.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <p style={{ fontSize: 14.5, color: "var(--mira-graphite)", margin: "16px 0 0", lineHeight: 1.6 }}>{order.cancelLine}</p>
           </section>
         )}
 

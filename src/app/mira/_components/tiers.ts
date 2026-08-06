@@ -18,7 +18,7 @@ export const TIERS: Tier[] = [
     name: "Free",
     price: "Free",
     sub: "1,000,000 tokens / month",
-    items: ["Chat + voice notes", "Remembers you across chats", "Capped voice minutes"],
+    items: ["Chat + voice notes", "Remembers you across chats", "In Telegram — no new app, no new number"],
     cta: "Start free",
   },
   {
@@ -27,7 +27,7 @@ export const TIERS: Tier[] = [
     price: "$14.99",
     per: "/mo",
     sub: "15M tokens / month",
-    items: ["Everything in Free", "A persona you shape", "Load her knowledge base with your own text"],
+    items: ["Everything in Free", "A persona you shape", "15× the monthly usage of Free"],
     cta: "Choose Companion",
   },
   {
@@ -36,7 +36,7 @@ export const TIERS: Tier[] = [
     price: "$39",
     per: "/mo",
     sub: "60M tokens / month",
-    items: ["Everything in Companion", "Build pipeline (beta): small web apps & sites", "Priority replies"],
+    items: ["Everything in Companion", "60M tokens — 4× Companion", "Priority replies"],
     featured: true,
     cta: "Choose Assistant",
   },
@@ -46,7 +46,7 @@ export const TIERS: Tier[] = [
     price: "$79",
     per: "/mo",
     sub: "200M tokens / month",
-    items: ["Everything in Assistant", "Your own WhatsApp number", "Top of the queue"],
+    items: ["Everything in Assistant", "200M tokens — the highest cap", "Top of the queue"],
     cta: "Choose Studio",
   },
 ];

@@ -23,7 +23,7 @@ export const PRODUCTS: Product[] = [
       "No app to install — she messages you on Telegram today, with WhatsApp coming soon",
       "Voice-first and multilingual, on the fly",
       "Remembers you across every conversation",
-      "Load her knowledge base with your own text and she draws on it",
+      "A persona you shape, and she remembers you across chats",
     ],
     startingPriceUsd: 14.99,
   },

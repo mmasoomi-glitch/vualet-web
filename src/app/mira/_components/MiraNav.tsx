@@ -30,8 +30,8 @@ export default function MiraNav({ cta = true }: { cta?: boolean }) {
             Account
           </Link>
           {cta && (
-            <Link className="btn-mira mira-nav-cta" href="/mira/signup">
-              Join the waitlist
+            <Link className="btn-mira mira-nav-cta" href="/mira/start">
+              Start free
             </Link>
           )}
         </div>

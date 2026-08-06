@@ -42,8 +42,8 @@ export default function MiraPlans() {
           Choose how far <span className="grad">she goes</span>
         </h1>
         <p style={{ color: "var(--mira-graphite)", fontSize: 16, maxWidth: 540, margin: "0 auto" }}>
-          Start your 14-day free trial — no charge for 14 days, cancel anytime. Every plan includes a
-          million tokens free, every month.
+          Start your 14-day free trial — no charge for 14 days, cancel anytime. Or stay on the Free
+          plan: a million tokens every month, no card needed.
         </p>
       </header>
 

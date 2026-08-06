@@ -67,7 +67,7 @@ export const VERIDIAN_KB: KbEntry[] = [
   {
     topic: "Pricing — Companion tier",
     body:
-      "Companion: $14.99 per month. Everything in Free, plus a persona you shape and the ability to load Mira's knowledge base with your own text.",
+      "Companion: $14.99 per month. Everything in Free, plus a persona you shape and 15x the monthly usage of Free.",
   },
   {
     topic: "Pricing — Assistant tier",
@@ -77,7 +77,7 @@ export const VERIDIAN_KB: KbEntry[] = [
   {
     topic: "Pricing — Studio tier",
     body:
-      "Studio: $79 per month. Everything in Assistant, plus the ability to use your own WhatsApp number and top-of-the-queue priority.",
+      "Studio: $79 per month. Everything in Assistant, plus the highest monthly cap at 200M tokens and top-of-the-queue priority.",
   },
   {
     topic: "Roadmap — Veridian CLS Unlimited",

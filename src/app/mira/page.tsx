@@ -37,10 +37,10 @@ export default function MiraPage() {
                 Mira is the assistant with photographic memory and zero hallucination &mdash; <b>not less, none.</b> She&rsquo;d sooner tell you &ldquo;I don&rsquo;t know&rdquo; than invent an answer you&rsquo;ll regret trusting.
               </p>
               <div className="mha-cta-row mha-rise mha-d4">
-                <Link className="mha-btn mha-btn-primary" href="/mira/signup">Join the waitlist <span className="mha-arw">&rarr;</span></Link>
-                <a className="mha-btn mha-btn-ghost" href="#proof">See the difference</a>
+                <Link className="mha-btn mha-btn-primary" href="/mira/start">Start free <span className="mha-arw">&rarr;</span></Link>
+                <Link className="mha-btn mha-btn-ghost" href="/mira/plans">See plans</Link>
               </div>
-              <p className="mha-micro mha-rise mha-d4">Opening in waves &middot; <span className="mha-g">no spam, no fabricated hype</span></p>
+              <p className="mha-micro mha-rise mha-d4">Free plan, a million tokens a month &middot; <span className="mha-g">no card, no waiting</span></p>
             </div>
 
             {/* SIGNATURE: recall ledger */}
@@ -175,9 +175,9 @@ export default function MiraPage() {
           <div className="mha-wrap">
             <div className="mha-final-inner">
               <h2>Remembers everything.<br />Invents nothing.</h2>
-              <p>Get early access to the assistant you don&rsquo;t have to fact-check. We open the waitlist in waves.</p>
-              <Link className="mha-btn mha-btn-onlight" href="/mira/signup">Join the waitlist &rarr;</Link>
-              <p className="mha-microlight">One email. No fabricated urgency.</p>
+              <p>Start free in about two minutes &mdash; she&rsquo;s live on Telegram today. No card. No waiting.</p>
+              <Link className="mha-btn mha-btn-onlight" href="/mira/start">Start free &rarr;</Link>
+              <p className="mha-microlight">No card. Cancel anytime.</p>
             </div>
           </div>
         </section>
@@ -200,7 +200,7 @@ export default function MiraPage() {
             <nav className="mha-foot-links" aria-label="Footer">
               <a href="#proof">The difference</a>
               <a href="#more">What she does</a>
-              <Link href="/mira/signup">Waitlist</Link>
+              <Link href="/mira/plans">Plans</Link>
               <Link href="/legal/privacy">Privacy</Link>
             </nav>
           </div>

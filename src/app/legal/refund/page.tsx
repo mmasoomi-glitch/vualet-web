@@ -12,24 +12,21 @@ export default function RefundPolicyPage() {
   return (
     <LegalPage
       title="Refund Policy"
-      lastUpdated="July 17, 2026"
+      lastUpdated="August 6, 2026"
       activeHref="/legal/refund"
       intro="This Refund Policy explains how our free trial works, when subscription fees are refundable, and how to cancel."
     >
       <h2>1. Free trial</h2>
       <p>
-        <strong>Pre-launch note:</strong> Mira is currently in a waitlist /
-        pre-launch phase. We do <strong>not</strong> collect card details and
-        no charges are made during this phase. The terms below describe how
-        billing will work once paid subscriptions go live.
+        Every paid plan starts with a <strong>14-day free trial</strong>. You
+        will not be charged anything during the trial. If you cancel before the
+        trial ends, you will not be billed at all. If you take no action, your
+        selected subscription plan begins automatically at the end of the trial
+        and your card will be charged at the plan&apos;s monthly rate.
       </p>
       <p>
-        When paid plans launch, new accounts start with a{" "}
-        <strong>14-day free trial</strong>. You will not be charged anything
-        during the trial. If you cancel before the trial ends, you will not be
-        billed at all. If you take no action, your selected subscription plan
-        begins automatically at the end of the trial and your card will be
-        charged.
+        There is also a <strong>Free plan</strong> that requires no card at all
+        and does not expire.
       </p>
 
       <h2>2. Subscription refunds</h2>

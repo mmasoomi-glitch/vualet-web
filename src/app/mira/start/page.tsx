@@ -24,7 +24,24 @@ const CHANNELS: { id: string; label: string; note: string; soon?: boolean }[] = 
   { id: "whatsapp", label: "WhatsApp", note: "Coming soon", soon: true },
 ];
 
-const STEPS = ["Name", "Vibe", "Role", "Channel", "Review"] as const;
+// Language is a CONSTRAINT, not a personality trait. It used to be implicit: the only
+// "reply in the user's language" rule lived inside the engine's DEFAULT_PERSONA, so anyone
+// who shaped their own Mira here lost it and she drifted back to English mid-conversation.
+// "Match me" keeps that mirroring behaviour; picking a language pins her to it explicitly.
+const LANGUAGES: { id: string; label: string; blurb: string }[] = [
+  { id: "auto", label: "Match me", blurb: "She replies in whatever language you write in." },
+  { id: "English", label: "English", blurb: "Always English." },
+  { id: "Arabic", label: "العربية · Arabic", blurb: "Always Arabic, in your dialect." },
+  { id: "Persian", label: "فارسی · Persian", blurb: "Always Persian." },
+];
+
+const STEPS = ["Name", "Vibe", "Role", "Language", "Channel", "Review"] as const;
+
+/** The language sentence added to her persona. Empty for "Match me" — the engine mirrors by default. */
+function languageClause(langId: string): string {
+  if (!langId || langId === "auto") return "";
+  return ` Always reply in ${langId}, even if the customer writes in another language.`;
+}
 
 /* ---------- shared styles ---------- */
 
@@ -100,11 +117,13 @@ export default function ShapeYourMira() {
   const [vibe, setVibe] = useState<string>("warm");
   const [vibeText, setVibeText] = useState("");
   const [role, setRole] = useState<string>("friend");
+  const [lang, setLang] = useState<string>("auto");
   const [channel, setChannel] = useState<string>("telegram");
   const [done, setDone] = useState(false);
 
   const vibeLabel = VIBES.find((v) => v.id === vibe)?.label ?? "";
   const roleLabel = ROLES.find((r) => r.id === role)?.label ?? "";
+  const langLabel = LANGUAGES.find((l) => l.id === lang)?.label ?? "";
   const channelLabel = CHANNELS.find((c) => c.id === channel)?.label ?? "";
 
   // Compose the system prompt the bot will adopt as its persona, and persist
@@ -118,16 +137,17 @@ export default function ShapeYourMira() {
     const persona =
       `You are ${assistantName}, a ${roleText}. ${vibe_} ` +
       `Talk warmly and in character, keep replies short and natural, ` +
-      `never mention being an AI, a model, or any company/technology.`;
+      `never mention being an AI, a model, or any company/technology.` +
+      languageClause(lang);
     try {
       localStorage.setItem(
         "mira_setup",
-        JSON.stringify({ assistantName, role, vibe, persona }),
+        JSON.stringify({ assistantName, role, vibe, language: lang, persona }),
       );
     } catch {
       /* ignore (e.g. storage disabled) */
     }
-  }, [name, role, vibe, vibeText, roleLabel]);
+  }, [name, role, vibe, vibeText, roleLabel, lang]);
 
   // The real Telegram deep link, issued by the server on submit. Until then it
   // is null and no link is shown — we never hand the customer a link that
@@ -146,8 +166,9 @@ export default function ShapeYourMira() {
     (step === 0 && name.trim().length > 0) ||
     (step === 1 && !!vibe) ||
     (step === 2 && !!role) ||
-    (step === 3 && channel === "telegram") ||
-    step === 4;
+    (step === 3 && !!lang) ||
+    (step === 4 && channel === "telegram") ||
+    step === 5;
 
   function next() {
     if (step < STEPS.length - 1) setStep((s) => s + 1);
@@ -173,13 +194,14 @@ export default function ShapeYourMira() {
     const persona =
       `You are ${assistantName}, a ${roleText}. ${vibe_} ` +
       `Talk warmly and in character, keep replies short and natural, ` +
-      `never mention being an AI, a model, or any company/technology.`;
+      `never mention being an AI, a model, or any company/technology.` +
+      languageClause(lang);
 
     try {
       const res = await fetch("/api/begin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ setup: { assistantName, role, vibe, persona } }),
+        body: JSON.stringify({ setup: { assistantName, role, vibe, language: lang, persona } }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.botUrl) {
@@ -359,8 +381,24 @@ export default function ShapeYourMira() {
           </div>
         )}
 
-        {/* STEP 3 — channel */}
+        {/* STEP 3 — language */}
         {step === 3 && (
+          <div>
+            <h2 className="display" style={{ fontSize: 22, fontWeight: 400, margin: "0 0 6px" }}>What language should she speak?</h2>
+            <p style={{ color: "var(--mira-graphite)", fontSize: 14.5, margin: "0 0 18px" }}>Pick one and she stays in it. Or let her follow your lead.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
+              {LANGUAGES.map((l) => (
+                <OptionCard key={l.id} selected={lang === l.id} onClick={() => setLang(l.id)} title={l.label} blurb={l.blurb} />
+              ))}
+            </div>
+            <p style={{ fontSize: 12.5, color: "var(--mira-slate)", margin: "14px 0 0" }}>
+              You can change this any time — just tell her in chat.
+            </p>
+          </div>
+        )}
+
+        {/* STEP 4 — channel */}
+        {step === 4 && (
           <div>
             <h2 className="display" style={{ fontSize: 22, fontWeight: 400, margin: "0 0 6px" }}>Where should she live?</h2>
             <p style={{ color: "var(--mira-graphite)", fontSize: 14.5, margin: "0 0 18px" }}>In the chat you already use. No app to install.</p>
@@ -380,8 +418,8 @@ export default function ShapeYourMira() {
           </div>
         )}
 
-        {/* STEP 4 — review */}
-        {step === 4 && (
+        {/* STEP 5 — review */}
+        {step === 5 && (
           <div>
             <h2 className="display" style={{ fontSize: 22, fontWeight: 400, margin: "0 0 16px" }}>Meet {name || "Mira"}.</h2>
             <dl style={{ margin: 0 }}>
@@ -389,6 +427,7 @@ export default function ShapeYourMira() {
                 ["Name", name || "Mira"],
                 ["Vibe", vibeLabel + (vibeText ? ` — “${vibeText}”` : "")],
                 ["Role", roleLabel],
+                ["Language", langLabel],
                 ["Channel", channelLabel],
               ].map(([k, v], i) => (
                 <div key={k} style={{ display: "flex", gap: 16, padding: "12px 0", borderTop: i === 0 ? "none" : "1px solid var(--mira-fog)" }}>
