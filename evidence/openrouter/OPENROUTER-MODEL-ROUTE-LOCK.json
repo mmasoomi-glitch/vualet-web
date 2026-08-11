@@ -1,0 +1,83 @@
+{
+  "data_collection_denied": true,
+  "provider_restrictions": {
+    "openrouter_only": true,
+    "no_direct_provider_access": true
+  },
+  "account_verified": true,
+  "stages": [
+    {
+      "purpose": "CHEAP_BROAD_CHECK",
+      "fallback_policy": "REJECT",
+      "status": "SEALED",
+      "structured_output_required": true,
+      "expected_input_budget": 50000,
+      "stage": 1,
+      "requested_model": "NORTH_MINI",
+      "exact_openrouter_model_id": "cohere/north-mini-code:free",
+      "expected_output_budget": 10000,
+      "zdr_enabled": true,
+      "allow_fallbacks": false,
+      "data_retention_policy": "DENY",
+      "context_length": 256000
+    },
+    {
+      "purpose": "IMPLEMENTATION_DESIGN_AND_PATCHES",
+      "fallback_policy": "REJECT",
+      "status": "SEALED",
+      "structured_output_required": true,
+      "expected_input_budget": 200000,
+      "stage": 2,
+      "requested_model": "DEEPSEEK",
+      "exact_openrouter_model_id": "deepseek/deepseek-v4-flash-0731",
+      "expected_output_budget": 50000,
+      "zdr_enabled": true,
+      "allow_fallbacks": false,
+      "data_retention_policy": "DENY",
+      "context_length": 1048576
+    },
+    {
+      "purpose": "FULL_CONTEXT_CROSS_FILE_REVIEW",
+      "fallback_policy": "REJECT",
+      "status": "SEALED",
+      "structured_output_required": true,
+      "expected_input_budget": 500000,
+      "stage": 3,
+      "requested_model": "SONNET_1M_CONTEXT",
+      "exact_openrouter_model_id": "anthropic/claude-sonnet-5",
+      "expected_output_budget": 50000,
+      "zdr_enabled": true,
+      "allow_fallbacks": false,
+      "data_retention_policy": "DENY",
+      "context_length": 1000000
+    },
+    {
+      "exact_openrouter_model_id": "cohere/north-mini-code:free",
+      "structured_output_required": true,
+      "roles": [
+        "OWNER_INTENTION",
+        "TECHNICAL_TRUTH",
+        "SECURITY_PRIVACY",
+        "CREATIVITY",
+        "ADVERSARIAL"
+      ],
+      "purpose": "INDEPENDENT_JURY_VERDICTS",
+      "requested_model": "COHERE_NORTH_MINI_OR_DEEPSEEK",
+      "stage": 4,
+      "status": "SEALED",
+      "context_length": 256000
+    },
+    {
+      "stage": 5,
+      "exact_openrouter_model_id": "deepseek/deepseek-v4-flash-0731",
+      "purpose": "JUDGE_SYNTHESIS",
+      "status": "SEALED",
+      "context_length": 1048576,
+      "requested_model": "DEEPSEEK_OR_SONNET",
+      "structured_output_required": true
+    }
+  ],
+  "timestamp": "2026-08-01T18:46:24.2720530Z",
+  "total_models_available": 337,
+  "fallback_disabled": true
+}

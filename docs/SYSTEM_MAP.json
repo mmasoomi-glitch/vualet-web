@@ -1,0 +1,1034 @@
+{
+  "generatedAt": "2026-08-05",
+  "_note": "Compiled read-only from source. Every entry carries file:line evidence. WEB paths are relative to C:\\vualet-web; ENGINE paths are relative to C:\\Ballerina-Motasadea-V1 and are prefixed 'engine:'. Status words are literal: REAL runs today, SCAFFOLD is written but not end-to-end, DEAD is unreachable, PLANNED is specified only.",
+
+  "tiers": [
+    {
+      "id": "free",
+      "name": "Free",
+      "price": "Free",
+      "period": "month",
+      "includes": [
+        "Chat + voice notes",
+        "Remembers you across chats",
+        "Capped voice minutes",
+        "Local OCR (image reading)"
+      ],
+      "limits": {
+        "chat_tokens_per_month": 1000000,
+        "ocr_local_per_month": 30,
+        "ocr_premium_per_month": 0,
+        "engine_tier_alias": "trial"
+      },
+      "evidence": "src/app/mira/_components/tiers.ts:16-23; engine:apps/control-plane/src/limits.mjs:40-41,70-71,79-80"
+    },
+    {
+      "id": "companion",
+      "name": "Companion",
+      "price": "$14.99",
+      "period": "month",
+      "includes": [
+        "Everything in Free",
+        "A persona you shape",
+        "Load her knowledge base with your own text"
+      ],
+      "limits": {
+        "chat_tokens_per_month": 15000000,
+        "ocr_local_per_month": 500,
+        "ocr_premium_per_month": 20
+      },
+      "evidence": "src/app/mira/_components/tiers.ts:24-32; engine:apps/control-plane/src/limits.mjs:42,72,81"
+    },
+    {
+      "id": "assistant",
+      "name": "Assistant",
+      "price": "$39",
+      "period": "month",
+      "includes": [
+        "Everything in Companion",
+        "Build pipeline (beta): small web apps & sites",
+        "Priority replies"
+      ],
+      "limits": {
+        "chat_tokens_per_month": 60000000,
+        "ocr_local_per_month": 2000,
+        "ocr_premium_per_month": 100
+      },
+      "evidence": "src/app/mira/_components/tiers.ts:33-42; engine:apps/control-plane/src/limits.mjs:43,73,82"
+    },
+    {
+      "id": "studio",
+      "name": "Studio",
+      "price": "$79",
+      "period": "month",
+      "includes": [
+        "Everything in Assistant",
+        "Your own WhatsApp number",
+        "Top of the queue"
+      ],
+      "limits": {
+        "chat_tokens_per_month": 200000000,
+        "ocr_local_per_month": 10000,
+        "ocr_premium_per_month": 400
+      },
+      "evidence": "src/app/mira/_components/tiers.ts:43-51; engine:apps/control-plane/src/limits.mjs:44,74,83"
+    },
+    {
+      "id": "enterprise",
+      "name": "Enterprise (engine-only)",
+      "price": "not sold on the site",
+      "period": "month",
+      "includes": [
+        "Exists in the engine cap tables only",
+        "No storefront card, no checkout path"
+      ],
+      "limits": {
+        "chat_tokens_per_month": 1000000000,
+        "ocr_local_per_month": 100000,
+        "ocr_premium_per_month": 2000
+      },
+      "evidence": "engine:apps/control-plane/src/limits.mjs:45,75,84; absent from src/app/mira/_components/tiers.ts:15-52"
+    }
+  ],
+
+  "tier_truth": {
+    "what_tier_actually_gates": [
+      "Monthly chat-token quota (capForTier)",
+      "Monthly local-OCR count",
+      "Premium OCR access — free/trial gets 0, paid tiers get a quota. This is the ONLY capability gate in the engine.",
+      "Build-job credit affordability (gates entry to a pipeline that cannot execute)"
+    ],
+    "what_tier_does_NOT_gate": [
+      "Persona shaping — free tier can shape a persona on the web (/mira/start posts to /api/begin with no plan check)",
+      "Loading your own knowledge base — no tier check exists because no writer exists at all",
+      "Voice reply frequency — the ratio table never fires",
+      "WhatsApp number — no per-tenant provisioning is reachable from a purchase"
+    ],
+    "evidence": "engine:apps/control-plane/src/limits.mjs:54-56,90-93; engine:apps/engine/src/ocr.mjs:139-145; src/app/api/begin/route.ts:23-59; engine:apps/engine/src/router.mjs:21-27; engine:apps/engine/src/kb.mjs:20"
+  },
+
+  "journey": [
+    {
+      "step": 1,
+      "surface": "mira.vualet.com (/mira)",
+      "what_happens": "Landing page. Both primary CTAs say 'Join the waitlist' and go to /mira/signup, not to plans.",
+      "state_change": "none",
+      "status": "PARTIAL",
+      "evidence": "src/app/mira/page.tsx:40,179"
+    },
+    {
+      "step": 2,
+      "surface": "/mira/signup",
+      "what_happens": "Waitlist form. Native POST, works without JS. Not a purchase.",
+      "state_change": "row appended to waitlist.jsonl",
+      "status": "WORKING",
+      "evidence": "src/app/mira/signup/page.tsx:1,39; src/app/api/waitlist/route.ts:7-14"
+    },
+    {
+      "step": 3,
+      "surface": "/veridian",
+      "what_happens": "Live grounded demo chat. Answers only from the curated KB, remembers the visitor across visits, speaks with ElevenLabs TTS.",
+      "state_change": "vd_visitor cookie + per-visitor memory file",
+      "status": "WORKING",
+      "evidence": "src/app/veridian/page.tsx:154; src/app/api/veridian-demo/route.ts:20-40; src/app/api/veridian-voice/route.ts:3-13"
+    },
+    {
+      "step": 4,
+      "surface": "/mira/plans",
+      "what_happens": "Four tier cards rendered from the single tier source. Each links to /mira/checkout?plan=<id>.",
+      "state_change": "none",
+      "status": "WORKING",
+      "evidence": "src/app/mira/plans/page.tsx:2,58,103,111"
+    },
+    {
+      "step": 5,
+      "surface": "/mira/start",
+      "what_happens": "Five-step persona builder: Name, Vibe, Role, Channel, Review. WhatsApp is shown but disabled ('Coming soon').",
+      "state_change": "localStorage mira_setup; on submit a connect record via /api/begin",
+      "status": "WORKING",
+      "evidence": "src/app/mira/start/page.tsx:22-27,146-150,179"
+    },
+    {
+      "step": 6,
+      "surface": "/mira/checkout (free plan)",
+      "what_happens": "Posts to /api/begin. Mints an HMAC connect token, stores the persona, returns a Telegram deep link. Touches no payment provider.",
+      "state_change": "ConnectRecord status=pending, 7-day TTL",
+      "status": "WORKING",
+      "evidence": "src/app/mira/checkout/page.tsx:115; src/app/api/begin/route.ts:48-65; src/lib/store.ts:147-150"
+    },
+    {
+      "step": 7,
+      "surface": "/mira/checkout (promo code field)",
+      "what_happens": "Customer can type a discount code. The validator refuses every code by default and the checkout call never forwards one.",
+      "state_change": "none",
+      "status": "NOT_BUILT",
+      "evidence": "src/app/mira/checkout/page.tsx:68,144; src/app/api/promo/validate/route.ts:33-38; src/app/api/checkout/route.ts:13,20"
+    },
+    {
+      "step": 8,
+      "surface": "/mira/checkout (paid plan)",
+      "what_happens": "Server validates email, requires DODO_PAYMENTS_LIVE=1 plus the plan's product id, creates a Dodo subscription payment link and redirects.",
+      "state_change": "ConnectRecord status=pending carrying plan + email",
+      "status": "WORKING",
+      "evidence": "src/app/api/checkout/route.ts:34-50,65; src/lib/dodo.ts:64-66,90-117"
+    },
+    {
+      "step": 9,
+      "surface": "Dodo hosted checkout",
+      "what_happens": "Customer pays. Dodo is the merchant of record. No trial period is sent in the create-subscription body, though the UI promises 14 days free.",
+      "state_change": "Dodo subscription created",
+      "status": "PARTIAL",
+      "evidence": "src/lib/dodo.ts:100-116; src/app/mira/checkout/page.tsx:180,206,348"
+    },
+    {
+      "step": 10,
+      "surface": "/mira/welcome?token=...",
+      "what_happens": "Return URL. Reads /api/connect?token= for display state and shows the Telegram button plus a three-step 'what happens next'.",
+      "state_change": "localStorage mira_customer",
+      "status": "WORKING",
+      "evidence": "src/app/mira/welcome/page.tsx:17-28,51-59; src/lib/dodo.ts:104"
+    },
+    {
+      "step": 11,
+      "surface": "POST /api/webhooks/dodo",
+      "what_happens": "Standard-Webhooks signature verified against the raw body, deduped on webhook-id, then subscription.active / renewed / payment.succeeded activate the tier.",
+      "state_change": "ConnectRecord status=active + subscription record + email->customer index",
+      "status": "WORKING",
+      "evidence": "src/app/api/webhooks/dodo/route.ts:64-71,83-105; src/lib/store.ts:177-185"
+    },
+    {
+      "step": 12,
+      "surface": "Telegram — /start <token>",
+      "what_happens": "Deep link binds the chat. Single-use claim: the first telegram id owns the token, any other id is rejected 409. Bot authenticates with x-mira-bind-secret.",
+      "state_change": "ConnectRecord.telegramId set, status pending->bound; engine tenant created with the purchased tier",
+      "status": "WORKING",
+      "evidence": "engine:apps/engine/telegram-bot.mjs:698-703; src/app/api/connect/route.ts:34-64; src/lib/store.ts:160-175; engine:apps/control-plane/src/limits.mjs:117-125"
+    },
+    {
+      "step": 13,
+      "surface": "Telegram — first contact",
+      "what_happens": "Mira introduces herself. This greeting is forced to voice regardless of the ratio, so it is the only TTS a customer reliably hears.",
+      "state_change": "tenant.replyN reset to 0",
+      "status": "WORKING",
+      "evidence": "engine:apps/engine/telegram-bot.mjs:370-387"
+    },
+    {
+      "step": 14,
+      "surface": "Telegram — text chat",
+      "what_happens": "respond() runs: crisis check, moderation, canned/chat/job classify, memory, LLM with failover, leak filter, quota debit. Replies are capped at 160 tokens.",
+      "state_change": "20-turn memory window, credit debit, token meter",
+      "status": "WORKING",
+      "evidence": "engine:apps/engine/src/mira.mjs:62,65,68,157,164,203; engine:apps/engine/telegram-bot.mjs:778"
+    },
+    {
+      "step": 15,
+      "surface": "Telegram — voice note in",
+      "what_happens": "Voice note downloaded and transcribed by ElevenLabs STT, then fed into the same pipeline.",
+      "state_change": "same as text",
+      "status": "WORKING",
+      "evidence": "engine:apps/engine/telegram-bot.mjs:720-723; engine:apps/engine/src/voice.mjs"
+    },
+    {
+      "step": 16,
+      "surface": "Telegram — voice reply out",
+      "what_happens": "Intended as a tier lever (1-in-5 free, 3-in-5 Studio). replyN is reset to 0 on every inbound message, so the ratio test is always false.",
+      "state_change": "none",
+      "status": "NOT_BUILT",
+      "evidence": "engine:apps/engine/src/router.mjs:21-27; engine:apps/engine/src/mira.mjs:205-207; engine:apps/engine/telegram-bot.mjs:370,412,767"
+    },
+    {
+      "step": 17,
+      "surface": "Telegram — send a photo",
+      "what_happens": "Image goes through tier-metered OCR (local tesseract, or the paid AFAQ engine on paid tiers) and the extracted text feeds the reply. Over-cap gets a warm limit message.",
+      "state_change": "ocr_used_period / ocr_premium_used_period counters",
+      "status": "WORKING",
+      "evidence": "engine:apps/engine/telegram-bot.mjs:728-742; engine:apps/engine/src/ocr.mjs:123,139-145"
+    },
+    {
+      "step": 18,
+      "surface": "Telegram — slash commands",
+      "what_happens": "/help /whoami /tenant /switch /organizations /phone /privacy /unlink. Lazily loaded so a broken router can never take the bot down; runs after the entitlement gate and before any model call.",
+      "state_change": "varies by command; /unlink and /phone touch identity rows",
+      "status": "WORKING",
+      "evidence": "engine:apps/engine/telegram-bot.mjs:617-626,711-717; engine:apps/engine/src/telegram-commands.mjs:50,502"
+    },
+    {
+      "step": 19,
+      "surface": "Telegram — 'build me a website'",
+      "what_happens": "Classified as a job, charged a 400+ credit affordability gate, answered 'On it', then the executor import fails because the bridge directory does not exist.",
+      "state_change": "job row created, then crash line delivered",
+      "status": "NOT_BUILT",
+      "evidence": "engine:apps/engine/src/router.mjs:7; engine:apps/engine/src/mira.mjs:81,92,96; engine:apps/control-plane/src/veridian.mjs:5,11"
+    },
+    {
+      "step": 20,
+      "surface": "Telegram — load your own knowledge",
+      "what_happens": "Sold on the Companion tier. The retrieval side exists, but the only writer of tenant KB text has zero callers anywhere in the repo, so the KB is structurally empty.",
+      "state_change": "none",
+      "status": "NOT_BUILT",
+      "evidence": "engine:apps/engine/src/kb.mjs:20; src/app/mira/_components/tiers.ts:30"
+    },
+    {
+      "step": 21,
+      "surface": "/mira/login",
+      "what_happens": "Enter email, receive a single-use 15-minute magic link. Always answers 200 so the endpoint cannot enumerate accounts. Rate limited per IP and per email.",
+      "state_change": "magic token minted",
+      "status": "WORKING",
+      "evidence": "src/app/api/auth/request/route.ts:8-26; src/app/api/auth/verify/route.ts:14-22"
+    },
+    {
+      "step": 22,
+      "surface": "/mira/account",
+      "what_happens": "Renders from the server session only. Shows the plan, billing portal, cancel and refund controls — but entitlement is resolved from Stripe, and production charges through Dodo.",
+      "state_change": "httpOnly session cookie",
+      "status": "PARTIAL",
+      "evidence": "src/app/mira/account/page.tsx:38,148,172; src/app/api/auth/me/route.ts:13-27; src/lib/entitlement.ts:1,22-26"
+    },
+    {
+      "step": 23,
+      "surface": "/mira/account — Cancel plan",
+      "what_happens": "The route itself resolves the subscription from the Dodo-populated store by verified session email and cancels at period end. But the button is only rendered inside the Stripe-entitlement branch.",
+      "state_change": "subscription cancelled at period end",
+      "status": "PARTIAL",
+      "evidence": "src/app/api/subscription/cancel/route.ts:26-35; src/lib/store.ts:198-209; src/app/mira/account/page.tsx:172,192"
+    },
+    {
+      "step": 24,
+      "surface": "/mira/account — Request a refund",
+      "what_happens": "Records the request to an append-only JSONL file and emails the operator. Deliberately never calls the payment provider; a human approves.",
+      "state_change": "row appended to refund-requests.jsonl",
+      "status": "WORKING",
+      "evidence": "src/app/api/subscription/refund-request/route.ts:9-27,29"
+    },
+    {
+      "step": 25,
+      "surface": "WhatsApp",
+      "what_happens": "Sold on the Studio tier and shown as 'Coming soon' in the persona builder. A provisioning gateway exists but nothing in the purchase flow reaches it.",
+      "state_change": "none",
+      "status": "NOT_BUILT",
+      "evidence": "src/app/mira/start/page.tsx:24; src/app/mira/_components/tiers.ts:49; engine:apps/engine/whatsapp-gateway.mjs:1-13"
+    }
+  ],
+
+  "features": [
+    {
+      "id": "tier-catalog",
+      "name": "Tier catalog",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "One tier source feeds /mira, /mira/plans and /mira/account; engine token caps match it exactly.",
+      "evidence": "src/app/mira/_components/tiers.ts:15-56; engine:apps/control-plane/src/limits.mjs:39-46"
+    },
+    {
+      "id": "dodo-checkout",
+      "name": "Dodo checkout",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Live money path. Fails closed without a real email and without DODO_PAYMENTS_LIVE=1.",
+      "evidence": "src/app/api/checkout/route.ts:34-50; src/lib/dodo.ts:64-66"
+    },
+    {
+      "id": "dodo-webhook",
+      "name": "Dodo webhook activation",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Raw-body signature check, id dedupe, activates or cancels the tier; 500s without marking so Dodo retries.",
+      "evidence": "src/app/api/webhooks/dodo/route.ts:64-71,83-119"
+    },
+    {
+      "id": "stripe-webhook-legacy",
+      "name": "Stripe webhook (legacy)",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": false,
+      "one_line": "Still wired and functional, but Dodo replaced Stripe as the merchant of record for new purchases.",
+      "evidence": "src/app/api/webhooks/stripe/route.ts:19-25; src/app/api/checkout/route.ts:7"
+    },
+    {
+      "id": "stripe-billing-portal",
+      "name": "Stripe billing portal",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": false,
+      "one_line": "Opens a Stripe portal for known Stripe customers only; a Dodo-only customer has no record and is refused.",
+      "evidence": "src/app/api/portal/route.ts:6-28"
+    },
+    {
+      "id": "magic-link-auth",
+      "name": "Magic-link sign-in",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Single-use 15-minute token, non-enumerable responses, rate limited, sets an httpOnly session.",
+      "evidence": "src/app/api/auth/request/route.ts:8-26; src/app/api/auth/verify/route.ts:14-22"
+    },
+    {
+      "id": "entitlement-resolver",
+      "name": "Entitlement resolver",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": false,
+      "one_line": "Resolves 'has this person paid' from Stripe only — so a Dodo-paying customer resolves to no active plan.",
+      "evidence": "src/lib/entitlement.ts:1,22-26,45-47"
+    },
+    {
+      "id": "self-serve-cancel",
+      "name": "Self-serve cancel",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Session-only identity, no caller-supplied id to tamper with, cancels at period end.",
+      "evidence": "src/app/api/subscription/cancel/route.ts:17-35; src/lib/store.ts:198-209"
+    },
+    {
+      "id": "refund-request",
+      "name": "Refund request",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Durable append-only request plus operator email; refunding stays a human decision.",
+      "evidence": "src/app/api/subscription/refund-request/route.ts:9-27"
+    },
+    {
+      "id": "promo-codes",
+      "name": "Discount codes",
+      "area": "web",
+      "status": "SCAFFOLD",
+      "tier_gate": null,
+      "serves_intention": false,
+      "one_line": "Kill-switched off by default because it validated against Stripe while charging through Dodo.",
+      "evidence": "src/app/api/promo/validate/route.ts:22-38; src/app/api/checkout/route.ts:13"
+    },
+    {
+      "id": "connect-token-bind",
+      "name": "Connect token bind",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "HMAC-verified, single-use claim that ties a web purchase to one Telegram chat.",
+      "evidence": "src/app/api/connect/route.ts:34-64; src/lib/store.ts:160-175"
+    },
+    {
+      "id": "persona-builder",
+      "name": "Persona builder",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Name, vibe, role and channel captured on the web and carried to the bot at /start.",
+      "evidence": "src/app/mira/start/page.tsx:22-27,179; src/lib/store.ts:135-138"
+    },
+    {
+      "id": "veridian-demo",
+      "name": "Grounded demo chat",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Answers only from a curated public KB, remembers the visitor, refuses everything outside it.",
+      "evidence": "src/app/api/veridian-demo/route.ts:20-40; src/lib/veridian-kb.ts:21-97"
+    },
+    {
+      "id": "veridian-voice",
+      "name": "Demo voice output",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "ElevenLabs TTS with per-IP and global daily caps; degrades to browser speech, never 500s.",
+      "evidence": "src/app/api/veridian-voice/route.ts:3-26"
+    },
+    {
+      "id": "waitlist-capture",
+      "name": "Waitlist capture",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Durable append-only JSONL outside the deploy tree, so a redeploy cannot wipe signups.",
+      "evidence": "src/app/api/waitlist/route.ts:7-15"
+    },
+    {
+      "id": "contact-capture",
+      "name": "Contact form",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Same durable JSONL pattern as the waitlist.",
+      "evidence": "src/app/api/contact/route.ts:6-13"
+    },
+    {
+      "id": "support-order-status",
+      "name": "Support order lookup",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Read-only view of the signed-in customer's own plan; takes no parameter, so there is nothing to enumerate.",
+      "evidence": "src/app/api/support/order-status/route.ts:1-30"
+    },
+    {
+      "id": "support-bot",
+      "name": "Customer-service bot replies",
+      "area": "web",
+      "status": "SCAFFOLD",
+      "tier_gate": null,
+      "serves_intention": false,
+      "one_line": "Regex-matched canned answers; its own comment says wire it to the engine and verify the session later.",
+      "evidence": "src/app/api/support/route.ts:3-5"
+    },
+    {
+      "id": "admin-control-plane",
+      "name": "Admin control plane",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Per-admin password then mandatory MFA, RBAC permissions, session revocation, separate from customer auth.",
+      "evidence": "src/app/api/admin/login/route.ts:22-25; src/lib/admin-guard.ts; src/app/admin/layout.tsx"
+    },
+    {
+      "id": "admin-audit-chain",
+      "name": "Tamper-evident admin audit",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Append-only audit trail with chain verification; no route anywhere edits or deletes a row.",
+      "evidence": "src/app/api/admin/audit/route.ts:5-16; src/lib/audit-chain.mjs"
+    },
+    {
+      "id": "seo-sitemap",
+      "name": "SEO + sitemap",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Host-split sitemap and canonical helpers for vualet.com and mira.vualet.com.",
+      "evidence": "src/lib/seo.ts; src/app/sitemap.ts"
+    },
+    {
+      "id": "mira-storefront",
+      "name": "Mira product storefront",
+      "area": "web",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Lists five family products with honest Free / Available / Coming soon badges.",
+      "evidence": "src/app/mira/store/page.tsx:22-66"
+    },
+    {
+      "id": "mira-writing",
+      "name": "Mira Writing (desktop)",
+      "area": "infra",
+      "status": "SCAFFOLD",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Storefront links to an external download host; nothing in this repo builds, serves or verifies it.",
+      "evidence": "src/app/mira/store/page.tsx:24-32"
+    },
+    {
+      "id": "mira-vpn",
+      "name": "Mira VPN",
+      "area": "web",
+      "status": "PLANNED",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Preview page only; the page itself states no access links are being issued.",
+      "evidence": "src/app/mira/vpn/page.tsx:26,61-63"
+    },
+    {
+      "id": "mira-screenwatcher",
+      "name": "Mira ScreenWatcher",
+      "area": "web",
+      "status": "PLANNED",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Storefront card with no destination link.",
+      "evidence": "src/app/mira/store/page.tsx:50-57"
+    },
+    {
+      "id": "mira-locksmith",
+      "name": "Mira Locksmith",
+      "area": "web",
+      "status": "PLANNED",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Storefront card with no destination link.",
+      "evidence": "src/app/mira/store/page.tsx:58-65"
+    },
+    {
+      "id": "customers-page",
+      "name": "Customers page",
+      "area": "web",
+      "status": "PLANNED",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Honest placeholder: says 'Coming soon' rather than inventing testimonials.",
+      "evidence": "src/app/customers/page.tsx:6-14"
+    },
+    {
+      "id": "engine-respond",
+      "name": "respond() pipeline",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "The one live message pipeline for every channel; replies capped at 160 tokens.",
+      "evidence": "engine:apps/engine/src/mira.mjs:164; engine:apps/engine/telegram-bot.mjs:778"
+    },
+    {
+      "id": "engine-router",
+      "name": "Message classifier",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": false,
+      "one_line": "Routes canned/chat/job, but sends 'write me', 'design' and 'make' to the build path that cannot execute.",
+      "evidence": "engine:apps/engine/src/router.mjs:5-9"
+    },
+    {
+      "id": "engine-canned",
+      "name": "Canned smalltalk cache",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Zero-cost replies for greetings; keeps the cost floor honest.",
+      "evidence": "engine:apps/engine/src/canned.mjs; engine:apps/engine/src/mira.mjs:68"
+    },
+    {
+      "id": "engine-crisis-check",
+      "name": "Crisis interrupt",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Self-harm detection with hotlines, ahead of everything else in the pipeline.",
+      "evidence": "engine:apps/engine/src/safety.mjs:10; engine:apps/engine/src/mira.mjs:62"
+    },
+    {
+      "id": "engine-moderation",
+      "name": "Inbound moderation",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Hard refuse categories before any model call.",
+      "evidence": "engine:apps/engine/src/safety.mjs:33; engine:apps/engine/src/mira.mjs:65"
+    },
+    {
+      "id": "engine-leak-filter",
+      "name": "Provider-name scrubber",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": false,
+      "one_line": "Substitutes the literal word 'me' for a matched provider name, producing sentences like 'I use me for that'.",
+      "evidence": "engine:apps/engine/src/safety.mjs:26"
+    },
+    {
+      "id": "engine-memory",
+      "name": "Conversation memory",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": false,
+      "one_line": "20-turn rolling window plus a lossy LLM bullet summary — not correctable, not exportable, not a ledger.",
+      "evidence": "engine:apps/engine/src/memory.mjs:4,24-29; engine:apps/engine/src/mira.mjs:144,163,200"
+    },
+    {
+      "id": "engine-token-quota",
+      "name": "Monthly token quota",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": "all",
+      "serves_intention": true,
+      "one_line": "Per-tenant monthly cap enforced from the single cap table; unknown tiers are spared rather than wrongly capped.",
+      "evidence": "engine:apps/control-plane/src/limits.mjs:39-56; engine:apps/engine/src/mira.mjs:117"
+    },
+    {
+      "id": "engine-ocr",
+      "name": "Image and document OCR",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": "companion",
+      "serves_intention": true,
+      "one_line": "Local tesseract for everyone within a cap; the paid AFAQ engine only for paid tiers. The one true capability gate.",
+      "evidence": "engine:apps/engine/src/ocr.mjs:123,139-145; engine:apps/control-plane/src/limits.mjs:69-93"
+    },
+    {
+      "id": "engine-voice-in",
+      "name": "Voice note transcription",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "ElevenLabs STT on every inbound Telegram voice note.",
+      "evidence": "engine:apps/engine/telegram-bot.mjs:720-723"
+    },
+    {
+      "id": "engine-voice-out",
+      "name": "Voice replies by tier ratio",
+      "area": "engine",
+      "status": "DEAD",
+      "tier_gate": "all",
+      "serves_intention": false,
+      "one_line": "The reply counter is reset on every inbound message, so the ratio test can never be true below 1.0.",
+      "evidence": "engine:apps/engine/src/router.mjs:21-27; engine:apps/engine/telegram-bot.mjs:370,412,767"
+    },
+    {
+      "id": "engine-commands",
+      "name": "Telegram command router",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Eight commands, pure and injected, lazily loaded so a broken router cannot take the live bot down.",
+      "evidence": "engine:apps/engine/telegram-bot.mjs:617-626,711-717; engine:apps/engine/src/telegram-commands.mjs:50,502"
+    },
+    {
+      "id": "engine-tools",
+      "name": "Tool-calling engine",
+      "area": "engine",
+      "status": "SCAFFOLD",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "A complete multi-round tool loop with four registered capabilities, and zero production callers.",
+      "evidence": "engine:apps/engine/src/tools.mjs:24; engine:apps/engine/tools-test.mjs:4; engine:apps/engine/src/builtins.mjs"
+    },
+    {
+      "id": "engine-build-pipeline",
+      "name": "Application build pipeline",
+      "area": "engine",
+      "status": "SCAFFOLD",
+      "tier_gate": "assistant",
+      "serves_intention": true,
+      "one_line": "Loads its executor from a bridge directory that does not exist on this machine, so every build crashes.",
+      "evidence": "engine:apps/control-plane/src/veridian.mjs:5,11-16; C:\\fleet does not exist (verified 2026-08-05)"
+    },
+    {
+      "id": "engine-job-orchestration",
+      "name": "Job queue, concurrency, workspace, budget",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": "assistant",
+      "serves_intention": true,
+      "one_line": "Sound orchestration — atomic reservations, per-job path isolation, budget meter — wrapped around a missing executor.",
+      "evidence": "engine:apps/control-plane/src/concurrency.mjs; engine:apps/control-plane/src/workspace.mjs; engine:apps/control-plane/src/runner.mjs:24,32"
+    },
+    {
+      "id": "engine-credit-meter",
+      "name": "Credit meter",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": "all",
+      "serves_intention": false,
+      "one_line": "Named 'ledger' but stores money, not the customer's information; trims to the last 1000 events.",
+      "evidence": "engine:packages/state/src/ledger.mjs:8-28,56; engine:apps/engine/src/mira.mjs:203"
+    },
+    {
+      "id": "engine-tenant-kb",
+      "name": "Per-tenant knowledge base",
+      "area": "engine",
+      "status": "SCAFFOLD",
+      "tier_gate": "companion",
+      "serves_intention": true,
+      "one_line": "Ingest and retrieve work, but the only writer has zero callers, so every tenant KB is permanently empty.",
+      "evidence": "engine:apps/engine/src/kb.mjs:20; engine:apps/engine/src/mira.mjs:156"
+    },
+    {
+      "id": "engine-lap",
+      "name": "LAP grounding + output firewall",
+      "area": "engine",
+      "status": "SCAFFOLD",
+      "tier_gate": null,
+      "serves_intention": false,
+      "one_line": "Grounding rows are never injected and three of four checks cannot alter output; the one live branch tells customers their own memory is false.",
+      "evidence": "engine:apps/engine/src/lap.mjs:15-19,43; engine:apps/engine/src/lap-tier-router.mjs:76,83; engine:apps/engine/src/lap-firewall.mjs:95-96"
+    },
+    {
+      "id": "engine-impersonation",
+      "name": "Style imitation",
+      "area": "engine",
+      "status": "REAL",
+      "tier_gate": null,
+      "serves_intention": false,
+      "one_line": "Runs on every reply without consent; can truncate answers to 30 characters or wrap them in 'Sure, ... right?'.",
+      "evidence": "engine:apps/engine/src/mira.mjs:182; engine:apps/engine/src/impersonation.mjs:66-74; engine:apps/engine/src/style-generator.mjs:99,156"
+    },
+    {
+      "id": "engine-pilot-mode",
+      "name": "Approval gate",
+      "area": "engine",
+      "status": "SCAFFOLD",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "The right state machine pointed at prose styling instead of actions; nothing can enrol, approve or reject today.",
+      "evidence": "engine:apps/engine/src/pilot-mode.mjs:1-2,37,76; engine:apps/engine/src/impersonation.mjs:66-77"
+    },
+    {
+      "id": "engine-identity-layer",
+      "name": "Identity, orgs, consent",
+      "area": "engine",
+      "status": "SCAFFOLD",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Migration and bridge exist and the bot loads them lazily, but the tables are not in the production database.",
+      "evidence": "engine:packages/state/migrations/008_identity_layer.sql:41,75,128,147,180,220; engine:apps/engine/telegram-bot.mjs:489,540; ledger gotcha #136"
+    },
+    {
+      "id": "engine-tenant-ledger",
+      "name": "Hash-chained tenant ledger",
+      "area": "engine",
+      "status": "SCAFFOLD",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "The real context ledger the product is named for. Migration written; writes are hard-gated behind content encryption.",
+      "evidence": "engine:packages/state/migrations/009_tenant_ledger.sql:44,117,138; ledger gotcha #137"
+    },
+    {
+      "id": "engine-content-encryption",
+      "name": "Content-at-rest encryption",
+      "area": "infra",
+      "status": "SCAFFOLD",
+      "tier_gate": null,
+      "serves_intention": true,
+      "one_line": "Per-tenant wrapped DEK design is written; the table has never existed in production.",
+      "evidence": "engine:packages/state/migrations/005_content_encryption.sql:16-26; ledger gotcha #136,#137"
+    },
+    {
+      "id": "engine-behavior-facts",
+      "name": "Behaviour facts store",
+      "area": "engine",
+      "status": "DEAD",
+      "tier_gate": null,
+      "serves_intention": false,
+      "one_line": "Opens a local SQLite file while the system is Postgres; its table is in no migration and its schema init is never called.",
+      "evidence": "engine:apps/engine/src/behavior.mjs:4,6-8,36; engine:apps/engine/src/mira.mjs:12"
+    },
+    {
+      "id": "engine-whatsapp-gateway",
+      "name": "WhatsApp provisioning gateway",
+      "area": "engine",
+      "status": "SCAFFOLD",
+      "tier_gate": "studio",
+      "serves_intention": true,
+      "one_line": "Per-tenant isolated sessions with a branded pairing page; unreachable from any purchase, and headless WhatsApp breaks their ToS.",
+      "evidence": "engine:apps/engine/whatsapp-gateway.mjs:1-13"
+    },
+    {
+      "id": "engine-android-delivery",
+      "name": "Android artifact delivery",
+      "area": "engine",
+      "status": "DEAD",
+      "tier_gate": null,
+      "serves_intention": false,
+      "one_line": "A delivery mode whose function body is a single throw, with zero callers.",
+      "evidence": "engine:apps/engine/src/delivery.mjs:19,51-53"
+    }
+  ],
+
+  "channels": [
+    {
+      "id": "web",
+      "status": "REAL",
+      "one_line": "vualet.com and mira.vualet.com — marketing, plans, checkout, account, grounded demo.",
+      "evidence": "src/app/mira/page.tsx; src/lib/seo.ts"
+    },
+    {
+      "id": "telegram",
+      "status": "REAL",
+      "one_line": "The only channel a paying customer actually reaches today: text, voice in, OCR, eight commands.",
+      "evidence": "engine:apps/engine/telegram-bot.mjs:698,717,720,728,778"
+    },
+    {
+      "id": "whatsapp",
+      "status": "SCAFFOLD",
+      "one_line": "Sold on Studio and shown as 'Coming soon' in the builder; gateway code exists but no purchase reaches it.",
+      "evidence": "engine:apps/engine/whatsapp-gateway.mjs:1-13; src/app/mira/start/page.tsx:24"
+    },
+    {
+      "id": "email",
+      "status": "REAL",
+      "one_line": "Transactional only — magic sign-in links and operator refund notifications.",
+      "evidence": "src/lib/email.ts; src/app/api/auth/request/route.ts:2"
+    },
+    {
+      "id": "admin-console",
+      "status": "REAL",
+      "one_line": "Separate operator surface with its own auth, MFA, RBAC and audit trail.",
+      "evidence": "src/app/admin/layout.tsx; src/app/api/admin/login/route.ts:22-25"
+    }
+  ],
+
+  "data_model": [
+    {
+      "entity": "ConnectRecord (web KV)",
+      "purpose": "The bridge between a web purchase and a Telegram chat: token, plan, email, status, customerId, subscriptionId, telegramId, persona.",
+      "evidence": "src/lib/store.ts:127-140"
+    },
+    {
+      "entity": "web KV backends",
+      "purpose": "Upstash REST, else a durable JSON file, else in-process memory with a loud production warning. Live payments are gated on durability.",
+      "evidence": "src/lib/store.ts:18-22,58-67"
+    },
+    {
+      "entity": "email -> customer index",
+      "purpose": "Reverse index so a signed-in customer can find their own subscription from their session email alone. Without it there is no cancel path.",
+      "evidence": "src/lib/store.ts:145,177-185,198-209"
+    },
+    {
+      "entity": "JSONL capture files",
+      "purpose": "Append-only durable stores for waitlist, contact messages and refund requests, kept outside the deploy tree.",
+      "evidence": "src/app/api/waitlist/route.ts:7-14; src/app/api/contact/route.ts:6-12; src/app/api/subscription/refund-request/route.ts:29"
+    },
+    {
+      "entity": "visitor demo memory",
+      "purpose": "Per-visitor durable memory for the public demo, keyed by a vd_visitor cookie.",
+      "evidence": "src/lib/veridian-memory.ts; src/app/api/veridian-demo/route.ts:34-38"
+    },
+    {
+      "entity": "tenants (001)",
+      "purpose": "The engine's customer row: tier, credits ledger_json, kb_json, voice_ratio, usage counters.",
+      "evidence": "engine:packages/state/migrations/001_initial_schema.sql:10"
+    },
+    {
+      "entity": "jobs (001)",
+      "purpose": "Build-job records. Builds only — there is no general task or commitment table.",
+      "evidence": "engine:packages/state/migrations/001_initial_schema.sql:31"
+    },
+    {
+      "entity": "messages (001)",
+      "purpose": "Captured conversation content; the raw material a real ledger would be built from.",
+      "evidence": "engine:packages/state/migrations/001_initial_schema.sql:103"
+    },
+    {
+      "entity": "tenant_style_profiles, pilot_mode, pilot_approvals (001)",
+      "purpose": "Style imitation and its unusable approval workflow.",
+      "evidence": "engine:packages/state/migrations/001_initial_schema.sql:59,77,89"
+    },
+    {
+      "entity": "usage meter columns (002-004)",
+      "purpose": "kb_json, tokens_used_period, period_start, ocr_used_period, ocr_premium_used_period. Present in production.",
+      "evidence": "engine:packages/state/migrations/003_usage_meter.sql; engine:packages/state/migrations/004_ocr_meter.sql; ledger gotcha #136"
+    },
+    {
+      "entity": "tenant_deks (005)",
+      "purpose": "Per-tenant wrapped data encryption key; the KEK lives only in an env var. NOT PRESENT in production.",
+      "evidence": "engine:packages/state/migrations/005_content_encryption.sql:16-26; ledger gotcha #136"
+    },
+    {
+      "entity": "common_facts (006), album_seeds (007)",
+      "purpose": "Shared world facts and role seed libraries for the LAP grounding tiers. Neither is populated.",
+      "evidence": "engine:packages/state/migrations/006_common_ledger.sql:19; engine:packages/state/migrations/007_album_seed.sql:18"
+    },
+    {
+      "entity": "identities, channel_identities, orgs, memberships, consents, invitations (008)",
+      "purpose": "The identity and authorization layer. Written additively with no ALTER on tenants. Not yet in production.",
+      "evidence": "engine:packages/state/migrations/008_identity_layer.sql:41,75,128,147,180,220"
+    },
+    {
+      "entity": "tenant_facts, tenant_ledger_heads, tenant_ledger_checkpoints (009)",
+      "purpose": "The real hash-chained per-tenant context ledger. Statements are specified as ciphertext and the hash covers the stored bytes.",
+      "evidence": "engine:packages/state/migrations/009_tenant_ledger.sql:44,117,138"
+    },
+    {
+      "entity": "admin audit chain",
+      "purpose": "Append-only operator audit with chain verification and no edit or delete route.",
+      "evidence": "src/lib/audit-chain.mjs; src/app/api/admin/audit/route.ts:5-8"
+    }
+  ],
+
+  "open_gates": [
+    {
+      "id": "gate-005-encryption",
+      "what": "Migration 005 (tenant_deks) has never run in production, so content-at-rest encryption is not live.",
+      "why_blocked": "Production mira_state predates 005. The table is simply absent; the deployed engine is older than the migration.",
+      "evidence": "ledger gotcha #136; engine:packages/state/migrations/005_content_encryption.sql:16; engine:docs/MIGRATION_PROOF.md"
+    },
+    {
+      "id": "gate-shadow-ledger-writes",
+      "what": "Shadow ledger writes must not be enabled before 005 is applied and DEK retrieval works.",
+      "why_blocked": "tenant_facts.statement is ciphertext and the hash covers the stored bytes, so plaintext written now can never be re-encrypted without breaking the chain irrecoverably.",
+      "evidence": "ledger gotcha #137; engine:packages/state/migrations/009_tenant_ledger.sql:99-100"
+    },
+    {
+      "id": "gate-migration-blast-radius",
+      "what": "The first production restart applies SIX migrations (002, 005, 006, 007, 008, 009), not the two the deploy plan names.",
+      "why_blocked": "The plan's wording is wrong. All six were proved together on a snapshot, so the tested path is the real one, but sign-off must state the true blast radius.",
+      "evidence": "ledger gotcha #136; engine:docs/MIGRATION_PROOF.md"
+    },
+    {
+      "id": "gate-engine-not-deployed",
+      "what": "Production still runs roughly 2026-07-14 engine code; main is at 411ab1e and has never been deployed.",
+      "why_blocked": "Deploy is manual SSH with no auto-deploy, and the box holds a built image with no git checkout, so the deployed commit is not recoverable from the machine.",
+      "evidence": "canonical ledger state [ballerina]"
+    },
+    {
+      "id": "gate-entitlement-provider-mismatch",
+      "what": "Sign-in entitlement is resolved from Stripe while production charges through Dodo.",
+      "why_blocked": "entitlementForEmail queries Stripe only. A Dodo-paying customer who signs in sees 'No active plan', and the cancel and billing controls are inside that same branch — so the working cancel route is not reachable from the UI for them.",
+      "evidence": "src/lib/entitlement.ts:1,22-26; src/app/mira/account/page.tsx:172,192; src/app/api/checkout/route.ts:7"
+    },
+    {
+      "id": "gate-promo-codes",
+      "what": "The discount-code field is visible on checkout but every code is refused.",
+      "why_blocked": "The validator prices against Stripe while the charge goes through Dodo, and /api/checkout never forwards the code. It was quoting discounts it could not honour, so it was killed by default.",
+      "evidence": "src/app/api/promo/validate/route.ts:22-38; src/app/mira/checkout/page.tsx:144; src/app/api/checkout/route.ts:13"
+    },
+    {
+      "id": "gate-trial-promise",
+      "what": "Checkout promises a 14-day free trial; the Dodo create-subscription body sends no trial parameter.",
+      "why_blocked": "If a trial exists it is configured on the Dodo product, which cannot be verified from this repo. Unverified either way — treat as unproven until a live smoke purchase confirms it.",
+      "evidence": "src/lib/dodo.ts:100-116; src/app/mira/checkout/page.tsx:180,206,348"
+    },
+    {
+      "id": "gate-build-executor",
+      "what": "No build can complete: the executor is imported from a bridge directory that does not exist.",
+      "why_blocked": "Either vendor the pipeline into the repo so it is version-controlled and testable, or replace it with the in-repo tool-calling loop that is already written.",
+      "evidence": "engine:apps/control-plane/src/veridian.mjs:5,11; engine:apps/engine/src/tools.mjs:24"
+    },
+    {
+      "id": "gate-lap-closed-world",
+      "what": "The one live LAP branch tells a customer their own memory is false.",
+      "why_blocked": "The tenant KB is structurally empty because its only writer has no callers, so the closed-world negative fires on every first-person question. It must be off until a populated ledger exists.",
+      "evidence": "engine:apps/engine/src/lap-tier-router.mjs:71,83; engine:apps/engine/src/kb.mjs:20"
+    },
+    {
+      "id": "gate-live-purchase-unproven",
+      "what": "No real card has been run end to end: pay, welcome, Telegram bind, webhook tier activation.",
+      "why_blocked": "Needs one live smoke purchase. Until then the activation chain is proven only by tests, not by a customer.",
+      "evidence": "canonical ledger state [mira-suite]"
+    }
+  ],
+
+  "counts": {
+    "features_total": 53,
+    "features_by_status": { "REAL": 34, "SCAFFOLD": 12, "DEAD": 3, "PLANNED": 4 },
+    "features_serving_intention": 39,
+    "features_not_serving_intention": 14,
+    "journey_total": 25,
+    "journey_by_status": { "WORKING": 16, "PARTIAL": 4, "NOT_BUILT": 5 },
+    "channels_total": 5,
+    "channels_by_status": { "REAL": 4, "SCAFFOLD": 1 },
+    "tiers": 5,
+    "data_model_entities": 15,
+    "open_gates": 10,
+    "_reading": "34 of 53 features run today. The 19 that do not cluster in one place: doing the work for the customer (tool loop, build executor, task surface) and remembering the customer (tenant KB, hash-chained ledger, content encryption). Those are the two things the product is named for."
+  }
+}
