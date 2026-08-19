@@ -20,7 +20,44 @@ function tooLong(s: string | undefined, max: number): boolean {
   return typeof s === "string" && s.length > max;
 }
 
+// ── Rate limiting ─────────────────────────────────────────────────────────
+// In-memory sliding-window limiter (same pattern as veridian-demo). Each
+// provision creates a real tenant record + Telegram deep-link; this is a
+// resource faucet that must be gated. 5 provisions per IP per hour.
+// Per-instance only (resets on redeploy); no external dependency.
+const RATE_LIMIT = 5;
+const RATE_WINDOW_MS = 3_600_000; // 1 hour
+const _hits = new Map<string, number[]>();
+
+function rateLimited(ip: string): boolean {
+  const now = Date.now();
+  const arr = (_hits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  arr.push(now);
+  _hits.set(ip, arr);
+  // Opportunistic cleanup so the map can't grow unbounded.
+  if (_hits.size > 5000) {
+    for (const [k, v] of _hits) {
+      if (v.every((t) => now - t >= RATE_WINDOW_MS)) _hits.delete(k);
+    }
+  }
+  return arr.length > RATE_LIMIT;
+}
+
+function clientIp(req: Request): string {
+  return (req.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || "unknown";
+}
+
 export async function POST(req: Request) {
+  // Rate-limit: prevent open-faucet tenant provisioning. Every call creates a
+  // real tenant with trial credits — an unbounded endpoint is a resource drain.
+  const ip = clientIp(req);
+  if (rateLimited(ip)) {
+    return NextResponse.json(
+      { error: "rate_limited", message: "Too many requests. Try again later." },
+      { status: 429 },
+    );
+  }
+
   let body: {
     plan?: string;
     email?: string;
