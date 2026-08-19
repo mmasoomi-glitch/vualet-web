@@ -18,8 +18,8 @@
     "test:knowledge": "node --test scripts/system-knowledge-test.mjs"
   },
   "dependencies": {
-    "next": "16.2.6",
-    "nodemailer": "^6.10.1",
+    "next": "16.3.1",
+    "nodemailer": "9.0.5",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "stripe": "^17.7.0"
@@ -31,7 +31,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.6",
+    "eslint-config-next": "16.3.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
