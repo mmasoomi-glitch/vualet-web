@@ -18,7 +18,11 @@ function Welcome() {
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((d: Connect) => {
         setData(d);
-        if (d.customerId) localStorage.setItem("mira_customer", d.customerId);
+        // Durably save the Stripe customer id for /mira/account to read later.
+        // Wrapped so a storage exception (private mode, quota) can't break the flow.
+        try {
+          if (d.customerId) localStorage.setItem("mira_customer", d.customerId);
+        } catch {}
       })
       .catch(() => setErr(true));
   }, [token]);
@@ -27,7 +31,7 @@ function Welcome() {
   const active = data?.status === "active";
 
   return (
-    <main style={{ maxWidth: 620, margin: "0 auto", padding: "64px 24px 90px", textAlign: "center" }}>
+    <main id="mira-main" style={{ maxWidth: 620, margin: "0 auto", padding: "64px 24px 90px", textAlign: "center" }}>
       <div
         className="mira-aura"
         aria-hidden
@@ -55,7 +59,7 @@ function Welcome() {
       </a>
 
       <div style={{ marginTop: 40, textAlign: "left", background: "var(--mira-canvas)", border: "1px solid var(--mira-fog)", borderRadius: "var(--mira-radius-lg)", padding: 24 }}>
-        <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-deep)", fontWeight: 600, margin: 0 }}>
+        <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-ink)", fontWeight: 600, margin: 0 }}>
           What happens next
         </p>
         {[
@@ -74,7 +78,7 @@ function Welcome() {
       </div>
 
       <p style={{ fontSize: 14, color: "var(--mira-slate)", marginTop: 26 }}>
-        Manage your plan anytime from <Link href="/mira/account" style={{ color: "var(--mira-rose-deep)" }}>your account</Link>.
+        Manage your plan anytime from <Link href="/mira/account" style={{ color: "var(--mira-rose-ink)" }}>your account</Link>.
       </p>
     </main>
   );

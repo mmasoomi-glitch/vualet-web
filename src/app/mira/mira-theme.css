@@ -1,29 +1,50 @@
 /* Mira sub-brand theme — scoped to .mira-root so it never leaks into the Vualet house style.
    Tokens from the official Mira brand kit (mira.css). */
 .mira-root {
-  --mira-rose: #F8A5A0;
-  --mira-rose-light: #FFC9C4;
-  --mira-rose-deep: #E68A85;
-  --mira-petal: #FFDCE0;
-  --mira-lavender: #C7B8F0;
-  --aether: #6366F1;
-  --mira-cream: #FFF8F0;
-  --mira-canvas: #FEFAF6;
-  --mira-ink: #2A1F2D;
-  --mira-graphite: #524A55;
-  --mira-slate: #8C8190;
-  --mira-fog: #E8E0EA;
-  --mira-frost: #F2EAF0;
+  /* "Notary" recolor (owner request 2026-07-27): Mira moves off pink → indigo
+     presence + amber verified-seal on warm paper, matching her actual thesis
+     (a private assistant that keeps a verifiable record) and the Vualet house
+     indigo. Token NAMES are unchanged so no component markup moves; only the
+     VALUES change. The --mira-rose-* family now carries the warm AMBER seal
+     tones (name kept to avoid markup churn — same trick globals.css uses). */
+  --mira-rose: #E4A130;         /* amber — seal fill, dots, left-accents, borders */
+  --mira-rose-light: #F3C775;
+  --mira-rose-deep: #C77D2E;    /* deep amber — decorative borders / hover */
+  --mira-petal: #F7E7C6;        /* warm sand — soft buttons & chat bubbles (ink on it ≈12:1) */
+  --mira-lavender: #C7B8F0;     /* kept — indigo-adjacent, supports the presence hue */
+  --aether: #6366F1;            /* Vualet house indigo — unchanged */
+  --mira-cream: #F6F3EC;        /* warm paper, de-pinked */
+  --mira-canvas: #FCFAF5;
+  --mira-ink: #1C1830;          /* deep indigo-plum */
+  --mira-graphite: #4A4560;     /* indigo-tinted body text (≈7.8:1 on paper) */
+  --mira-slate: #665F73;        /* secondary/placeholder (≈4.6:1 on paper) */
+  --mira-fog: #E4E0D8;          /* warm hairline border */
+  --mira-frost: #EFEBE2;        /* warm frost surface */
   --mira-success: #6BCE9B;
-  --mira-grad-presence: linear-gradient(135deg, #F8A5A0 0%, #C7B8F0 55%, #6366F1 100%);
-  --mira-grad-aura: radial-gradient(circle at center, #FFEDEB 0%, #F8A5A0 40%, #C7B8F0 100%);
+  /* Design A (Recall Ledger) accents. --mira-verify-deep/-rose-ink/-aether-ink are
+     the DARKENED text-safe variants of the brand green/rose/aether: the light brand
+     tones (#6BCE9B rose-deep #E68A85, #6366F1) drop below 4.5:1 as small text on the
+     cream canvas, so meaningful labels use these deeper tones (all measured >=4.5:1
+     on --mira-cream) while the light tones stay on borders/dots/fills only. */
+  --mira-verify: #6BCE9B;
+  --mira-verify-deep: #12784E;
+  --mira-rose-ink: #935312;     /* text-safe bronze/amber (≈6.2:1 on paper) — was rose */
+  --mira-aether-ink: #4F46E5;   /* indigo, text-safe */
+  --mira-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  /* Presence gradient is now pure indigo (no pink): from the Vualet aether into a
+     deep indigo. White text holds well above WCAG 1.4.3 at every stop — the lightest
+     point (#4F46E5) measures ≈6.3:1 white-on-fill (relative-luminance check), better
+     than the old rose gradient's ~5.2:1. Amber lives on the seal and verified marks,
+     not on this action gradient. */
+  --mira-grad-presence: linear-gradient(135deg, #4F46E5 0%, #3E3AC0 55%, #312C9E 100%);
+  --mira-grad-aura: radial-gradient(circle at center, #FFF3D9 0%, #E4A130 40%, #C7B8F0 100%);
   --mira-radius-lg: 24px;
   --mira-radius-xl: 32px;
   --mira-radius-full: 999px;
-  --mira-shadow-sm: 0 1px 3px rgba(248,165,160,.12);
-  --mira-shadow-md: 0 4px 16px rgba(199,184,240,.18), 0 2px 4px rgba(42,31,45,.04);
-  --mira-shadow-lg: 0 16px 48px rgba(199,184,240,.25), 0 4px 12px rgba(42,31,45,.08);
-  --mira-shadow-aura: 0 0 40px rgba(248,165,160,.4);
+  --mira-shadow-sm: 0 1px 3px rgba(228,161,48,.12);
+  --mira-shadow-md: 0 4px 16px rgba(199,184,240,.18), 0 2px 4px rgba(28,24,48,.04);
+  --mira-shadow-lg: 0 16px 48px rgba(199,184,240,.25), 0 4px 12px rgba(28,24,48,.08);
+  --mira-shadow-aura: 0 0 40px rgba(228,161,48,.4);
 
   background: var(--mira-cream);
   color: var(--mira-ink);
@@ -41,16 +62,73 @@
 .btn-mira:hover { box-shadow: var(--mira-shadow-aura); transform: translateY(-1px); }
 .btn-mira-soft {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: var(--mira-petal); color: var(--mira-rose-deep); font-weight: 500;
+  /* color was --mira-rose-deep (#E68A85) on --mira-petal (#FFDCE0) = ~2:1 (WCAG 1.4.3
+     fail). --mira-ink on --mira-petal measures ~12.4:1. */
+  background: var(--mira-petal); color: var(--mira-ink); font-weight: 500;
   padding: 13px 26px; border-radius: var(--mira-radius-full); border: none; cursor: pointer; transition: background .3s;
 }
 .btn-mira-soft:hover { background: var(--mira-rose-light); }
 
+/* WCAG 2.4.7 / 2.4.13 — branded focus indicator for keyboard users. */
+.mira-root .mira-navlink:focus-visible,
+.btn-mira:focus-visible,
+.btn-mira-soft:focus-visible {
+  outline: 2px solid var(--aether);
+  outline-offset: 2px;
+}
+
+/* WCAG 2.4.1 (Bypass Blocks) — skip link: off-screen until focused, then revealed
+   with the standard indigo focus ring so keyboard/AT users can jump past the sticky
+   MiraNav straight to the page's <main id="mira-main">. Scoped to .mira-root. */
+.mira-root .mira-skip {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  padding: 10px 16px; border-radius: var(--mira-radius-full);
+  background: var(--mira-canvas); color: var(--mira-ink);
+  border: 1px solid var(--mira-fog); font-size: 14px; text-decoration: none;
+}
+.mira-root .mira-skip:focus { left: 12px; top: 12px; outline: 2px solid var(--aether); outline-offset: 2px; }
+
 @keyframes mira-breathe { 0%,100% { opacity:.5; transform: scale(1); } 50% { opacity:.8; transform: scale(1.05); } }
 .mira-aura { animation: mira-breathe 2400ms cubic-bezier(.4,0,.2,1) infinite; transform-origin: center; }
 
+/* WCAG 2.2.2 — the aura is purely decorative; stop the infinite animation for users
+   who asked the OS for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .mira-aura { animation: none; }
+}
+
 .mira-root .mira-navlink { transition: color .2s; }
 .mira-root .mira-navlink:hover { color: var(--mira-rose-deep); }
+
+/* ---------- MiraNav (header) — 320px reflow ----------
+   Static layout values live here (not inline) so the <=420px overrides below can
+   win without !important. At narrow widths the row (logo + Plans + Account +
+   CTA) is wider than a 320px viewport when laid out on one line; the Account
+   link hides and the CTA shrinks so what remains fits without any horizontal
+   overflow (verified via headless screenshot at 320px). */
+.mira-navbar-row {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+.mira-navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+.mira-nav-cta { padding: 9px 18px; font-size: 14px; }
+@media (max-width: 420px) {
+  .mira-navbar-row { padding: 12px 14px; gap: 10px; }
+  .mira-navbar-links { gap: 10px; }
+  .mira-nav-account { display: none; }
+  .mira-nav-cta { padding: 8px 14px; font-size: 12.5px; }
+}
 
 /* ---------- Responsive grid utilities ---------- */
 .mira-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
@@ -59,6 +137,21 @@
 @media (max-width: 860px) { .mira-3col { grid-template-columns: 1fr; } .mira-4col { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 720px) { .mira-2col { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .mira-4col { grid-template-columns: 1fr; } .mira-step-label { display: none; } }
+
+/* ---------- 320px reflow safety net (WCAG 1.4.10) ----------
+   Grid/flex items default to min-width:auto, which lets their intrinsic content
+   width push the whole row (and, via width:auto block ancestors like the hero
+   wrapper, the entire page) wider than a 320px viewport instead of wrapping.
+   min-width:0 lets them shrink to the container; max-width:100% on the theme's
+   containers/media stops anything from overflowing to the right. */
+.mira-root, .mira-2col, .mira-3col, .mira-4col,
+.mira-2col > *, .mira-3col > *, .mira-4col > * {
+  min-width: 0;
+}
+.mira-root img { max-width: 100%; height: auto; }
+@media (max-width: 380px) {
+  .mira-hero-pad, .mira-plans-pad { padding-left: 16px; padding-right: 16px; }
+}
 
 /* ---------- Mira assistant bot (floating CS) ---------- */
 .mira-bot-fab {
@@ -94,4 +187,536 @@
 @media (max-width: 480px) {
   .mira-bot-panel { right: 8px; bottom: 8px; width: calc(100vw - 16px); height: calc(100vh - 16px); max-height: none; }
   .mira-bot-fab { right: 12px; bottom: 12px; }
+}
+
+/* ============================================================================
+   DESIGN A — "Recall Ledger" homepage. Ported faithfully from the approved mock.
+   Everything is scoped under .mira-root and prefixed .mira-* so it cannot leak
+   into the Vualet house style or collide with generic class names. Reuses the
+   --mira-* brand tokens; the serif comes from the layout's Fraunces variable and
+   the utility face from --mira-mono.
+   ========================================================================== */
+.mira-root .mha-wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+.mira-root .mha-serif { font-family: var(--font-mira-display, "Fraunces", Georgia, serif); }
+.mira-root .mha-mono { font-family: var(--mira-mono); }
+
+/* shared focus ring for every interactive element on this page */
+.mira-root .mha-page a:focus-visible,
+.mira-root .mha-page button:focus-visible { outline: 2px solid var(--aether); outline-offset: 3px; border-radius: 6px; }
+
+.mira-root .mha-eyebrow {
+  font-family: var(--mira-mono); font-size: .72rem; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--mira-graphite); display: inline-flex; align-items: center; gap: 10px;
+}
+.mira-root .mha-eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--mira-rose-deep); }
+
+/* ---- buttons ---- */
+.mira-root .mha-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  font-weight: 600; font-size: 1rem; text-decoration: none; cursor: pointer; border: none;
+  padding: 15px 30px; border-radius: var(--mira-radius-full);
+  transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s;
+}
+.mira-root .mha-btn-primary { background: var(--mira-grad-presence); color: #fff; }
+.mira-root .mha-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(228,161,48,.5); }
+.mira-root .mha-btn-primary .mha-arw { transition: transform .3s; }
+.mira-root .mha-btn-primary:hover .mha-arw { transform: translateX(4px); }
+.mira-root .mha-btn-ghost { background: transparent; color: var(--mira-ink); border: 1px solid var(--mira-fog); padding: 14px 26px; font-weight: 500; }
+.mira-root .mha-btn-ghost:hover { border-color: var(--mira-rose-deep); background: #fff; }
+.mira-root .mha-btn-onlight { background: #fff; color: var(--mira-ink); }
+.mira-root .mha-btn-onlight:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(42,31,45,.28); }
+
+/* ---- hero ---- */
+.mira-root .mha-hero { position: relative; padding: 66px 0 72px; overflow: hidden; }
+.mira-root .mha-hero-orb {
+  position: absolute; right: -6%; top: -12%; width: 620px; max-width: 80%; height: auto;
+  opacity: .16; filter: blur(2px); pointer-events: none; z-index: 0;
+}
+.mira-root .mha-hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; align-items: center; }
+.mira-root .mha-hero h1 { font-size: clamp(1.62rem, 6.2vw, 4.7rem); line-height: 1.04; margin: 22px 0 0; }
+.mira-root .mha-lede { font-size: clamp(1.08rem, 1.6vw, 1.28rem); color: var(--mira-graphite); max-width: 34ch; margin: 26px 0 0; }
+.mira-root .mha-lede b { color: var(--mira-ink); font-weight: 600; }
+.mira-root .mha-cta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 34px; }
+.mira-root .mha-micro { font-family: var(--mira-mono); font-size: .74rem; color: var(--mira-graphite); letter-spacing: .02em; margin-top: 16px; }
+.mira-root .mha-micro .mha-g { color: var(--mira-verify-deep); }
+
+/* ---- signature: recall ledger ---- */
+.mira-root .mha-recall-stage { position: relative; }
+.mira-root .mha-recall {
+  background: var(--mira-canvas); border: 1px solid var(--mira-fog); border-radius: var(--mira-radius-lg);
+  box-shadow: var(--mira-shadow-lg); overflow: hidden; position: relative;
+}
+.mira-root .mha-recall-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 20px; border-bottom: 1px solid var(--mira-fog); background: #fff;
+}
+.mira-root .mha-recall-top .mha-t { font-family: var(--mira-mono); font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--mira-ink); }
+.mira-root .mha-live { font-family: var(--mira-mono); font-size: .66rem; letter-spacing: .12em; color: var(--mira-verify-deep); display: inline-flex; align-items: center; gap: 7px; }
+.mira-root .mha-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--mira-verify); box-shadow: 0 0 0 4px rgba(107,206,155,.22); }
+.mira-root .mha-entry { padding: 16px 20px; border-bottom: 1px dashed var(--mira-fog); }
+.mira-root .mha-entry:last-child { border-bottom: none; padding-bottom: 30px; padding-right: 78px; }
+.mira-root .mha-entry-meta { display: flex; align-items: center; gap: 10px; font-family: var(--mira-mono); font-size: .66rem; letter-spacing: .05em; color: var(--mira-graphite); margin-bottom: 9px; }
+.mira-root .mha-entry-meta .mha-idx { color: var(--mira-rose-ink); }
+.mira-root .mha-q { font-size: .92rem; color: var(--mira-graphite); }
+.mira-root .mha-a { font-size: 1.02rem; color: var(--mira-ink); margin-top: 5px; font-weight: 500; }
+.mira-root .mha-stamp { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mira-mono); font-size: .63rem; letter-spacing: .1em; text-transform: uppercase; padding: 4px 9px; border-radius: var(--mira-radius-full); margin-top: 11px; }
+.mira-root .mha-stamp.mha-ok { background: rgba(18,120,78,.14); color: var(--mira-verify-deep); }
+.mira-root .mha-stamp.mha-no { background: var(--mira-frost); color: var(--mira-graphite); border: 1px dashed var(--mira-fog); }
+.mira-root .mha-stamp .mha-ck { width: 13px; height: 13px; }
+.mira-root .mha-seal {
+  position: absolute; right: -40px; bottom: -40px; width: 128px; height: 128px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #fff 0%, var(--mira-petal) 78%);
+  border: 1.5px solid var(--mira-rose-deep); box-shadow: var(--mira-shadow-md);
+  display: grid; place-items: center; transform: rotate(-13deg); z-index: 3;
+}
+.mira-root .mha-seal svg { width: 100%; height: 100%; position: absolute; inset: 0; }
+.mira-root .mha-seal .mha-core { text-align: center; font-family: var(--mira-mono); line-height: 1.25; color: var(--mira-rose-ink); }
+.mira-root .mha-seal .mha-core .mha-big { display: block; font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 400; font-size: 1.5rem; color: var(--mira-ink); letter-spacing: -.01em; }
+.mira-root .mha-seal .mha-core .mha-sm { font-size: .5rem; letter-spacing: .14em; text-transform: uppercase; }
+.mira-root .mha-float-tag {
+  position: absolute; left: -18px; top: -16px; background: #fff; border: 1px solid var(--mira-fog);
+  border-radius: var(--mira-radius-full); padding: 8px 15px; box-shadow: var(--mira-shadow-md); z-index: 3;
+  font-family: var(--mira-mono); font-size: .66rem; letter-spacing: .08em; color: var(--mira-ink); display: flex; align-items: center; gap: 8px;
+}
+.mira-root .mha-float-tag b { color: var(--mira-verify-deep); font-weight: 500; }
+
+/* ---- band: two promises ---- */
+.mira-root .mha-promises { position: relative; overflow: hidden; background: var(--mira-canvas); border-top: 1px solid var(--mira-fog); border-bottom: 1px solid var(--mira-fog); padding: 76px 0; }
+.mira-root .mha-mesh { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .10; pointer-events: none; z-index: 0; }
+.mira-root .mha-promises > .mha-wrap { position: relative; z-index: 1; }
+.mira-root .mha-sec-head { max-width: 52ch; }
+.mira-root .mha-sec-head h2 { font-size: clamp(1.9rem, 3.6vw, 2.9rem); margin: 16px 0 0; }
+.mira-root .mha-sec-head p { color: var(--mira-graphite); margin: 16px 0 0; font-size: 1.08rem; }
+.mira-root .mha-two { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 44px; }
+.mira-root .mha-promise { background: var(--mira-cream); border: 1px solid var(--mira-fog); border-radius: var(--mira-radius-lg); padding: 30px; }
+.mira-root .mha-promise .mha-num { font-family: var(--mira-mono); font-size: .72rem; letter-spacing: .14em; color: var(--mira-rose-ink); }
+.mira-root .mha-promise h3 { font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 400; font-size: 1.7rem; letter-spacing: -.01em; margin: 14px 0 0; }
+.mira-root .mha-promise p { color: var(--mira-graphite); margin: 12px 0 0; font-size: 1.02rem; }
+.mira-root .mha-promise .mha-line { height: 1px; background: var(--mira-fog); margin: 22px 0 16px; }
+.mira-root .mha-promise .mha-foot { font-family: var(--mira-mono); font-size: .7rem; letter-spacing: .06em; color: var(--mira-verify-deep); display: inline-flex; align-items: center; gap: 8px; }
+
+/* ---- proof: the honest difference ---- */
+.mira-root .mha-proof { padding: 82px 0; }
+.mira-root .mha-proof-head { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center; }
+.mira-root .mha-proof-fig { width: 168px; height: 168px; border-radius: var(--mira-radius-lg); object-fit: cover; border: 1px solid var(--mira-fog); box-shadow: var(--mira-shadow-md); }
+.mira-root .mha-versus { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 44px; align-items: stretch; }
+.mira-root .mha-card { border-radius: var(--mira-radius-lg); padding: 28px; position: relative; }
+.mira-root .mha-card .mha-lbl { font-family: var(--mira-mono); font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; }
+.mira-root .mha-card .mha-said { font-size: 1.12rem; margin: 18px 0 0; line-height: 1.5; }
+.mira-root .mha-card.mha-other { background: var(--mira-frost); border: 1px solid var(--mira-fog); }
+.mira-root .mha-card.mha-other .mha-lbl { color: var(--mira-graphite); }
+.mira-root .mha-card.mha-other .mha-said { color: var(--mira-graphite); }
+.mira-root .mha-card.mha-other .mha-said s { text-decoration-color: var(--mira-rose-deep); text-decoration-thickness: 2px; }
+.mira-root .mha-card.mha-other .mha-verdict { margin-top: 18px; font-family: var(--mira-mono); font-size: .72rem; letter-spacing: .05em; color: var(--mira-rose-ink); }
+.mira-root .mha-card.mha-mira { background: #fff; border: 1.5px solid var(--mira-verify); box-shadow: var(--mira-shadow-md); }
+.mira-root .mha-card.mha-mira .mha-lbl { color: var(--mira-verify-deep); }
+.mira-root .mha-card.mha-mira .mha-said { color: var(--mira-ink); }
+.mira-root .mha-card.mha-mira .mha-verdict { margin-top: 18px; font-family: var(--mira-mono); font-size: .72rem; letter-spacing: .05em; color: var(--mira-verify-deep); display: inline-flex; align-items: center; gap: 8px; }
+
+/* ---- full-width brand band ---- */
+.mira-root .mha-band { position: relative; }
+.mira-root .mha-band img { display: block; width: 100%; height: clamp(160px, 26vw, 300px); object-fit: cover; }
+.mira-root .mha-band-cap {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 24px;
+  background: linear-gradient(0deg, rgba(42,31,45,.62), transparent);
+  color: #fff; font-family: var(--mira-mono); font-size: .74rem; letter-spacing: .08em;
+}
+.mira-root .mha-band-cap span { max-width: 1080px; margin: 0 auto; display: block; }
+
+/* ---- quiet capabilities ---- */
+.mira-root .mha-quiet { background: var(--mira-canvas); border-top: 1px solid var(--mira-fog); padding: 70px 0; }
+.mira-root .mha-quiet .mha-eyebrow { margin-bottom: 26px; }
+.mira-root .mha-three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.mira-root .mha-qitem { border-left: 2px solid var(--mira-fog); padding: 4px 0 4px 20px; }
+.mira-root .mha-qthumb { width: 100%; height: 128px; object-fit: cover; border-radius: var(--mira-radius-lg); border: 1px solid var(--mira-fog); margin-bottom: 16px; }
+.mira-root .mha-qitem h4 { font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 400; font-size: 1.25rem; margin: 0; }
+.mira-root .mha-qitem p { color: var(--mira-graphite); font-size: .98rem; margin: 9px 0 0; }
+.mira-root .mha-beta { font-family: var(--mira-mono); font-size: .6rem; letter-spacing: .12em; text-transform: uppercase; color: var(--mira-aether-ink); border: 1px solid var(--mira-lavender); border-radius: var(--mira-radius-full); padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
+
+/* ---- final cta ---- */
+.mira-root .mha-final { padding: 92px 0; }
+.mira-root .mha-final-inner { background: var(--mira-grad-presence); border-radius: var(--mira-radius-xl); padding: 64px 40px; text-align: center; position: relative; overflow: hidden; box-shadow: var(--mira-shadow-lg); }
+.mira-root .mha-final-inner::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 20% 0%, rgba(255,255,255,.18), transparent 55%); pointer-events: none; }
+.mira-root .mha-final h2 { font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 300; color: #fff; font-size: clamp(2rem, 4.4vw, 3.3rem); letter-spacing: -.02em; line-height: 1.08; margin: 0; position: relative; }
+.mira-root .mha-final p { color: rgba(255,255,255,.92); max-width: 44ch; margin: 18px auto 0; position: relative; font-size: 1.1rem; }
+.mira-root .mha-final .mha-btn { margin-top: 32px; position: relative; }
+.mira-root .mha-microlight { position: relative; margin-top: 16px; font-family: var(--mira-mono); font-size: .72rem; color: rgba(255,255,255,.9); }
+
+/* ---- investor + footer ---- */
+.mira-root .mha-investor { border-top: 1px solid var(--mira-fog); padding: 40px 0 8px; }
+.mira-root .mha-investor .mha-eyebrow { color: var(--mira-graphite); }
+.mira-root .mha-investor h3 { font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 400; font-size: 1.35rem; margin: 12px 0 0; color: var(--mira-ink); }
+.mira-root .mha-investor p { color: var(--mira-graphite); font-size: .98rem; margin: 8px 0 0; max-width: 60ch; }
+.mira-root .mha-footer { border-top: 1px solid var(--mira-fog); padding: 40px 0 56px; margin-top: 32px; }
+.mira-root .mha-foot-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; }
+.mira-root .mha-foot-brand { display: inline-flex; align-items: center; gap: 11px; font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 400; font-size: 1.15rem; letter-spacing: -.01em; color: var(--mira-ink); text-decoration: none; }
+.mira-root .mha-foot-links { display: flex; flex-wrap: wrap; gap: 22px; font-family: var(--mira-mono); font-size: .74rem; letter-spacing: .04em; }
+.mira-root .mha-foot-links a { color: var(--mira-graphite); text-decoration: none; }
+.mira-root .mha-foot-links a:hover { color: var(--mira-ink); }
+.mira-root .mha-foot-legal { color: var(--mira-graphite); font-size: .8rem; margin-top: 22px; }
+
+/* ---- load animation ---- */
+.mira-root .mha-rise { opacity: 0; transform: translateY(14px); animation: mha-rise .8s cubic-bezier(.16,1,.3,1) forwards; }
+.mira-root .mha-d1 { animation-delay: .05s; } .mira-root .mha-d2 { animation-delay: .15s; }
+.mira-root .mha-d3 { animation-delay: .25s; } .mira-root .mha-d4 { animation-delay: .35s; }
+.mira-root .mha-seal { opacity: 0; transform: rotate(-13deg) scale(.86); animation: mha-sealin .7s cubic-bezier(.16,1,.3,1) .55s forwards; }
+@keyframes mha-rise { to { opacity: 1; transform: translateY(0); } }
+@keyframes mha-sealin { to { opacity: 1; transform: rotate(-13deg) scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .mira-root .mha-rise, .mira-root .mha-seal { animation: none; opacity: 1; }
+  .mira-root .mha-rise { transform: none; }
+  .mira-root .mha-seal { transform: rotate(-13deg); }
+}
+
+/* ============================================================================
+   MSA — "Private line + stand-in" homepage section.
+   Sells (1) she's private: a WhatsApp "message yourself" self-chat rendered in
+   Mira's own cream/petal/rose (not WhatsApp green), and (2) she can stand in for
+   you. Pure CSS phone, no image. All scoped .mira-root .msa-* so it cannot leak
+   or collide with the .mha-* page. Reuses the --mira-* brand tokens only.
+   ========================================================================== */
+.mira-root .msa { padding: 84px 0; }
+.mira-root .msa-h2 { font-size: clamp(1.9rem, 3.6vw, 2.9rem); margin: 16px 0 0; line-height: 1.08; }
+.mira-root .msa-sub { color: var(--mira-graphite); font-size: 1.08rem; margin: 16px 0 0; max-width: 56ch; }
+
+/* ---- A. layout: phone + copy ---- */
+.mira-root .msa-privacy { display: grid; grid-template-columns: minmax(0, 320px) 1fr; gap: 54px; align-items: center; margin-top: 48px; }
+
+/* ---- the CSS phone (self-chat) ---- */
+.mira-root .msa-phone {
+  position: relative; width: 300px; max-width: 100%; margin: 0 auto;
+  padding: 12px; border-radius: 42px;
+  background: linear-gradient(158deg, #1C1830 0%, #2A2540 100%);
+  box-shadow: var(--mira-shadow-lg), inset 0 0 0 1px rgba(255,255,255,.06);
+}
+.mira-root .msa-notch {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  width: 116px; height: 20px; border-radius: 0 0 14px 14px; background: #1C1830; z-index: 3;
+}
+.mira-root .msa-screen { border-radius: 30px; overflow: hidden; background: var(--mira-frost); }
+
+/* header — self chat, rose gradient in place of WhatsApp green */
+.mira-root .msa-bar { display: flex; align-items: center; gap: 9px; padding: 26px 12px 12px; background: var(--mira-grad-presence); color: #fff; }
+.mira-root .msa-back { font-size: 1.35rem; line-height: 1; opacity: .9; }
+.mira-root .msa-av { flex: none; width: 33px; height: 33px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255,255,255,.24); font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-size: 1rem; }
+.mira-root .msa-id { min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.mira-root .msa-id .n { font-size: .86rem; font-weight: 600; }
+.mira-root .msa-self { font-weight: 400; opacity: .8; font-size: .74rem; }
+.mira-root .msa-id .s { font-size: .6rem; opacity: .82; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mira-root .msa-dots { margin-left: auto; opacity: .85; font-size: 1rem; }
+
+/* thread */
+.mira-root .msa-thread { padding: 14px 12px 18px; display: flex; flex-direction: column; gap: 8px; min-height: 232px;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(199,184,240,.14), transparent 42%),
+    radial-gradient(circle at 82% 78%, rgba(228,161,48,.14), transparent 42%),
+    var(--mira-frost); }
+.mira-root .msa-day { align-self: center; background: #fff; color: var(--mira-graphite); font-family: var(--mira-mono);
+  font-size: .58rem; letter-spacing: .06em; text-transform: uppercase; padding: 3px 11px; border-radius: var(--mira-radius-full); box-shadow: var(--mira-shadow-sm); }
+.mira-root .msa-locknote { align-self: center; text-align: center; max-width: 88%; background: rgba(255,248,240,.9);
+  color: var(--mira-graphite); font-size: .62rem; line-height: 1.4; padding: 5px 11px; border-radius: 10px; margin-bottom: 2px; }
+.mira-root .msa-lock { color: var(--mira-verify-deep); }
+
+/* every bubble sits on the sender side (right) */
+.mira-root .msa-b { align-self: flex-end; max-width: 84%; padding: 7px 10px 5px; font-size: .8rem; line-height: 1.45;
+  border-radius: 13px; border-bottom-right-radius: 4px; box-shadow: 0 1px 1px rgba(42,31,45,.07); }
+.mira-root .msa-b.you { background: var(--mira-petal); color: var(--mira-ink); }
+.mira-root .msa-b.mira { background: #fff; color: var(--mira-ink); border: 1px solid var(--mira-fog); border-left: 2.5px solid var(--mira-rose-deep); }
+.mira-root .msa-reply { align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; max-width: 88%; }
+.mira-root .msa-tag { font-family: var(--mira-mono); font-size: .55rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--mira-rose-ink); margin: 2px 3px 3px 0; }
+.mira-root .msa-meta { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 3px;
+  font-family: var(--mira-mono); font-size: .55rem; color: var(--mira-graphite); }
+.mira-root .msa-ticks { color: var(--mira-aether-ink); flex: none; }
+
+/* voice note */
+.mira-root .msa-voice { display: flex; align-items: center; gap: 8px; }
+.mira-root .msa-play { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--mira-grad-presence); color: #fff; font-size: .58rem; padding-left: 2px; }
+.mira-root .msa-wave { display: flex; align-items: center; gap: 2px; height: 18px; }
+.mira-root .msa-wave i { display: block; width: 2px; border-radius: 2px; background: var(--mira-rose-deep); }
+.mira-root .msa-vtime { font-family: var(--mira-mono); font-size: .58rem; color: var(--mira-graphite); }
+
+/* copy beside phone */
+.mira-root .msa-h3 { font-family: var(--font-mira-display, "Fraunces", Georgia, serif); font-weight: 400;
+  font-size: clamp(1.5rem, 2.6vw, 2rem); letter-spacing: -.01em; margin: 0; line-height: 1.12; }
+.mira-root .msa-copy .msa-list { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.mira-root .msa-copy .msa-list li { display: flex; align-items: flex-start; gap: 12px; color: var(--mira-graphite); font-size: 1.04rem; line-height: 1.45; }
+.mira-root .msa-ck { flex: none; margin-top: 2px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(18,120,78,.14); color: var(--mira-verify-deep); }
+
+/* ---- B. stand-in ---- */
+.mira-root .msa-standin { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 34px; align-items: stretch; }
+.mira-root .msa-cap { background: var(--mira-cream); border: 1px solid var(--mira-fog); border-radius: var(--mira-radius-lg); padding: 30px; }
+.mira-root .msa-num { font-family: var(--mira-mono); font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--mira-rose-ink); }
+.mira-root .msa-cap h3 { margin-top: 14px; }
+.mira-root .msa-cap p { color: var(--mira-graphite); font-size: 1.04rem; line-height: 1.5; margin: 14px 0 0; }
+.mira-root .msa-capfoot { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px;
+  font-family: var(--mira-mono); font-size: .68rem; letter-spacing: .03em; color: var(--mira-verify-deep); }
+.mira-root .msa-eg { position: relative; margin: 0; background: var(--mira-canvas); border: 1px dashed var(--mira-lavender);
+  border-radius: var(--mira-radius-lg); padding: 34px 30px 26px; }
+.mira-root .msa-eg-badge { position: absolute; top: -12px; left: 26px; background: #fff; color: var(--mira-aether-ink);
+  border: 1px solid var(--mira-lavender); border-radius: var(--mira-radius-full); padding: 3px 13px;
+  font-family: var(--mira-mono); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; box-shadow: var(--mira-shadow-sm); }
+.mira-root .msa-eg-body { color: var(--mira-ink); font-size: 1.08rem; line-height: 1.55; margin: 0; }
+.mira-root .msa-eg-note { color: var(--mira-graphite); font-family: var(--mira-mono); font-size: .66rem; letter-spacing: .04em; margin: 16px 0 0; }
+
+/* ---- C. honest stats ---- */
+.mira-root .msa-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 42px;
+  border-top: 1px solid var(--mira-fog); padding-top: 36px; }
+.mira-root .msa-stat { display: flex; flex-direction: column; gap: 8px; }
+.mira-root .msa-fig { font-weight: 400; font-size: clamp(1.7rem, 2.8vw, 2.35rem); line-height: 1; letter-spacing: -.01em; color: var(--mira-ink); }
+.mira-root .msa-lab { font-family: var(--mira-mono); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--mira-graphite); }
+
+/* ---- responsive ---- */
+@media (max-width: 820px) {
+  .mira-root .msa-privacy { grid-template-columns: 1fr; gap: 38px; }
+  .mira-root .msa-standin { grid-template-columns: 1fr; }
+  .mira-root .msa-stats { grid-template-columns: repeat(2, 1fr); gap: 26px 18px; }
+}
+@media (max-width: 460px) {
+  .mira-root .msa { padding: 64px 0; }
+  .mira-root .msa-stats { grid-template-columns: 1fr; }
+  .mira-root .msa-cap, .mira-root .msa-eg { padding-left: 22px; padding-right: 22px; }
+}
+
+/* ---- responsive ---- */
+@media (max-width: 900px) {
+  .mira-root .mha-hero-grid { grid-template-columns: 1fr; gap: 44px; }
+  .mira-root .mha-hero { padding: 44px 0 56px; }
+  .mira-root .mha-recall-stage { max-width: 460px; margin: 0 auto; }
+  .mira-root .mha-two, .mira-root .mha-versus, .mira-root .mha-three { grid-template-columns: 1fr; }
+  .mira-root .mha-proof-head { grid-template-columns: 1fr; }
+  .mira-root .mha-proof-fig { display: none; }
+  .mira-root .mha-lede { max-width: 46ch; }
+}
+@media (max-width: 520px) {
+  .mira-root .mha-wrap { padding: 0 18px; }
+  .mira-root .mha-cta-row { gap: 12px; }
+  .mira-root .mha-cta-row .mha-btn { width: 100%; }
+  .mira-root .mha-final-inner { padding: 48px 22px; }
+  .mira-root .mha-seal { width: 104px; height: 104px; right: -8px; bottom: -14px; }
+  .mira-root .mha-seal .mha-core .mha-big { font-size: 1.2rem; }
+  .mira-root .mha-float-tag { left: 8px; }
+}
+
+/* ============================================================================
+   VVC — Veridian live-voice demo chat (press-and-talk in, her voice out, trial
+   gate). Scoped under .mira-root; reuses the --mira-* tokens and the same
+   voice-note visual vocabulary the marketing self-chat (.msa-*) already uses, so
+   the thing visitors SEE marketed is the thing they DO in the live demo.
+   ========================================================================== */
+
+/* voice on/off pill in the header (white translucent over the gradient) */
+.mira-root .vvc-voice-toggle {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  padding: 6px 11px; border-radius: var(--mira-radius-full); cursor: pointer;
+  border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.16);
+  color: #fff; font-size: 12px; font-weight: 500; line-height: 1;
+  font-family: inherit; transition: background .2s;
+}
+.mira-root .vvc-voice-toggle:hover { background: rgba(255,255,255,.28); }
+
+/* ================= Killer hold-to-talk composer (VVC) =================
+   One rounded field on the left; ONE big presence orb on the right that
+   morphs mic <-> send by input state. Press-and-hold arms it (pulse rings +
+   live waveform tray + slide-to-cancel). WhatsApp-familiar, Mira-premium. */
+.mira-root .vvc-composer {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; border-top: 1px solid var(--mira-fog);
+}
+.mira-root .vvc-field {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  min-height: 50px; padding: 4px 8px 4px 16px; border-radius: var(--mira-radius-full);
+  border: 1px solid var(--mira-fog); background: var(--mira-cream);
+  transition: border-color .2s, background .2s, box-shadow .2s;
+}
+.mira-root .vvc-field:focus-within { border-color: var(--mira-lavender); box-shadow: 0 0 0 3px rgba(199,184,240,.3); }
+.mira-root .vvc-field input {
+  flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+  color: var(--mira-ink); font-size: 14.5px; font-family: inherit; padding: 11px 0;
+}
+.mira-root .vvc-field input::placeholder { color: var(--mira-slate); }
+.mira-root .vvc-field.is-rec { border-color: var(--mira-rose-deep); background: #fff; }
+.mira-root .vvc-field.is-cancel { border-color: var(--mira-rose-ink); background: rgba(181,74,69,.07); }
+/* subtle "hold to talk" affordance next to the mic (idle + empty only) */
+.mira-root .vvc-holdhint { flex: none; font-size: 11.5px; font-weight: 500; color: var(--mira-slate); white-space: nowrap; }
+
+/* recording tray — replaces the input while holding */
+.mira-root .vvc-rectray { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 5px 2px; }
+.mira-root .vvc-rectime { flex: none; font-family: var(--mira-mono); font-size: 13px; color: var(--mira-rose-ink); font-variant-numeric: tabular-nums; }
+.mira-root .vvc-rechint { min-width: 0; flex: 1; font-size: 12.5px; color: var(--mira-graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mira-root .vvc-field.is-cancel .vvc-rechint { color: var(--mira-rose-ink); font-weight: 600; }
+
+/* the hero: one round control (mic <-> send) */
+.mira-root .vvc-primary {
+  flex: none; width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer;
+  display: grid; place-items: center; color: #fff; background: var(--mira-grad-presence);
+  box-shadow: var(--mira-shadow-md); position: relative; touch-action: none; user-select: none;
+  transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .2s, background .25s;
+}
+.mira-root .vvc-primary svg { width: 22px; height: 22px; }
+.mira-root .vvc-primary:hover { transform: translateY(-1px) scale(1.03); box-shadow: var(--mira-shadow-aura); }
+.mira-root .vvc-primary:active { transform: scale(.95); }
+.mira-root .vvc-primary:disabled { opacity: .5; cursor: default; box-shadow: var(--mira-shadow-md); transform: none; }
+/* quiet "press me" breathing ring — mic, idle only */
+.mira-root .vvc-mic-btn::after { content: ""; position: absolute; inset: 0; border-radius: 50%; animation: vvc-invite 2800ms ease-out infinite; pointer-events: none; }
+@keyframes vvc-invite { 0% { box-shadow: 0 0 0 0 rgba(181,74,69,.4); } 70%,100% { box-shadow: 0 0 0 12px rgba(181,74,69,0); } }
+/* armed: enlarged, concentric pulse */
+.mira-root .vvc-primary.is-rec { transform: scale(1.08); animation: vvc-armed 1250ms ease-out infinite; }
+.mira-root .vvc-primary.is-rec::after { animation: none; }
+@keyframes vvc-armed { 0% { box-shadow: 0 0 0 0 rgba(181,74,69,.5); } 100% { box-shadow: 0 0 0 17px rgba(181,74,69,0); } }
+/* slide-to-cancel armed */
+.mira-root .vvc-primary.is-cancel { background: var(--mira-rose-ink); animation: none; transform: scale(1.08); }
+
+/* certified micro-line under the composer — the trust seal, hairline-quiet */
+.mira-root .vvc-certify { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 7px; padding: 0 16px 14px; font-family: var(--mira-mono); font-size: 10px; letter-spacing: .13em; text-transform: uppercase; color: var(--mira-graphite); text-align: center; }
+.mira-root .vvc-certify .tick { flex: none; width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center; background: rgba(18,120,78,.14); color: var(--mira-verify-deep); font-size: 9px; letter-spacing: 0; }
+.mira-root .vvc-certify b { color: var(--mira-verify-deep); font-weight: 600; }
+
+/* live recording banner: dot + waveform + interim transcript */
+.mira-root .vvc-reclive {
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+  border-top: 1px solid var(--mira-fog); background: var(--mira-frost);
+}
+.mira-root .vvc-reclive-dot {
+  flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--mira-rose-ink);
+  animation: vvc-dot 1100ms ease-in-out infinite;
+}
+@keyframes vvc-dot {
+  0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(181,74,69,.4); }
+  50% { opacity: .55; box-shadow: 0 0 0 6px rgba(181,74,69,0); }
+}
+.mira-root .vvc-reclive-txt {
+  min-width: 0; flex: 1; font-size: 12.5px; color: var(--mira-graphite);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* animated live waveform (in the recording banner) */
+.mira-root .vvc-wave { display: flex; align-items: center; gap: 2.5px; height: 22px; flex: none; }
+.mira-root .vvc-wave i {
+  display: block; width: 3px; height: 20px; border-radius: 2px; transform-origin: center;
+  background: var(--mira-grad-presence); animation: vvc-bar 900ms ease-in-out infinite;
+}
+@keyframes vvc-bar { 0%,100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+
+/* her voice-note bubble (played back under her text) */
+.mira-root .vvc-vn {
+  display: flex; align-items: center; gap: 9px; margin-top: 9px; padding: 7px 10px;
+  background: #fff; border: 1px solid var(--mira-fog); border-left: 2.5px solid var(--mira-rose-deep);
+  border-radius: 13px;
+}
+.mira-root .vvc-vn-play {
+  flex: none; width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer;
+  display: grid; place-items: center; color: #fff; background: var(--mira-grad-presence);
+}
+.mira-root .vvc-vn-wave { display: flex; align-items: center; gap: 2px; height: 24px; flex: 1; min-width: 0; overflow: hidden; }
+.mira-root .vvc-vn-wave i { display: block; width: 2.5px; border-radius: 2px; background: var(--mira-rose-deep); transition: opacity .12s; }
+.mira-root .vvc-vn.is-playing .vvc-vn-wave i { animation: vvc-vnbar 850ms ease-in-out infinite; }
+.mira-root .vvc-vn.is-playing .vvc-vn-wave i:nth-child(odd) { animation-delay: 140ms; }
+.mira-root .vvc-vn.is-playing .vvc-vn-wave i:nth-child(3n) { animation-delay: 260ms; }
+@keyframes vvc-vnbar { 0%,100% { transform: scaleY(.72); } 50% { transform: scaleY(1.12); } }
+.mira-root .vvc-vn-time { flex: none; font-family: var(--mira-mono); font-size: 11px; color: var(--mira-graphite); }
+.mira-root .vvc-vn-mic { flex: none; color: var(--mira-rose-ink); font-size: 12px; }
+
+/* free-trial gate — inline email, no card */
+.mira-root .vvc-trial {
+  align-self: stretch; display: flex; flex-direction: column; gap: 10px; margin-top: 4px;
+  padding: 14px; background: var(--mira-cream); border: 1px solid var(--mira-lavender);
+  border-radius: var(--mira-radius-lg); box-shadow: var(--mira-shadow-sm);
+}
+.mira-root .vvc-trial-lead { font-size: 13.5px; font-weight: 500; color: var(--mira-ink); }
+.mira-root .vvc-trial-row { display: flex; gap: 8px; }
+.mira-root .vvc-trial-input {
+  flex: 1; min-width: 0; padding: 11px 13px; border-radius: var(--mira-radius-full);
+  border: 1px solid var(--mira-fog); background: #fff; color: var(--mira-ink); font-size: 14px; outline: none;
+}
+.mira-root .vvc-trial-input[aria-invalid="true"] { border-color: var(--mira-rose-ink); }
+.mira-root .vvc-trial-btn { flex: none; padding: 11px 20px; }
+.mira-root .vvc-trial-err { font-size: 12px; color: var(--mira-rose-ink); }
+
+/* shared visible keyboard focus for the new controls */
+.mira-root .vvc-mic:focus-visible,
+.mira-root .vvc-voice-toggle:focus-visible,
+.mira-root .vvc-vn-play:focus-visible,
+.mira-root .vvc-trial-input:focus-visible,
+.mira-root .vvc-trial-btn:focus-visible,
+.mira-root .mbv-mic:focus-visible,
+.mira-root .mbv-voice-toggle:focus-visible,
+.mira-root .mbv-vn-play:focus-visible,
+.mira-root .mbv-trial-row input:focus-visible,
+.mira-root .mbv-trial-row button:focus-visible {
+  outline: 2px solid var(--aether); outline-offset: 2px;
+}
+
+@media (max-width: 440px) { .mira-root .vvc-holdhint { display: none; } }
+@media (max-width: 360px) {
+  .mira-root .vvc-primary { width: 48px; height: 48px; }
+  .mira-root .vvc-voice-toggle span:last-child { display: none; } /* icon-only on tiny screens */
+}
+
+/* ---------- MBV — the compact voice affordances inside the floating MiraBot ---------- */
+.mira-root .mbv-voice-toggle {
+  flex: none; width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer;
+  display: grid; place-items: center; font-size: 14px; color: #fff; background: rgba(255,255,255,.2);
+  transition: background .2s;
+}
+.mira-root .mbv-voice-toggle:hover { background: rgba(255,255,255,.32); }
+/* compact hold-to-talk composer inside the floating MiraBot */
+.mira-root .mira-bot-foot .mbv-field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 3px 6px 3px 14px; border-radius: var(--mira-radius-full); border: 1px solid var(--mira-fog); background: var(--mira-cream); transition: border-color .2s, background .2s; }
+.mira-root .mira-bot-foot .mbv-field:focus-within { border-color: var(--mira-lavender); }
+.mira-root .mira-bot-foot .mbv-field input { flex: 1; min-width: 0; border: none; background: transparent; outline: none; color: var(--mira-ink); font-size: 14px; font-family: inherit; padding: 9px 0; }
+.mira-root .mira-bot-foot .mbv-field.is-rec { border-color: var(--mira-rose-deep); background: #fff; }
+.mira-root .mira-bot-foot .mbv-field.is-cancel { border-color: var(--mira-rose-ink); background: rgba(181,74,69,.07); }
+.mira-root .mbv-holdhint { flex: none; font-size: 10.5px; font-weight: 500; color: var(--mira-slate); white-space: nowrap; }
+.mira-root .mbv-rectray { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 4px 2px; }
+.mira-root .mbv-rectime { flex: none; font-family: var(--mira-mono); font-size: 12px; color: var(--mira-rose-ink); font-variant-numeric: tabular-nums; }
+.mira-root .mbv-rechint { min-width: 0; flex: 1; font-size: 11.5px; color: var(--mira-graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mira-root .mira-bot-foot .mbv-field.is-cancel .mbv-rechint { color: var(--mira-rose-ink); font-weight: 600; }
+.mira-root .mira-bot-foot .mbv-primary { flex: none; width: 46px; height: 46px; border-radius: 50%; border: none; cursor: pointer; display: grid; place-items: center; color: #fff; background: var(--mira-grad-presence); box-shadow: var(--mira-shadow-sm); position: relative; touch-action: none; user-select: none; transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .2s, background .25s; }
+.mira-root .mira-bot-foot .mbv-primary svg { width: 19px; height: 19px; }
+.mira-root .mira-bot-foot .mbv-primary:hover { transform: scale(1.04); box-shadow: var(--mira-shadow-aura); }
+.mira-root .mira-bot-foot .mbv-primary:active { transform: scale(.95); }
+.mira-root .mira-bot-foot .mbv-primary:disabled { opacity: .5; cursor: default; transform: none; }
+.mira-root .mbv-mic-btn::after { content: ""; position: absolute; inset: 0; border-radius: 50%; animation: vvc-invite 2800ms ease-out infinite; pointer-events: none; }
+.mira-root .mira-bot-foot .mbv-primary.is-rec { transform: scale(1.07); animation: vvc-armed 1250ms ease-out infinite; }
+.mira-root .mbv-primary.is-rec::after { animation: none; }
+.mira-root .mira-bot-foot .mbv-primary.is-cancel { background: var(--mira-rose-ink); animation: none; transform: scale(1.07); }
+.mira-root .mbv-certify { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; padding: 0 12px 11px; font-family: var(--mira-mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--mira-graphite); text-align: center; }
+.mira-root .mbv-certify .tick { flex: none; width: 13px; height: 13px; border-radius: 50%; display: grid; place-items: center; background: rgba(18,120,78,.14); color: var(--mira-verify-deep); font-size: 8px; letter-spacing: 0; }
+.mira-root .mbv-certify b { color: var(--mira-verify-deep); font-weight: 600; }
+
+.mira-root .mbv-reclive {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border-top: 1px solid var(--mira-fog); background: var(--mira-frost);
+}
+.mira-root .mbv-reclive-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--mira-rose-ink); animation: vvc-dot 1100ms ease-in-out infinite; }
+.mira-root .mbv-reclive-txt { min-width: 0; flex: 1; font-size: 11.5px; color: var(--mira-graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mira-root .mbv-wave { display: flex; align-items: center; gap: 2px; height: 18px; flex: none; }
+.mira-root .mbv-wave i { display: block; width: 2.5px; height: 16px; border-radius: 2px; transform-origin: center; background: var(--mira-grad-presence); animation: vvc-bar 900ms ease-in-out infinite; }
+
+.mira-root .mbv-vn { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 6px 9px; background: #fff; border: 1px solid var(--mira-fog); border-radius: 12px; }
+.mira-root .mbv-vn-play { flex: none; width: 26px; height: 26px; border-radius: 50%; border: none; cursor: pointer; color: #fff; background: var(--mira-grad-presence); font-size: 9px; display: grid; place-items: center; }
+.mira-root .mbv-vn-wave { display: flex; align-items: center; gap: 2px; height: 18px; flex: 1; min-width: 0; overflow: hidden; }
+.mira-root .mbv-vn-wave i { display: block; width: 2px; border-radius: 2px; background: var(--mira-rose-deep); transition: opacity .12s; }
+.mira-root .mbv-vn.is-playing .mbv-vn-wave i { animation: vvc-vnbar 850ms ease-in-out infinite; }
+.mira-root .mbv-vn-time { flex: none; font-family: var(--mira-mono); font-size: 10.5px; color: var(--mira-graphite); }
+
+.mira-root .mbv-trial { display: flex; flex-direction: column; gap: 8px; padding: 10px; background: var(--mira-cream); border: 1px solid var(--mira-lavender); border-radius: 14px; }
+.mira-root .mbv-trial-lead { font-size: 12.5px; font-weight: 500; color: var(--mira-ink); }
+.mira-root .mbv-trial-row { display: flex; gap: 6px; }
+.mira-root .mbv-trial-row input { flex: 1; min-width: 0; padding: 9px 11px; border-radius: var(--mira-radius-full); border: 1px solid var(--mira-fog); background: #fff; color: var(--mira-ink); font-size: 13px; outline: none; }
+.mira-root .mbv-trial-row button { flex: none; border: none; cursor: pointer; border-radius: 50%; width: 36px; height: 36px; color: #fff; background: var(--mira-grad-presence); font-size: 15px; }
+
+/* WCAG 2.2.2 — stop the ambient voice/recording animations for reduced-motion users */
+@media (prefers-reduced-motion: reduce) {
+  .mira-root .vvc-primary.is-rec, .mira-root .mbv-primary.is-rec,
+  .mira-root .vvc-mic-btn::after, .mira-root .mbv-mic-btn::after,
+  .mira-root .vvc-reclive-dot, .mira-root .mbv-reclive-dot,
+  .mira-root .vvc-wave i, .mira-root .mbv-wave i,
+  .mira-root .vvc-vn.is-playing .vvc-vn-wave i,
+  .mira-root .mbv-vn.is-playing .mbv-vn-wave i { animation: none; }
+  .mira-root .vvc-primary.is-rec, .mira-root .mbv-primary.is-rec { transform: none; }
+  .mira-root .vvc-wave i, .mira-root .mbv-wave i { transform: scaleY(.7); }
 }

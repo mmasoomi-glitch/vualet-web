@@ -118,7 +118,7 @@ export default function PricingPage() {
                   "Priority support",
                   "SSO and SAML",
                   "Dedicated onboarding manager",
-                  "99.9% uptime SLA",
+                  "Priority reliability and status updates",
                 ].map((b) => (
                   <li key={b} className="flex gap-3">
                     <span className="text-[var(--color-vualet-lime)]">✓</span>

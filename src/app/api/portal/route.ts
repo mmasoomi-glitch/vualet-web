@@ -1,30 +1,71 @@
 import { NextResponse } from "next/server";
-import { dodo, appUrl, paymentsConfigured } from "@/lib/dodo";
+import { stripe, appUrl, paymentsConfigured } from "@/lib/stripe";
+import { getSession } from "@/lib/session";
+import { getSubscriptionByEmail } from "@/lib/store";
 
-// Returns a Dodo customer-portal link so a subscriber can manage/cancel billing.
-// Body: { customer_id }  (until auth lands, the welcome page passes this through).
-export async function POST(req: Request) {
+/**
+ * Self-serve Stripe billing portal (manage payment method, view invoices, cancel).
+ *
+ * ANTI-IDOR (jury #125, P0-W3): the subscription is resolved ONLY from the verified
+ * session email. The caller cannot pass a customer id, subscription id, or email —
+ * so there is nothing to tamper with and no way to open a stranger's billing portal.
+ * The old version took customer_id from the request body, which let anyone who knew
+ * any customer id open that customer's portal. That is fixed here.
+ *
+ * Only works for Stripe-era customers. Dodo customers cancel via /api/subscription/cancel
+ * and manage billing through the account page.
+ */
+export async function POST() {
   if (!paymentsConfigured()) {
     return NextResponse.json({ error: "not_configured" }, { status: 503 });
   }
 
-  let customerId: string | undefined;
-  try {
-    customerId = (await req.json())?.customer_id;
-  } catch {
-    /* fall through */
+  const session = await getSession();
+  if (!session?.email) {
+    return NextResponse.json(
+      { error: "not_signed_in", message: "Sign in to manage your billing." },
+      { status: 401 },
+    );
   }
-  if (!customerId) {
-    return NextResponse.json({ error: "missing customer_id" }, { status: 400 });
+
+  // Resolve the subscription from the verified session email — never from a
+  // client-supplied id. This is the anti-IDOR shape.
+  const found = await getSubscriptionByEmail(session.email);
+  if (!found) {
+    return NextResponse.json(
+      {
+        error: "no_subscription",
+        message:
+          "We couldn't find a subscription for your account. Contact us and we'll sort it out right away.",
+      },
+      { status: 404 },
+    );
+  }
+
+  const { customerId, rec } = found;
+
+  // The Stripe billing portal only works for Stripe-era customers (those with a
+  // Stripe customer id). Dodo-era customers manage their plan through the account
+  // page instead.
+  if (!rec.customerId) {
+    return NextResponse.json(
+      {
+        error: "dodo_managed",
+        message:
+          "Your plan is managed through your account page. Visit /mira/account to manage or cancel your subscription.",
+        redirect: `${appUrl()}/mira/account`,
+      },
+      { status: 409 },
+    );
   }
 
   try {
-    const session = await dodo().customers.customerPortal.create(customerId, {
-      send_email: false,
-    } as Record<string, unknown>);
-    const url = (session as { link?: string; url?: string }).link ?? (session as { url?: string }).url;
-    if (!url) throw new Error("Dodo returned no portal link.");
-    return NextResponse.json({ url });
+    const portalSession = await stripe().billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${appUrl()}/mira/account`,
+    });
+    if (!portalSession.url) throw new Error("Stripe returned no portal url.");
+    return NextResponse.json({ url: portalSession.url });
   } catch (err) {
     console.error("[portal] failed:", err);
     return NextResponse.json(

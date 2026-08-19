@@ -11,7 +11,7 @@ export default function Home() {
           <div className="max-w-4xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1 text-xs font-medium text-[var(--muted)]">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-vualet-lime)]" />
-              New — Vualet WhatsApp AI Agents now live
+              New — the Vualet family is launching, starting with Mira
             </div>
             <h1
               className="mt-6 text-5xl md:text-7xl font-semibold tracking-tight leading-[1.05]"
@@ -21,9 +21,10 @@ export default function Home() {
               your business <span className="text-[var(--color-vualet-indigo)]">for you.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg md:text-xl text-[var(--muted)] leading-relaxed">
-              Vualet is the operating software for modern teams. WhatsApp AI agents,
-              CRM automation, HR and people tools — under one login, one bill, one
-              quietly competent system.
+              Vualet is a Dubai product family building software that runs your
+              business for you. Mira, our personal assistant, is first — live on
+              Telegram today. CRM automation, people tools and more are coming
+              soon, under one login and one bill.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-3">
               <Link
