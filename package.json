@@ -15,7 +15,12 @@
     "test:dodo": "node --test scripts/dodo-webhook-test.mjs",
     "test:email": "node --test scripts/checkout-email-test.mjs",
     "test:cancel": "node --test scripts/cancel-refund-test.mjs",
-    "test:knowledge": "node --test scripts/system-knowledge-test.mjs"
+    "test:knowledge": "node --test scripts/system-knowledge-test.mjs",
+    "test:checkout-route": "node --test scripts/revenue-checkout-test.mjs",
+    "test:portal-idor": "node --test scripts/revenue-portal-idor-test.mjs",
+    "test:begin-limit": "node --test scripts/revenue-begin-ratelimit-test.mjs",
+    "test:counterfactual": "node --test scripts/revenue-counterfactual-test.mjs",
+    "test:revenue": "node --test scripts/revenue-checkout-test.mjs scripts/revenue-portal-idor-test.mjs scripts/revenue-begin-ratelimit-test.mjs scripts/revenue-counterfactual-test.mjs"
   },
   "dependencies": {
     "next": "16.2.6",
