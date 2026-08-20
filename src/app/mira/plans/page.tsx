@@ -1,67 +1,92 @@
-"use client";
-
 import Link from "next/link";
-import { useState } from "react";
 import { TIERS } from "../_components/tiers";
-import { Stepper } from "../_components/Stepper";
 
+// Every tier — paid and free — routes to /mira/checkout, which collects the
+// customer's email before starting payment.
+//
+// This page used to POST straight to /api/checkout with only { plan }. That
+// worked under Stripe Checkout, which collected the email on its own hosted
+// page. Dodo requires the email up-front, so with no email supplied, dodo.ts
+// fell back to a hardcoded "guest@vualet.com" — and because this page is the
+// main paid entry point, EVERY paying customer collapsed into that one fake
+// identity, unable to be identified, sign in, or have entitlement resolved.
+//
+// /mira/checkout already collects the email and already handles promo codes,
+// so routing here reuses a working path rather than duplicating it. Jury #101.
 export default function MiraPlans() {
-  const [selected, setSelected] = useState<string>("assistant");
-
-  function startCheckout() {
-    // Trial needs no card → straight to welcome. Paid → the payment step.
-    if (selected === "trial") {
-      window.location.href = "/mira/welcome";
-    } else {
-      window.location.href = `/mira/checkout?plan=${selected}`;
-    }
-  }
-
   return (
-    <main style={{ maxWidth: 1080, margin: "0 auto", padding: "48px 24px 80px" }}>
-      <Stepper current={2} />
-      <header style={{ textAlign: "center", marginBottom: 36 }}>
+    <main
+      id="mira-main"
+      className="mira-plans-pad"
+      style={{ maxWidth: 1080, width: "100%", minWidth: 0, boxSizing: "border-box", margin: "0 auto", padding: "48px 24px 80px" }}
+    >
+      <header style={{ textAlign: "center", marginBottom: 28 }}>
+        <span
+          style={{
+            display: "inline-block",
+            fontSize: 11.5,
+            fontWeight: 600,
+            letterSpacing: ".14em",
+            textTransform: "uppercase",
+            color: "var(--mira-ink)",
+            background: "var(--mira-rose-light)",
+            border: "1px solid var(--mira-rose-light)",
+            borderRadius: 999,
+            padding: "4px 14px",
+            marginBottom: 14,
+          }}
+        >
+          14-day free trial
+        </span>
         <h1 className="display" style={{ fontSize: "clamp(30px,5vw,48px)", margin: "0 0 8px" }}>
           Choose how far <span className="grad">she goes</span>
         </h1>
-        <p style={{ color: "var(--mira-graphite)", fontSize: 16, maxWidth: 520, margin: "0 auto" }}>
-          Start free for an hour. Upgrade only when she&apos;s already earned it.
+        <p style={{ color: "var(--mira-graphite)", fontSize: 16, maxWidth: 540, margin: "0 auto" }}>
+          Start your 14-day free trial — no charge for 14 days, cancel anytime. Or stay on the Free
+          plan: a million tokens every month, no card needed.
         </p>
       </header>
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+          gridTemplateColumns: "repeat(auto-fit,minmax(min(220px,100%),1fr))",
           gap: 16,
+          minWidth: 0,
         }}
       >
         {TIERS.map((t) => {
-          const isSel = selected === t.id;
+          const paid = t.id !== "free";
           return (
-            <button
+            <div
               key={t.id}
-              type="button"
-              onClick={() => setSelected(t.id)}
               style={{
                 textAlign: "left",
-                cursor: "pointer",
                 background: "var(--mira-cream)",
-                border: `1.5px solid ${isSel ? "var(--mira-rose)" : t.featured ? "var(--mira-rose-light)" : "var(--mira-fog)"}`,
+                border: `1.5px solid ${t.featured ? "var(--mira-rose-light)" : "var(--mira-fog)"}`,
                 borderRadius: "var(--mira-radius-lg)",
                 padding: 24,
-                boxShadow: isSel ? "var(--mira-shadow-lg)" : t.featured ? "var(--mira-shadow-md)" : "none",
-                transition: "border-color .2s, box-shadow .2s, transform .2s",
-                transform: isSel ? "translateY(-2px)" : "none",
                 position: "relative",
               }}
             >
               {t.featured && (
-                <span style={{ position: "absolute", top: 16, right: 16, fontSize: 11, fontWeight: 600, color: "#fff", background: "var(--mira-grad-presence)", borderRadius: 999, padding: "3px 10px" }}>
-                  Most loved
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 16,
+                    right: 16,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "#fff",
+                    background: "var(--mira-grad-presence)",
+                    borderRadius: 999,
+                    padding: "3px 10px",
+                  }}
+                >
+                  Most complete
                 </span>
               )}
-              <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-deep)", fontWeight: 600, margin: 0 }}>{t.name}</p>
+              <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-ink)", fontWeight: 600, margin: 0 }}>{t.name}</p>
               <p className="display" style={{ fontSize: 34, fontWeight: 400, margin: "8px 0 0", display: "flex", alignItems: "baseline", gap: 4 }}>
                 {t.price}
                 {t.per && <span style={{ fontSize: 14, color: "var(--mira-slate)" }}>{t.per}</span>}
@@ -72,58 +97,33 @@ export default function MiraPlans() {
                   <li key={it} style={{ padding: "3px 0" }}>✓ {it}</li>
                 ))}
               </ul>
-              <div
-                aria-hidden
-                style={{
-                  marginTop: 18,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: isSel ? "var(--mira-rose-deep)" : "var(--mira-slate)",
-                }}
-              >
-                <span
-                  style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: "50%",
-                    border: `1.5px solid ${isSel ? "var(--mira-rose)" : "var(--mira-fog)"}`,
-                    background: isSel ? "var(--mira-grad-presence)" : "transparent",
-                    display: "grid",
-                    placeItems: "center",
-                    color: "#fff",
-                    fontSize: 10,
-                  }}
-                >
-                  {isSel ? "✓" : ""}
-                </span>
-                {isSel ? "Selected" : "Select"}
+              <div style={{ marginTop: 18 }}>
+                {paid ? (
+                  <Link
+                    href={`/mira/checkout?plan=${t.id}`}
+                    className="btn-mira"
+                    style={{ width: "100%", justifyContent: "center", display: "inline-flex", fontSize: 14, textDecoration: "none" }}
+                  >
+                    {t.cta}
+                  </Link>
+                ) : (
+                  <Link
+                    href="/mira/checkout?plan=free"
+                    className="btn-mira-soft"
+                    style={{ width: "100%", justifyContent: "center", display: "inline-flex", fontSize: 14, textDecoration: "none" }}
+                  >
+                    {t.cta}
+                  </Link>
+                )}
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
 
-      <div style={{ textAlign: "center", marginTop: 36 }}>
-        <button
-          type="button"
-          className="btn-mira"
-          onClick={startCheckout}
-          style={{ minWidth: 240, cursor: "pointer" }}
-        >
-          {selected === "trial"
-            ? "Start free →"
-            : `Continue with ${TIERS.find((t) => t.id === selected)?.name} →`}
-        </button>
-        <p style={{ fontSize: 13, color: "var(--mira-slate)", margin: "14px 0 0" }}>
-          No card needed to start the trial · Secure checkout by Dodo · Cancel anytime
-        </p>
-        <p style={{ fontSize: 14, color: "var(--mira-graphite)", margin: "20px 0 0" }}>
-          Haven&apos;t shaped her yet? <Link href="/mira/start" style={{ color: "var(--mira-rose-deep)" }}>Start here →</Link>
-        </p>
-      </div>
+      <p style={{ textAlign: "center", fontSize: 13.5, color: "var(--mira-slate)", margin: "24px 0 0" }}>
+        Start your 14-day free trial — no charge for 14 days, cancel anytime.
+      </p>
     </main>
   );
 }

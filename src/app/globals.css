@@ -1,42 +1,49 @@
 @import "tailwindcss";
 
+/* Unified under the Mira brand kit (owner request 2026-07-16; recolored 2026-07-27):
+   the whole site wears Mira's "Notary" identity — indigo presence + amber verified-
+   seal on warm paper, deep indigo-plum ink — matching the .mira-root sub-brand theme
+   so landing/signup and the Mira product pages read as one brand. The token NAMES
+   stay (--color-vualet-*) so no page markup changes; only the VALUES are remapped. */
 @theme {
-  --color-vualet-indigo: #5B5BF6;
-  --color-vualet-indigo-hover: #4848e3;
-  --color-vualet-indigo-soft: #8b8bf8;
-  --color-vualet-ink: #0F1117;
-  --color-vualet-ink-2: #161823;
-  --color-vualet-lime: #C7F25A;
-  --color-vualet-text-dark: #E6E8EE;
-  --color-vualet-text-light: #0B0D12;
-  --color-vualet-muted-dark: #9CA3AF;
-  --color-vualet-muted-light: #4B5563;
-  --color-vualet-border-dark: #20232E;
-  --color-vualet-border-light: #E5E7EB;
-  --color-vualet-success: #22C55E;
+  --color-vualet-indigo: #6366F1;         /* Mira aether — presence */
+  --color-vualet-indigo-hover: #5254E8;
+  --color-vualet-indigo-soft: #C7B8F0;    /* Mira lavender */
+  --color-vualet-ink: #1C1830;            /* Mira ink (indigo-plum) */
+  --color-vualet-ink-2: #2A2540;
+  --color-vualet-lime: #E4A130;           /* Mira amber — the verified-seal accent */
+  --color-vualet-text-dark: #F6F3EC;      /* warm-paper text on dark */
+  --color-vualet-text-light: #1C1830;
+  --color-vualet-muted-dark: #B8AEBC;
+  --color-vualet-muted-light: #6B6270;    /* Mira slate — passes WCAG AA (≥4.5:1 on paper) */
+  --color-vualet-border-dark: #2A2540;
+  --color-vualet-border-light: #E4E0D8;   /* Mira fog (warm) */
+  --color-vualet-success: #6BCE9B;        /* Mira success */
   --color-vualet-danger: #EF4444;
 
-  --font-display: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-mira-display, "Fraunces", Georgia, serif);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Mira is a warm light brand and its product pages are always cream — so the whole
+   site stays cream in both light and dark OS settings, for one consistent identity. */
 :root {
-  --background: #FFFFFF;
-  --foreground: #0B0D12;
-  --surface: #FFFFFF;
-  --surface-2: #F7F8FA;
-  --muted: #4B5563;
-  --border: #E5E7EB;
+  --background: #F6F3EC;                   /* Mira warm paper */
+  --foreground: #1C1830;                   /* Mira indigo-plum ink */
+  --surface: #FCFAF5;                      /* Mira canvas */
+  --surface-2: #EFEBE2;                    /* Mira frost (warm) */
+  --muted: #6B6270;                        /* Mira slate — passes WCAG AA (≥4.5:1 on paper) */
+  --border: #E4E0D8;                       /* Mira fog (warm) */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0F1117;
-    --foreground: #E6E8EE;
-    --surface: #0F1117;
-    --surface-2: #161823;
-    --muted: #9CA3AF;
-    --border: #20232E;
+    --background: #F6F3EC;
+    --foreground: #1C1830;
+    --surface: #FCFAF5;
+    --surface-2: #EFEBE2;
+    --muted: #6B6270;
+    --border: #E4E0D8;
   }
 }
 
@@ -52,6 +59,22 @@ body {
 }
 
 ::selection {
-  background: var(--color-vualet-indigo);
+  background: var(--color-vualet-ink);
   color: #FFFFFF;
+}
+
+/* Accessibility: a visible keyboard focus ring on every focusable element. */
+:focus-visible {
+  outline: 2px solid var(--color-vualet-indigo);
+  outline-offset: 2px;
+}
+
+/* Accessibility: honour the OS "reduce motion" preference site-wide. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

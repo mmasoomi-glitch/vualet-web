@@ -2,17 +2,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" width="600" height="200">
   <defs>
     <linearGradient id="miraGrad" gradientUnits="userSpaceOnUse" x1="20" y1="20" x2="180" y2="180">
-      <stop offset="0%" stop-color="#F8A5A0"/>
+      <stop offset="0%" stop-color="#E4A130"/>
       <stop offset="55%" stop-color="#C7B8F0"/>
       <stop offset="100%" stop-color="#6366F1"/>
     </linearGradient>
     <radialGradient id="miraCore" gradientUnits="userSpaceOnUse" cx="100" cy="100" r="36">
-      <stop offset="0%" stop-color="#FFEDEB"/>
-      <stop offset="40%" stop-color="#F8A5A0"/>
+      <stop offset="0%" stop-color="#FFF3D9"/>
+      <stop offset="40%" stop-color="#E4A130"/>
       <stop offset="100%" stop-color="#C7B8F0"/>
     </radialGradient>
     <linearGradient id="textGrad" gradientUnits="userSpaceOnUse" x1="220" y1="80" x2="540" y2="160">
-      <stop offset="0%" stop-color="#F8A5A0"/>
+      <stop offset="0%" stop-color="#E4A130"/>
       <stop offset="100%" stop-color="#6366F1"/>
     </linearGradient>
   </defs>

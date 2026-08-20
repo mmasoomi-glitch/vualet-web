@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local context-ledger coordination state (not shipped)
+.claude/
+
+# scratchpad workspace — build artifacts, bundle copies, node_modules, .next dirs
+scratchpad/
+
+# Claude fleet MCP preview — dev tooling, includes secrets (kernel_secret.key)
+.preview/
+
+# local runtime data — SQLite databases, veridian memory state
+data/
+
+# accidental shell redirect artifacts
+\!

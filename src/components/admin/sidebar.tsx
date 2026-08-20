@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
-import { clearAdminSession } from "@/lib/admin-auth";
 
 const NAV = [
   { href: "/admin", label: "Overview", icon: "M3 3h7v7H3V3zm0 11h7v7H3v-7zm11 0h7v7h-7v-7zm0-11h7v7h-7V3z" },
   { href: "/admin/customers", label: "Customers", icon: "M16 11a4 4 0 10-8 0 4 4 0 008 0zM4 21v-1a6 6 0 0112 0v1" },
   { href: "/admin/billing", label: "Billing", icon: "M3 6h18v12H3V6zm0 4h18" },
   { href: "/admin/health", label: "Health", icon: "M3 12h4l2 6 4-12 2 6h6" },
+  { href: "/admin/team", label: "Team & access", icon: "M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z" },
+  { href: "/admin/audit", label: "Audit trail", icon: "M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -21,6 +22,14 @@ function isActive(pathname: string, href: string) {
 export function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [me, setMe] = useState<{ email: string; roles: string[] } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.admin && setMe({ email: d.admin.email, roles: d.admin.roles }))
+      .catch(() => {});
+  }, []);
 
   return (
     <>
@@ -78,13 +87,13 @@ export function Sidebar() {
 
           <div className="border-t border-[var(--border)] p-3">
             <div className="px-3 py-2 mb-1 rounded-lg bg-[var(--background)]">
-              <p className="text-xs font-medium text-[var(--foreground)]">ops@vualet.com</p>
-              <p className="text-[10px] text-[var(--muted)]">Internal team</p>
+              <p className="text-xs font-medium text-[var(--foreground)] truncate">{me?.email || "…"}</p>
+              <p className="text-[10px] text-[var(--muted)] truncate">{me?.roles?.join(", ") || "Internal team"}</p>
             </div>
             <button
-              onClick={() => {
-                clearAdminSession();
-                window.location.href = "/admin";
+              onClick={async () => {
+                await fetch("/api/admin/login", { method: "DELETE" }).catch(() => {});
+                window.location.href = "/admin-login";
               }}
               className="w-full text-left rounded-lg px-3 py-2 text-sm text-[var(--muted)] hover:text-[var(--color-vualet-danger)] hover:bg-[var(--background)] transition-colors"
             >
