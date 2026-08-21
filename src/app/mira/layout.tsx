@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     default: "Mira — your assistant, by reflection",
     template: "%s · Mira",
   },
-  description: "Your own AI assistant, in the chat you already use. No app to install. Mira talks, remembers you, and gets things done — on Telegram today, with WhatsApp coming soon.",
+  description: "Your own AI assistant, in the chat you already use. No app to install. Mira talks, remembers you, and gets things done — in WhatsApp, in a group on your own account.",
   openGraph: {
     title: "Mira — your assistant, by reflection",
     description: "Your own AI assistant, in the chat you already use. Mira talks, remembers you, and never makes anything up.",

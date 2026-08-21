@@ -12,6 +12,7 @@ import {
 } from "@/lib/store";
 import {
   activateCheckout,
+  renewalRecordFromInvoice,
   wasEventProcessed as coreWasEventProcessed,
   markEventProcessed as coreMarkEventProcessed,
 } from "@/lib/webhook-core.mjs";
@@ -116,20 +117,36 @@ async function refreshFromInvoice(invoice: Stripe.Invoice): Promise<void> {
     return;
   }
 
-  const rec: ConnectRecord = {
-    token: token ?? base?.token ?? subscriptionId ?? customerId ?? "unknown",
-    plan: base?.plan ?? "companion",
-    email: base?.email,
-    status: "active",
-    customerId: customerId ?? base?.customerId,
-    subscriptionId: subscriptionId ?? base?.subscriptionId,
-    telegramId: base?.telegramId,
-    persona: base?.persona,
-    role: base?.role,
-    assistantName: base?.assistantName,
-    createdAt: base?.createdAt ?? new Date().toISOString(),
-  };
-  if (token) await putConnect(rec);
+  // gotchas#257, THIRD SITE. This used to be a second hand-maintained object
+  // literal carrying the SAME stale allow-list as activation — telegramId,
+  // persona, role, assistantName and nothing else — so a customer whose
+  // binding survived activation lost phone/channel/consent on their FIRST
+  // RENEWAL instead. Rebuilding the record is now the pure core's single job
+  // (renewalRecordFromInvoice), which preserves the whole base by spreading it,
+  // so there is no longer a second list here to go stale independently.
+  const rec: ConnectRecord = renewalRecordFromInvoice(
+    { customerId, subscriptionId, token },
+    base,
+    new Date().toISOString(),
+  );
+
+  // Writer H's Dodo finding applies here too, but with the opposite outcome and
+  // it is worth recording WHY: Dodo's renewal preserved nothing because the
+  // CONNECT record carries a 7-day TTL (store.ts:169) while a monthly
+  // subscription renews on day ~30, so its base was simply null. This path does
+  // not have that hole, because it recovers its base from getSubscription
+  // FIRST (above) and the durable subscription record is written with NO TTL
+  // (store.ts:198). The base is therefore still there at day 30 — but only
+  // carries the binding fields because activation now preserves them, so the
+  // activation fix is a PREREQUISITE for this one, not a parallel to it.
+  //
+  // Write the connect record on the token we actually resolved, not the local
+  // `token`: when the invoice echoed none but a base was recovered, the old
+  // guard skipped the write, leaving the (TTL-expired) connect record the
+  // customer binds through un-restored. Never write one keyed by a synthesised
+  // fallback id — only a REAL connect token.
+  const connectToken = token ?? base?.token;
+  if (connectToken) await putConnect(rec);
   if (rec.customerId) await putSubscription(rec.customerId, rec);
   console.log("[stripe-webhook] invoice.paid → active", {
     customerId: rec.customerId,

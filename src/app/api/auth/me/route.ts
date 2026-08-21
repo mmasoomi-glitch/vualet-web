@@ -23,6 +23,13 @@ export async function GET() {
       status: ent.status,
       plan: ent.plan,
       customerId: ent.customerId,
+      // The free-trial phase. Without this the account page has no trial signal
+      // to read at all, which is why a Dodo customer inside their advertised
+      // 14 days could never be shown "Free trial active" — the page was not
+      // wrong, it was uninformed. `status` already reports "trialing" alongside
+      // active:true; this is the date that lets the page say how long is left
+      // and that expires on its own once the trial lapses.
+      trialEndsAt: ent.trialEndsAt,
     },
   });
 }

@@ -15,6 +15,9 @@
  *   portal anti-IDOR   4ed719e  — the branch parent; the fix is new on this branch
  *   begin rate limit   4ed719e  — same, limiter is new on this branch
  *   checkout promo     4ed719e  — same, promo handling is new on this branch
+ *   checkout binding   f889ee5  — the phone/channel/consent gate on the PAID
+ *                                path (gotchas#256) is new on this branch, so
+ *                                the branch tip before it is the honest base.
  *   checkout email     1ade97d  — the email guard is NOT new on this branch. It
  *                                 landed earlier in 19232a4, so 4ed719e already
  *                                 has it and is useless as a counterfactual
@@ -37,6 +40,7 @@ import { __cookies } from "./route-harness/stubs/next-headers.mjs";
 
 const PARENT = "4ed719e";        // branch parent: portal / begin / promo baseline
 const PRE_EMAIL_GUARD = "1ade97d"; // last revision before 19232a4 added the guard
+const PRE_BINDING = "f889ee5";     // last revision before the paid path collected phone/channel/consent
 
 let OLD = {};
 
@@ -52,6 +56,7 @@ before(() => {
   extract("begin", PARENT, "src/app/api/begin/route.ts");
   extract("checkoutPromo", PARENT, "src/app/api/checkout/route.ts");
   extract("checkoutEmail", PRE_EMAIL_GUARD, "src/app/api/checkout/route.ts");
+  extract("checkoutBinding", PRE_BINDING, "src/app/api/checkout/route.ts");
 });
 
 /**
@@ -348,4 +353,135 @@ test("CF-d2: the '6th call -> 429' assertion FAILS against the old begin route",
     assert.equal(sixth.body.error, "rate_limited");
   });
   assert.equal(sixth.status, 200, "the old route provisioned yet another tenant");
+});
+
+// ── (e) BINDING-AT-PURCHASE counterfactual ─────────────────────────────────
+//
+// gotchas#256. The claim being counter-checked: /api/checkout now refuses a
+// paid order that carries no number, no channel or no gate-C1 consent, and
+// refuses it BEFORE any provider is called. If the section (e) tests in
+// revenue-checkout-test.mjs would also pass against the route as it stood
+// before the fix, they are decoration. They must not.
+
+const CONSENT_OK = {
+  unofficialAutomation: true,
+  banRisk: true,
+  ownAccountReplies: true,
+};
+
+test("CF-e1: the OLD checkout takes the money and leaves the customer UNBINDABLE — the defect", async () => {
+  env(DODO_ARMED);
+  dodoReplies();
+  const { POST } = await loadRoute(OLD.checkoutBinding.path, { fresh: true });
+  const store = await loadRoute("src/lib/store.ts");
+
+  // No phone. No channel. No consent. Nothing but an email.
+  const res = await POST(jsonRequest({ plan: "companion", email: "unbindable@example.com" })).then(readJson);
+
+  assert.equal(res.status, 200, "the old route happily charged for a plan it could never connect");
+  assert.equal(netCalls.length, 1, "and it really did reach the payment provider");
+
+  const token = new URL(JSON.parse(netCalls[0].body).return_url).searchParams.get("token");
+  const rec = await store.getConnect(token);
+  assert.ok(rec, "a connect record was written...");
+  assert.equal(rec.phone, undefined, "...with no number to bind to");
+  assert.equal(rec.channel, undefined, "...no channel");
+  assert.equal(rec.consent, undefined, "...and no proof the ban-risk notice was ever shown");
+});
+
+test("CF-e2: the 'missing consent -> 400 consent_required' assertion FAILS against the old checkout", async () => {
+  env(DODO_ARMED);
+  dodoReplies();
+  const { POST } = await loadRoute(OLD.checkoutBinding.path, { fresh: true });
+
+  for (const consent of [undefined, {}, { ...CONSENT_OK, banRisk: false }]) {
+    const res = await POST(jsonRequest({
+      plan: "companion", email: "buyer@example.com", phone: "0501234567", consent,
+    })).then(readJson);
+
+    await mustFailAgainstOldCode(`consent=${JSON.stringify(consent)} is refused 400`, () => {
+      assert.equal(res.status, 400);
+      assert.equal(res.body.error, "consent_required");
+    });
+    assert.equal(res.status, 200, "the old route charged without any consent at all");
+  }
+});
+
+test("CF-e3: the 'invalid phone -> 400 invalid_phone, no charge' assertion FAILS against the old checkout", async () => {
+  env(DODO_ARMED);
+  dodoReplies();
+  const { POST } = await loadRoute(OLD.checkoutBinding.path, { fresh: true });
+
+  const res = await POST(jsonRequest({
+    plan: "companion", email: "buyer@example.com", phone: "abcdef", consent: CONSENT_OK,
+  })).then(readJson);
+
+  await mustFailAgainstOldCode("a junk phone is refused 400 invalid_phone", () => {
+    assert.equal(res.status, 400);
+    assert.equal(res.body.error, "invalid_phone");
+  });
+  await mustFailAgainstOldCode("a junk phone reaches no provider", () => {
+    assert.equal(netCalls.length, 0);
+  });
+  assert.equal(netCalls.length, 1, "the old route charged and discarded the number entirely");
+});
+
+test("CF-e4: the 'unknown channel -> 400 invalid_channel' assertion FAILS against the old checkout", async () => {
+  env(DODO_ARMED);
+  dodoReplies();
+  const { POST } = await loadRoute(OLD.checkoutBinding.path, { fresh: true });
+
+  const res = await POST(jsonRequest({
+    plan: "companion", email: "buyer@example.com", channel: "signal",
+    phone: "0501234567", consent: CONSENT_OK,
+  })).then(readJson);
+
+  await mustFailAgainstOldCode("an unknown channel is refused 400", () => {
+    assert.equal(res.status, 400);
+    assert.equal(res.body.error, "invalid_channel");
+  });
+  assert.equal(res.status, 200, "the old route had no concept of a channel to refuse");
+});
+
+test("CF-e5: the 'phone stored as E.164' assertion FAILS against the old checkout", async () => {
+  env(DODO_ARMED);
+  dodoReplies();
+  const { POST } = await loadRoute(OLD.checkoutBinding.path, { fresh: true });
+  const store = await loadRoute("src/lib/store.ts");
+
+  await POST(jsonRequest({
+    plan: "companion", email: "e164@example.com", phone: "050 123 4567", consent: CONSENT_OK,
+  })).then(readJson);
+
+  const token = new URL(JSON.parse(netCalls[0].body).return_url).searchParams.get("token");
+  const rec = await store.getConnect(token);
+
+  await mustFailAgainstOldCode("the normalised E.164 is persisted on the record", () => {
+    assert.equal(rec.phone, "+971501234567");
+  });
+  assert.equal(rec.phone, undefined, "the old route dropped the number on the floor");
+});
+
+test("CF-e6: the 'zero-charge order is bound too' assertion FAILS against the old checkout", async () => {
+  env({ ...DODO_ARMED, ...STRIPE_ARMED, PROMO_CODES_ENABLED: "1" });
+  stripeStub.config.promotionCodes = {
+    data: [{ id: "promo_100", code: "FREEBIE", active: true, coupon: { percent_off: 100, valid: true } }],
+  };
+  stripeStub.config.price = { unit_amount: 1499, currency: "usd" };
+  const { POST } = await loadRoute(OLD.checkoutBinding.path, { fresh: true });
+  const store = await loadRoute("src/lib/store.ts");
+
+  // A comped order with everything supplied — the old route still recorded none of it.
+  const res = await POST(jsonRequest({
+    plan: "companion", email: "comped@example.com", promoCode: "FREEBIE",
+    channel: "whatsapp", phone: "050 123 4567", consent: CONSENT_OK,
+  })).then(readJson);
+  assert.equal(res.body.zeroCharge, true);
+
+  const rec = await store.getConnect(res.body.token);
+  await mustFailAgainstOldCode("a comped customer is as bindable as a paying one", () => {
+    assert.equal(rec.phone, "+971501234567");
+    assert.equal(rec.channel, "whatsapp");
+    assert.equal(rec.consent.banRisk, true);
+  });
 });

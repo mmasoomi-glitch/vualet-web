@@ -54,3 +54,6 @@ data/
 
 # accidental shell redirect artifacts
 \!
+
+# Playwright MCP session artifacts (console logs), not source
+.playwright-mcp/
