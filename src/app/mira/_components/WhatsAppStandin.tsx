@@ -1,9 +1,16 @@
-/* Private WhatsApp self-chat + stand-in marketing section.
-   Two things it sells: (1) she's a private line inside your OWN WhatsApp
-   (a "message yourself" thread, every bubble on the right); (2) she can
-   stand in for you. Honest by construction: the stand-in scenario is
-   visibly badged "Example", and the stats are capability figures, not
-   usage/customer counts. Pure CSS phone (no image). Server component —
+/* WhatsApp group + stand-in marketing section.
+   Two things it sells: (1) she lives inside your OWN WhatsApp — in a group
+   YOU create and own, where, depending on your setup, her replies may appear
+   to come from your own account rather than a separate bot identity (this is
+   what actually ships: a device paired to the customer's WhatsApp account, so
+   the mock must show a group, never a "message yourself" thread); (2) she can
+   stand in for you. Honest by construction: the group is drawn as a group, the
+   stand-in scenario is visibly badged "Example", and the stats are capability
+   figures, not usage/customer counts. The connection risks (WhatsApp terms of
+   service, the optional observation number) are disclosed in the signup flow by
+   WhatsAppDisclosure.tsx — do not restate or soften them here, and do not
+   re-add any "Telegram today, WhatsApp soon" claim: Telegram is not offered to
+   new customers (decisions#340). Pure CSS phone (no image). Server component —
    no client hooks, safe to import into the server page. Styling lives in
    mira-theme.css under .mira-root .msa-*. */
 
@@ -34,31 +41,32 @@ export default function WhatsAppStandin() {
       <div className="mha-wrap">
         <span className="mha-eyebrow">Yours alone</span>
         <h2 id="msa-h" className="display msa-h2">
-          Private by nature. <span className="grad">A stand-in when you need one.</span>
+          In the WhatsApp you already have. <span className="grad">A stand-in when you need one.</span>
         </h2>
         <p className="msa-sub">
-          No new app, no group thread, no third party listening in &mdash; just a private line to Mira, who can also answer in your voice when you can&rsquo;t.
+          No new app to install and no new number to learn &mdash; just your own WhatsApp, with Mira in a group you create, who can also answer in your voice when you can&rsquo;t.
         </p>
 
-        {/* ---- A. Private self-chat: phone + copy ---- */}
+        {/* ---- A. The group inside your own WhatsApp: phone + copy ---- */}
         <div className="msa-privacy">
-          {/* CSS phone — a "message yourself" thread; every bubble on the right */}
-          <div className="msa-phone" role="img" aria-label="A private WhatsApp self-chat: the user's own message-yourself thread with Mira. A voice note, a question about a client promise, and Mira's exact recall — every message on the sender's side.">
+          {/* CSS phone — a group the customer created; bubbles sit on the sender's side
+              because her replies can surface from the customer's own paired account */}
+          <div className="msa-phone" role="img" aria-label="A WhatsApp group the user created, with Mira in it. A voice note, a question about a client promise, and Mira's exact recall — her replies may appear to come from the user's own account, so every message sits on the sender's side.">
             <span className="msa-notch" aria-hidden></span>
             <div className="msa-screen">
               <div className="msa-bar">
                 <span className="msa-back" aria-hidden>&#8249;</span>
-                <span className="msa-av" aria-hidden>Y</span>
+                <span className="msa-av" aria-hidden>M</span>
                 <span className="msa-id">
-                  <span className="n">You <span className="msa-self">(you)</span></span>
-                  <span className="s">Message yourself &middot; +971 5&bull;&bull; &bull;&bull;&bull;14</span>
+                  <span className="n">Mira &amp; me <span className="msa-self">(group)</span></span>
+                  <span className="s">Group &middot; created by you &middot; you and Mira</span>
                 </span>
                 <span className="msa-dots" aria-hidden>&#8942;</span>
               </div>
               <div className="msa-thread">
                 <span className="msa-day" aria-hidden>Today</span>
                 <span className="msa-locknote" aria-hidden>
-                  <span className="msa-lock">&#128274;</span> A private line &mdash; just you and Mira
+                  <span className="msa-lock">&#128274;</span> Your group &mdash; you and Mira, unless you add someone
                 </span>
 
                 {/* user: voice note */}
@@ -85,7 +93,7 @@ export default function WhatsAppStandin() {
 
                 {/* Mira: reply — still on the right, tagged so it reads as hers */}
                 <div className="msa-reply">
-                  <span className="msa-tag">Mira</span>
+                  <span className="msa-tag">Mira &middot; in your group</span>
                   <div className="msa-b mira">
                     The revised quote by Thursday &mdash; AED 42,000, locked. You sent me that note on Tuesday.
                     <div className="msa-meta">09:07 <Ticks /></div>
@@ -97,11 +105,11 @@ export default function WhatsAppStandin() {
 
           {/* copy beside the phone */}
           <div className="msa-copy">
-            <h3 className="display msa-h3">She lives in your chat. Just yours.</h3>
+            <h3 className="display msa-h3">She lives in your WhatsApp, in a group you own.</h3>
             <ul className="msa-list">
-              <li><span className="msa-ck"><Tick /></span> No new app &mdash; she&rsquo;s in the chat you already use. Telegram today, WhatsApp soon.</li>
-              <li><span className="msa-ck"><Tick /></span> No third party in the thread. It&rsquo;s a private line to her.</li>
-              <li><span className="msa-ck"><Tick /></span> She reads only what you send her &mdash; never listens to anything else.</li>
+              <li><span className="msa-ck"><Tick /></span> No new app &mdash; she answers in the WhatsApp you already use, in a group you create. You connect your own account once, and her replies may appear to come from it.</li>
+              <li><span className="msa-ck"><Tick /></span> You own the group. Every member is visible to you, and you can remove any of them.</li>
+              <li><span className="msa-ck"><Tick /></span> She reads what you send to that group &mdash; nothing outside it.</li>
             </ul>
           </div>
         </div>

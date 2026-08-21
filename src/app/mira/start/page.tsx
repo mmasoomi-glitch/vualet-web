@@ -1,7 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import {
+  DEFAULT_CALLING_CODE,
+  isPhoneReason,
+  normalisePhone,
+  phoneErrorText,
+} from "@/lib/phone";
+import WhatsAppDisclosure from "@/app/mira/_components/WhatsAppDisclosure";
+// The consent RULE comes from its definition, not from the component that renders the copy.
+// WhatsAppDisclosure re-exports these for backwards compatibility, but pointing at the shim
+// would hide which module actually owns the rule — and the whole reason it moved to
+// @/lib/consent is that the browser predicate and the two server validators must be one thing.
+import {
+  EMPTY_WHATSAPP_CONSENT,
+  whatsAppConsentComplete,
+  type WhatsAppConsent,
+} from "@/lib/consent";
 
 /* ---------- presets / option data ---------- */
 
@@ -19,10 +36,14 @@ const ROLES: { id: string; label: string; blurb: string }[] = [
   { id: "coach", label: "A coach", blurb: "Keeps you moving, gently." },
 ];
 
-const CHANNELS: { id: string; label: string; note: string; soon?: boolean }[] = [
-  { id: "telegram", label: "Telegram", note: "Ready now · no new number" },
-  { id: "whatsapp", label: "WhatsApp", note: "Coming soon", soon: true },
-];
+// Mira lives in WhatsApp. This is not a picker any more: there is exactly one channel a new
+// customer is offered, so the wizard states it plainly instead of showing a one-option choice
+// or a greyed-out "coming soon" tile that the customer cannot act on.
+const CHANNEL = {
+  id: "whatsapp",
+  label: "WhatsApp",
+  note: "The chat you already use. No app to install.",
+} as const;
 
 // Language is a CONSTRAINT, not a personality trait. It used to be implicit: the only
 // "reply in the user's language" rule lived inside the engine's DEFAULT_PERSONA, so anyone
@@ -35,7 +56,15 @@ const LANGUAGES: { id: string; label: string; blurb: string }[] = [
   { id: "Persian", label: "فارسی · Persian", blurb: "Always Persian." },
 ];
 
-const STEPS = ["Name", "Vibe", "Role", "Language", "Channel", "Review"] as const;
+const STEPS = ["Name", "Vibe", "Role", "Language", "WhatsApp", "Review"] as const;
+type StepName = (typeof STEPS)[number];
+
+// Every branch in this file is keyed by STEP.Name, never by a bare index. The wizard used to be
+// written as `step === 4`, which meant inserting or reordering a single step silently re-pointed
+// the gate, the renderer and the progress bar at different things. Deriving the indices from STEPS
+// makes that class of bug impossible: rename or reorder above and everything below follows.
+const STEP = Object.fromEntries(STEPS.map((label, i) => [label, i])) as Record<StepName, number>;
+const LAST_STEP = STEPS.length - 1;
 
 /** The language sentence added to her persona. Empty for "Match me" — the engine mirrors by default. */
 function languageClause(langId: string): string {
@@ -118,17 +147,49 @@ export default function ShapeYourMira() {
   const [vibeText, setVibeText] = useState("");
   const [role, setRole] = useState<string>("friend");
   const [lang, setLang] = useState<string>("auto");
-  const [channel, setChannel] = useState<string>("telegram");
+  const [phone, setPhone] = useState("");
+  // Errors appear once the customer has actually left the field, not while they are still
+  // half-way through typing their own number.
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  // RELEASE GATE C1 (decisions#340). Every box starts UNCHECKED — consent is something the
+  // customer gives, never something we pre-give on their behalf. The optional observation
+  // number is false in EMPTY_WHATSAPP_CONSENT and nothing here ever flips it for them.
+  const [consent, setConsent] = useState<WhatsAppConsent>(EMPTY_WHATSAPP_CONSENT);
+  // Set when they try to move on without consenting, so the reason appears instead of a
+  // Continue button that simply does nothing.
+  const [consentAttempted, setConsentAttempted] = useState(false);
   const [done, setDone] = useState(false);
+
+  // WhatsApp is THE channel a new customer gets. It is a constant, not state, because there is
+  // nothing here for them to choose between.
+  const channel = CHANNEL.id;
 
   const vibeLabel = VIBES.find((v) => v.id === vibe)?.label ?? "";
   const roleLabel = ROLES.find((r) => r.id === role)?.label ?? "";
   const langLabel = LANGUAGES.find((l) => l.id === lang)?.label ?? "";
-  const channelLabel = CHANNELS.find((c) => c.id === channel)?.label ?? "";
+  const channelLabel = CHANNEL.label;
 
-  // Compose the system prompt the bot will adopt as its persona, and persist
+  // The single source of truth for "is this number usable". The same vendored normaliser the
+  // engine uses, so a number typed here and a number shared in chat land on one identity.
+  const phoneResult = useMemo(
+    () => normalisePhone(phone, { defaultCallingCode: DEFAULT_CALLING_CODE }),
+    [phone],
+  );
+  const phoneE164 = phoneResult.ok ? phoneResult.e164 : null;
+  const phoneError = !phoneResult.ok && phoneTouched ? phoneErrorText(phoneResult.reason) : null;
+
+  // The consent rule itself lives in WhatsAppDisclosure (writer C / specs#160) and is NOT
+  // restated here. Three required boxes; the observation number is optional and excluded.
+  const consentComplete = whatsAppConsentComplete(consent);
+
+  // Compose the system prompt the assistant will adopt as its persona, and persist
   // the whole setup to localStorage so checkout can carry it through the
-  // connect token to the Telegram bot. (See /api/begin → /api/connect.)
+  // connect token to the assistant. (See /api/begin → /api/connect.)
+  //
+  // The channel and the number are persisted alongside the persona, because checkout needs to
+  // know WHERE she is being connected, not just who she is. Only the NORMALISED E.164 number is
+  // written — never a half-typed string, so nothing downstream can inherit an unusable number.
+  // (This wizard has never rehydrated state on load; that is unchanged here.)
   useEffect(() => {
     const assistantName = name.trim() || "Mira";
     const roleText = (roleLabel || "personal assistant").toLowerCase();
@@ -142,36 +203,51 @@ export default function ShapeYourMira() {
     try {
       localStorage.setItem(
         "mira_setup",
-        JSON.stringify({ assistantName, role, vibe, language: lang, persona }),
+        JSON.stringify({
+          assistantName,
+          role,
+          vibe,
+          language: lang,
+          persona,
+          channel,
+          ...(phoneE164 ? { phone: phoneE164 } : {}),
+        }),
       );
     } catch {
       /* ignore (e.g. storage disabled) */
     }
-  }, [name, role, vibe, vibeText, roleLabel, lang]);
+  }, [name, role, vibe, vibeText, roleLabel, lang, channel, phoneE164]);
 
-  // The real Telegram deep link, issued by the server on submit. Until then it
-  // is null and no link is shown — we never hand the customer a link that
-  // cannot actually bind them.
+  // The real connect link, issued by the server on submit. Until then it is null and no link is
+  // shown — we never hand the customer a link that cannot actually bind them.
   //
-  // This replaces a mock: the page used to build a fake `?start=name=X;vibe=Y`
-  // payload and tell the user outright that it was a placeholder, so everything
-  // they configured here went nowhere. /api/begin already mints a real signed
-  // single-use connect token and returns the real bot URL, so submit() now
-  // simply uses it.
-  const [telegramLink, setTelegramLink] = useState<string | null>(null);
+  // Two server shapes are supported on purpose:
+  //   WhatsApp → { token, channel: "whatsapp", pairUrl }
+  //   Telegram → { token, botUrl }              (the legacy shape, for existing bindings)
+  // We read whichever is present rather than assuming a Telegram deep link, and if NEITHER is
+  // present we say so out loud instead of pretending the request merely failed.
+  const [connectLink, setConnectLink] = useState<string | null>(null);
+  const [connectChannel, setConnectChannel] = useState<string>(CHANNEL.id);
   const [submitBusy, setSubmitBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const canAdvance =
-    (step === 0 && name.trim().length > 0) ||
-    (step === 1 && !!vibe) ||
-    (step === 2 && !!role) ||
-    (step === 3 && !!lang) ||
-    (step === 4 && channel === "telegram") ||
-    step === 5;
+    (step === STEP.Name && name.trim().length > 0) ||
+    (step === STEP.Vibe && !!vibe) ||
+    (step === STEP.Role && !!role) ||
+    (step === STEP.Language && !!lang) ||
+    (step === STEP.WhatsApp && phoneResult.ok && consentComplete) ||
+    step === STEP.Review;
 
   function next() {
-    if (step < STEPS.length - 1) setStep((s) => s + 1);
+    // The number step refuses in a way the customer can SEE. A dead Continue button that says
+    // nothing is how someone ends up handing over a number without ever reading the risk.
+    if (step === STEP.WhatsApp && (!phoneResult.ok || !consentComplete)) {
+      if (!phoneResult.ok) setPhoneTouched(true);
+      if (!consentComplete) setConsentAttempted(true);
+      return;
+    }
+    if (step < LAST_STEP) setStep((s) => s + 1);
   }
   function back() {
     setStep((s) => Math.max(0, s - 1));
@@ -179,12 +255,30 @@ export default function ShapeYourMira() {
 
   // Actually create the assistant. Everything the customer just shaped is sent
   // to /api/begin, which mints a real signed single-use connect token and
-  // returns the real Telegram deep link that binds this setup to their chat.
+  // returns the real link that binds this setup to their chat.
   //
   // Note we deliberately reuse /api/begin rather than adding a new field to the
   // connect record: the engine's identity plumbing is being rebuilt in
   // parallel, and touching that shape here would risk a conflict (jury #105).
   async function submit() {
+    // Last line of defence. The Review step can be reached with the number already entered, so
+    // if it is somehow not usable by the time they press the button, stop here and send them
+    // back to the field rather than posting a setup that cannot be delivered.
+    if (!phoneResult.ok) {
+      setPhoneTouched(true);
+      setStep(STEP.WhatsApp);
+      setSubmitError(phoneErrorText(phoneResult.reason));
+      return;
+    }
+    // GATE C1. No connect call is made until the three required consents are given. This is a
+    // second, independent check rather than a repeat of canAdvance: reaching Review must never
+    // be enough on its own to bind a real WhatsApp number.
+    if (!consentComplete) {
+      setConsentAttempted(true);
+      setStep(STEP.WhatsApp);
+      setSubmitError("Please read the WhatsApp notice and tick the three required boxes first.");
+      return;
+    }
     setSubmitError(null);
     setSubmitBusy(true);
     const assistantName = name.trim() || "Mira";
@@ -201,22 +295,87 @@ export default function ShapeYourMira() {
       const res = await fetch("/api/begin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ setup: { assistantName, role, vibe, language: lang, persona } }),
+        // ONE canonical shape. `channel`, `phone` and `consent` are binding parameters and live
+        // at the top level, which is exactly where /api/begin reads them (route.ts:105-114).
+        // `setup` carries personality only. They are deliberately NOT duplicated in both places:
+        // two copies of the same field is ambiguity about which one wins, not defensiveness.
+        //
+        // `consent` is sent so the record of what the customer was told, and agreed to, exists
+        // server-side and not only in this component's memory. A gate that lives only in the
+        // browser is a gate anyone can walk around.
+        body: JSON.stringify({
+          channel,
+          phone: phoneResult.e164,
+          consent,
+          setup: { assistantName, role, vibe, language: lang, persona },
+        }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.botUrl) {
-        setTelegramLink(data.botUrl);
+
+      // 503 — the WhatsApp pairing surface is not open on OUR side yet. This is our
+      // configuration, not anything the customer did, and the server refuses BEFORE it mints or
+      // stores anything (route.ts:166-176), so there is no half-made account to worry about.
+      // Say that, rather than a blaming "try once more".
+      if (res.status === 503 && data.error === "whatsapp_unavailable") {
+        setSubmitError(
+          "WhatsApp signup isn't open on our side yet — that's us, not you. Nothing was created and nothing was charged. Everything you chose is still here; please try again shortly.",
+        );
+        setSubmitBusy(false);
+        return;
+      }
+
+      // 400 invalid_phone — the server re-normalises with the SAME vendored rules this page
+      // uses, so this should be unreachable. If it ever fires, the two copies have drifted:
+      // trust the server, show its reason, and put the customer back on the field.
+      if (res.status === 400 && data.error === "invalid_phone") {
+        setPhoneTouched(true);
+        setStep(STEP.WhatsApp);
+        setSubmitError(phoneErrorText(isPhoneReason(data.reason) ? data.reason : "length"));
+        setSubmitBusy(false);
+        return;
+      }
+
+      // Read whichever connect link this channel returns; never assume a Telegram deep link.
+      const link: string | null =
+        (typeof data.pairUrl === "string" && data.pairUrl) ||
+        (typeof data.botUrl === "string" && data.botUrl) ||
+        null;
+
+      if (res.ok && link) {
+        setConnectLink(link);
+        setConnectChannel(
+          typeof data.channel === "string" && data.channel
+            ? data.channel
+            : data.pairUrl
+              ? "whatsapp"
+              : "telegram",
+        );
         try {
-          localStorage.setItem("mira_bot_url", data.botUrl);
+          localStorage.setItem("mira_connect_url", link);
+          // Kept for anything still reading the old key on the Telegram path only — we do not
+          // write a WhatsApp pairing URL into a key named "bot_url".
+          if (typeof data.botUrl === "string" && data.botUrl) {
+            localStorage.setItem("mira_bot_url", data.botUrl);
+          }
         } catch {
           /* ignore (e.g. storage disabled) */
         }
         setDone(true);
         return;
       }
-      setSubmitError(
-        data.message || "We couldn't set her up just then. Try once more?",
-      );
+
+      if (res.ok) {
+        // The server accepted the setup but handed back no way to reach her. Retrying would
+        // mint a SECOND token and still leave the customer with nothing, so say plainly what
+        // happened instead of showing the generic "try once more" and hoping.
+        setSubmitError(
+          `${assistantName} was created, but we didn't get your connect link back. Nothing is lost — open your account and we'll finish connecting her there.`,
+        );
+      } else {
+        setSubmitError(
+          data.message || "We couldn't set her up just then. Try once more?",
+        );
+      }
     } catch {
       setSubmitError("Something went wrong on our side. Try once more?");
     }
@@ -237,6 +396,9 @@ export default function ShapeYourMira() {
 
   /* ---------- confirmation screen ---------- */
   if (done) {
+    // Whatever the server bound her to, name it honestly. `done` is only ever set with a real
+    // link in hand, so there is no state here where we promise a chat we cannot open.
+    const openWhere = connectChannel === "telegram" ? "Telegram" : "WhatsApp";
     return (
       <main style={{ minHeight: "70vh", display: "grid", placeItems: "center", padding: "64px 24px" }}>
         <div style={{ ...card, maxWidth: 560, width: "100%", padding: "40px 32px", textAlign: "center", position: "relative", overflow: "hidden" }}>
@@ -253,15 +415,16 @@ export default function ShapeYourMira() {
               {name || "Mira"} is ready to meet you.
             </h1>
             <p style={{ color: "var(--mira-graphite)", fontSize: 15.5, lineHeight: 1.6, margin: "0 auto 26px", maxWidth: 420 }}>
-              Open her in Telegram and say hello. She already knows she&apos;s your {roleLabel.toLowerCase()} — {vibeLabel.toLowerCase()}.
+              Open her in {openWhere} and say hello. She already knows she&apos;s your {roleLabel.toLowerCase()} — {vibeLabel.toLowerCase()}.
             </p>
-            {telegramLink && (
-              <a className="btn-mira" href={telegramLink} target="_blank" rel="noopener noreferrer" style={{ width: "100%", maxWidth: 320 }}>
-                Open {name || "Mira"} in Telegram →
+            {connectLink && (
+              <a className="btn-mira" href={connectLink} target="_blank" rel="noopener noreferrer" style={{ width: "100%", maxWidth: 320 }}>
+                Open {name || "Mira"} in {openWhere} →
               </a>
             )}
             <p style={{ fontSize: 12.5, color: "var(--mira-slate)", margin: "14px 0 0" }}>
               This link is yours alone — it connects her to your chat the first time you open it.
+              {phoneE164 && openWhere === "WhatsApp" ? ` She's expecting ${phoneE164}.` : ""}
             </p>
             <div style={{ marginTop: 22, paddingTop: 22, borderTop: "1px solid var(--mira-fog)", display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
               <Link className="btn-mira-soft" href="/mira/plans">
@@ -310,7 +473,7 @@ export default function ShapeYourMira() {
 
       <div style={{ ...card, padding: "28px 24px" }}>
         {/* STEP 0 — name */}
-        {step === 0 && (
+        {step === STEP.Name && (
           <div>
             <h2 className="display" style={{ fontSize: 22, fontWeight: 400, margin: "0 0 6px" }}>What should I call her?</h2>
             <p style={{ color: "var(--mira-graphite)", fontSize: 14.5, margin: "0 0 18px" }}>A name makes her yours. Mira is just fine, too.</p>
@@ -336,7 +499,7 @@ export default function ShapeYourMira() {
         )}
 
         {/* STEP 1 — vibe */}
-        {step === 1 && (
+        {step === STEP.Vibe && (
           <div>
             <h2 className="display" style={{ fontSize: 22, fontWeight: 400, margin: "0 0 6px" }}>How should she feel?</h2>
             <p style={{ color: "var(--mira-graphite)", fontSize: 14.5, margin: "0 0 18px" }}>Pick a starting vibe — then add a few words in your own voice.</p>
@@ -369,7 +532,7 @@ export default function ShapeYourMira() {
         )}
 
         {/* STEP 2 — role */}
-        {step === 2 && (
+        {step === STEP.Role && (
           <div>
             <h2 className="display" style={{ fontSize: 22, fontWeight: 400, margin: "0 0 6px" }}>What is she here for?</h2>
             <p style={{ color: "var(--mira-graphite)", fontSize: 14.5, margin: "0 0 18px" }}>She can be more than one thing — pick where she starts.</p>
@@ -382,7 +545,7 @@ export default function ShapeYourMira() {
         )}
 
         {/* STEP 3 — language */}
-        {step === 3 && (
+        {step === STEP.Language && (
           <div>
             <h2 className="display" style={{ fontSize: 22, fontWeight: 400, margin: "0 0 6px" }}>What language should she speak?</h2>
             <p style={{ color: "var(--mira-graphite)", fontSize: 14.5, margin: "0 0 18px" }}>Pick one and she stays in it. Or let her follow your lead.</p>
@@ -397,29 +560,83 @@ export default function ShapeYourMira() {
           </div>
         )}
 
-        {/* STEP 4 — channel */}
-        {step === 4 && (
+        {/* STEP — WhatsApp: where she lives, and the number she'll answer on */}
+        {step === STEP.WhatsApp && (
           <div>
-            <h2 className="display" style={{ fontSize: 22, fontWeight: 400, margin: "0 0 6px" }}>Where should she live?</h2>
-            <p style={{ color: "var(--mira-graphite)", fontSize: 14.5, margin: "0 0 18px" }}>In the chat you already use. No app to install.</p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 }}>
-              {CHANNELS.map((c) => (
-                <OptionCard
-                  key={c.id}
-                  selected={channel === c.id}
-                  disabled={c.soon}
-                  onClick={() => !c.soon && setChannel(c.id)}
-                  title={c.label}
-                  blurb={c.note}
-                  badge={c.soon ? "Soon" : undefined}
-                />
-              ))}
+            {/* GATE C1 (decisions#340): the risk copy is on screen BEFORE the number field, not
+                after it and not behind a link. The customer reads what WhatsApp can do to the
+                number they are about to type, and consents, or they do not proceed. */}
+            <WhatsAppDisclosure value={consent} onChange={setConsent} />
+
+            <div style={{ marginTop: 26, paddingTop: 24, borderTop: "1px solid var(--mira-fog)" }}>
+              <h2 className="display" style={{ fontSize: 22, fontWeight: 400, margin: "0 0 6px" }}>
+                Which number should she connect?
+              </h2>
+              <p style={{ color: "var(--mira-graphite)", fontSize: 14.5, margin: "0 0 18px" }}>
+                She lives in {CHANNEL.label} — {CHANNEL.note.toLowerCase()} This is the number that
+                gets connected, so choose one you can afford to lose.
+              </p>
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                onBlur={() => setPhoneTouched(true)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  setPhoneTouched(true);
+                  if (canAdvance) next();
+                }}
+                placeholder="+971 50 123 4567"
+                maxLength={24}
+                aria-label="Your WhatsApp number"
+                aria-invalid={phoneError ? true : undefined}
+                aria-describedby={phoneError ? "phone-error" : "phone-hint"}
+                style={{
+                  width: "100%",
+                  fontSize: 18,
+                  padding: "14px 16px",
+                  borderRadius: "var(--mira-radius-lg)",
+                  border: `1.5px solid ${phoneError ? "var(--mira-rose)" : "var(--mira-fog)"}`,
+                  background: "var(--mira-cream)",
+                  color: "var(--mira-ink)",
+                  outline: "none",
+                }}
+              />
+              {phoneError ? (
+                <p
+                  id="phone-error"
+                  role="alert"
+                  style={{ fontSize: 13, color: "var(--mira-rose-ink)", margin: "10px 0 0", lineHeight: 1.5 }}
+                >
+                  {phoneError}
+                </p>
+              ) : (
+                <p
+                  id="phone-hint"
+                  style={{ fontSize: 12.5, color: "var(--mira-slate)", margin: "10px 0 0", lineHeight: 1.5 }}
+                >
+                  {phoneE164
+                    ? `We'll connect her to ${phoneE164}.`
+                    : `A local number is fine — we'll add +${DEFAULT_CALLING_CODE} for you. For anywhere else, start with + and your country code.`}
+                </p>
+              )}
+              {consentAttempted && !consentComplete && (
+                <p
+                  role="alert"
+                  style={{ fontSize: 13, color: "var(--mira-rose-ink)", margin: "12px 0 0", lineHeight: 1.5 }}
+                >
+                  Please tick the three required boxes above. We can&apos;t connect a number until
+                  you&apos;ve confirmed you understand what WhatsApp can do to it.
+                </p>
+              )}
             </div>
           </div>
         )}
 
-        {/* STEP 5 — review */}
-        {step === 5 && (
+        {/* STEP — review */}
+        {step === STEP.Review && (
           <div>
             <h2 className="display" style={{ fontSize: 22, fontWeight: 400, margin: "0 0 16px" }}>Meet {name || "Mira"}.</h2>
             <dl style={{ margin: 0 }}>
@@ -429,6 +646,9 @@ export default function ShapeYourMira() {
                 ["Role", roleLabel],
                 ["Language", langLabel],
                 ["Channel", channelLabel],
+                ["Number", phoneE164 ?? "—"],
+                // Stated neutrally, as a choice they made — not sold back to them as a feature.
+                ["Observation number", consent.observationNumber ? "Added" : "Not added"],
               ].map(([k, v], i) => (
                 <div key={k} style={{ display: "flex", gap: 16, padding: "12px 0", borderTop: i === 0 ? "none" : "1px solid var(--mira-fog)" }}>
                   <dt style={{ width: 90, flexShrink: 0, fontSize: 12, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--mira-slate)", paddingTop: 2 }}>{k}</dt>
@@ -460,7 +680,7 @@ export default function ShapeYourMira() {
           >
             Skip — let her ask me
           </button>
-          {step < STEPS.length - 1 ? (
+          {step < LAST_STEP ? (
             <button type="button" onClick={next} disabled={!canAdvance} className="btn-mira" style={{ opacity: canAdvance ? 1 : 0.5, cursor: canAdvance ? "pointer" : "not-allowed" }}>
               Continue →
             </button>

@@ -18,9 +18,9 @@ export const PRODUCTS: Product[] = [
     category: "Customer Conversations",
     tagline: "Your own assistant, in the chat you already use. No app.",
     description:
-      "Mira lives in your Telegram today, with WhatsApp coming soon. She talks, remembers you, and quietly gets things done — from answering a question to building you a small app — delivered like a voice note from a friend. Scan a code, talk to yourself, and she's there.",
+      "Mira lives inside your own WhatsApp. She talks, remembers you, and quietly gets things done — from answering a question to building you a small app — delivered like a voice note from a friend. You link your WhatsApp with one scan, she joins a group you create, and she's there.",
     bullets: [
-      "No app to install — she messages you on Telegram today, with WhatsApp coming soon",
+      "No app to install — she answers in the WhatsApp you already use, in a group you create",
       "Voice-first and multilingual, on the fly",
       "Remembers you across every conversation",
       "A persona you shape, and she remembers you across chats",
