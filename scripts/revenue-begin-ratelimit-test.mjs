@@ -1098,7 +1098,8 @@ test("g: the shared predicate already matches the disclosure component it will r
 // extracted into a temp directory at run time; nothing under src/ is touched,
 // and the suite is reproducible on any clone.
 
-const OLD_REV = "HEAD";
+const OLD_REV = "f889ee5"; // PINNED, not "HEAD": once the fix is committed HEAD IS the fix,
+                      // and every pre-fix assertion silently starts testing the fix.
 let OLD_BEGIN = null;
 let OLD_SRC = "";
 
