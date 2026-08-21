@@ -18,20 +18,30 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   resolveEntitlement,
   entitlementFromDodoRecord,
   paidPlanOrNull,
+  noneEntitlement,
+  // The REAL access gate, imported so the trial tests below assert against the
+  // set the account page actually consults rather than a copy of it.
+  LIVE_DODO_STATUS,
 } from "../src/lib/entitlement-core.mjs";
 
-const ENTITLEMENT_KEYS = ["active", "status", "plan", "priceId", "customerId"];
+// The exact shape every caller destructures. `trialEndsAt` joined it so a Dodo
+// customer inside the advertised 14-day free trial can be TOLD they are: the
+// account page had no trial signal to read at all, so it showed "Subscription
+// active" to someone who had not been charged a penny. This list is the guard
+// that stops the shape drifting silently again.
+const ENTITLEMENT_KEYS = ["active", "status", "plan", "priceId", "customerId", "trialEndsAt"];
 
 /** Every answer must carry the exact Entitlement shape callers destructure. */
 function assertWellFormed(ent) {
   assert.ok(ent && typeof ent === "object", "entitlement must be an object");
   assert.deepEqual(Object.keys(ent).sort(), [...ENTITLEMENT_KEYS].sort(), "exact Entitlement keys");
   assert.equal(typeof ent.active, "boolean");
-  for (const k of ["status", "plan", "priceId", "customerId"]) {
+  for (const k of ["status", "plan", "priceId", "customerId", "trialEndsAt"]) {
     assert.ok(ent[k] === null || typeof ent[k] === "string", k + " must be string|null");
   }
 }
@@ -151,7 +161,11 @@ test("(c) no Dodo record and no Stripe customer -> inactive, well-formed, no thr
   });
   assertWellFormed(ent);
   assert.equal(ent.active, false);
-  assert.deepEqual(ent, { active: false, status: null, plan: null, priceId: null, customerId: null });
+  // Compared against noneEntitlement() rather than a literal on purpose. A
+  // hand-copied shape here is a SECOND definition of the same contract, and it
+  // goes stale the moment the real one grows a field — which is exactly what
+  // happened when trialEndsAt was added. Now there is one definition.
+  assert.deepEqual(ent, noneEntitlement());
 });
 
 test("(c2) empty/invalid email short-circuits to a well-formed inactive answer", async () => {
@@ -284,3 +298,128 @@ test("entitlementFromDodoRecord returns null when there is no record at all", ()
   assert.equal(entitlementFromDodoRecord(undefined), null);
   assert.equal(entitlementFromDodoRecord({ customerId: "c" }), null);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WRITER K — THE FREE-TRIAL PHASE (judge condition, writer L handoff)
+//
+// The bug being closed: a Dodo record is `status: "active"` for its entire
+// life, trial included, because that literal string is the entitlement gate. So
+// nothing downstream could distinguish a customer in their unbilled 14-day
+// trial from one being charged, and the account page told trialing customers
+// their subscription was active.
+//
+// The dangerous way to fix it would have been to write "trialing" into the
+// record's status — which would have revoked access for every trialing
+// customer, since LIVE_DODO_STATUS grants on "active" and nothing else. These
+// tests exist mainly to hold that line.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const TRIAL_REC = (over = {}) => ({
+  customerId: "cus_t",
+  rec: {
+    token: "tok_t",
+    plan: "companion",
+    status: "active",
+    email: "t@example.com",
+    customerId: "cus_t",
+    createdAt: "2026-08-01T00:00:00.000Z",
+    ...over,
+  },
+});
+
+test("K: a trialing Dodo customer is ENTITLED and is reported as trialing", () => {
+  const ent = entitlementFromDodoRecord(TRIAL_REC({ trialEndsAt: "2099-01-01T00:00:00.000Z" }), {
+    now: Date.parse("2026-08-05T00:00:00.000Z"),
+  });
+  assertWellFormed(ent);
+  assert.equal(ent.active, true, "A TRIAL IS ENTITLEMENT. Reporting the phase must never cost access.");
+  assert.equal(ent.status, "trialing", "the account page reads this to say 'Free trial active'");
+  assert.equal(ent.trialEndsAt, "2099-01-01T00:00:00.000Z", "a date, so the page can say how long is left");
+});
+
+test("K: the trial label expires on its own — no webhook has to clear it", () => {
+  // The reason this is a timestamp and not a boolean. A `trialing: true` set at
+  // signup would stay true forever unless something remembered to come back and
+  // unset it, and nothing was ever going to.
+  const ent = entitlementFromDodoRecord(TRIAL_REC({ trialEndsAt: "2026-08-15T00:00:00.000Z" }), {
+    now: Date.parse("2026-09-01T00:00:00.000Z"),
+  });
+  assert.equal(ent.status, "active", "the trial is over; it is a paid subscription now");
+  assert.equal(ent.active, true);
+});
+
+test("K: reporting a trial NEVER changes who is entitled", () => {
+  // The blast radius that had to stay at zero. Whatever the trial fields say,
+  // `active` is computed from the RECORD's status through LIVE_DODO_STATUS,
+  // exactly as before.
+  for (const status of ["pending", "bound", "cancelled", "refunded", "chargeback", "on_hold", "paused"]) {
+    const ent = entitlementFromDodoRecord(TRIAL_REC({ status, trialEndsAt: "2099-01-01T00:00:00.000Z" }), {
+      now: Date.parse("2026-08-05T00:00:00.000Z"),
+    });
+    assert.equal(ent.active, false, status + " must not be rescued by a trial date");
+    assert.equal(ent.status, status, "and it must be reported honestly, not as 'trialing'");
+  }
+  assert.ok(LIVE_DODO_STATUS.has("active"), "the gate is untouched");
+  assert.equal(LIVE_DODO_STATUS.size, 1, "exactly one status grants access, still");
+});
+
+test("K: a record with no trial information claims none", () => {
+  const ent = entitlementFromDodoRecord(TRIAL_REC());
+  assert.equal(ent.trialEndsAt, null, "absent means we hold no trial info, NOT 'not trialing'");
+  assert.equal(ent.status, "active");
+  // A junk value must not be treated as a live trial.
+  assert.equal(entitlementFromDodoRecord(TRIAL_REC({ trialEndsAt: "not-a-date" })).status, "active");
+  assert.equal(entitlementFromDodoRecord(TRIAL_REC({ trialEndsAt: 12345 })).trialEndsAt, null);
+});
+
+test("K: both processors answer the SAME trial shape", async () => {
+  // A consumer must not have to know which processor a customer came from in
+  // order to read their trial end.
+  const ent = await resolveEntitlement("legacy@example.com", {
+    getSubscriptionByEmail: noDodo,
+    stripeEnabled: true,
+    ...stripeStubs({
+      customers: [{ id: "cus_stripe" }],
+      subsByCustomer: {
+        cus_stripe: [
+          {
+            status: "trialing",
+            trial_end: Math.floor(Date.parse("2099-01-01T00:00:00.000Z") / 1000),
+            items: { data: [{ price: { id: "price_companion" } }] },
+          },
+        ],
+      },
+    }),
+    planForPriceId: () => "companion",
+  });
+  assertWellFormed(ent);
+  assert.equal(ent.active, true);
+  assert.equal(ent.status, "trialing");
+  assert.equal(ent.trialEndsAt, "2099-01-01T00:00:00.000Z", "Stripe unix seconds mapped to the same ISO shape");
+});
+
+test("K: every entitlement field the client needs actually REACHES the client", async () => {
+  // THE FAILURE MODE THIS GUARDS. Resolving a field and never exposing it is
+  // indistinguishable, from the page's side, from never resolving it at all:
+  // the account page could not show "Free trial active" not because the trial
+  // was unknown but because nothing carried it across the API boundary. A field
+  // added to Entitlement and forgotten in /api/auth/me is silently inert.
+  //
+  // Derived from noneEntitlement() rather than a typed-out list, so a NEW field
+  // is covered the day it is added and nobody has to remember this test exists.
+  const src = await readFile(new URL("../src/app/api/auth/me/route.ts", import.meta.url), "utf8");
+  // priceId is deliberately withheld: it is a Stripe internal, always null for
+  // Dodo, and the client has no use for it. Any OTHER omission is a bug.
+  const WITHHELD = new Set(["priceId"]);
+  for (const key of Object.keys(noneEntitlement())) {
+    if (WITHHELD.has(key)) {
+      assert.ok(!src.includes(`ent.${key}`), `${key} is documented as withheld but is being exposed`);
+      continue;
+    }
+    assert.ok(
+      src.includes(`ent.${key}`),
+      `/api/auth/me resolves ${key} and never sends it — the client cannot use what it cannot see`,
+    );
+  }
+});
+

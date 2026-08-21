@@ -18,7 +18,7 @@ export const TIERS: Tier[] = [
     name: "Free",
     price: "Free",
     sub: "1,000,000 tokens / month",
-    items: ["Chat + voice notes", "Remembers you across chats", "In Telegram — no new app, no new number"],
+    items: ["Chat + voice notes", "Remembers you across chats", "In your own WhatsApp — no new app to install"],
     cta: "Start free",
   },
   {

@@ -107,7 +107,7 @@ export const KNOWLEDGE = deepFreeze({
       price: "Free",
       per: null,
       allowance: "1,000,000 tokens / month",
-      includes: ["Chat + voice notes", "Remembers you across chats", "In Telegram — no new app, no new number"],
+      includes: ["Chat + voice notes", "Remembers you across chats", "In your own WhatsApp — no new app to install"],
       source:
         "src/app/mira/_components/tiers.ts (single source of truth); cross-checked src/lib/veridian-kb.ts 'Pricing — Free tier'",
     },
@@ -160,12 +160,21 @@ export const KNOWLEDGE = deepFreeze({
 
   channels: {
     today: f(
-      "Mira works on Telegram today. There is nothing new to install and no new number to manage.",
-      "src/lib/veridian-kb.ts — 'What Mira is' / 'Voice on Telegram (WhatsApp coming soon)'",
+      "Mira works on WhatsApp. There is nothing new to install and no new number to manage, because Mira runs through the customer's own WhatsApp account.",
+      "src/lib/veridian-kb.ts — 'What Mira is' / 'Voice on WhatsApp'; decisions#340",
     ),
-    comingSoon: f(
-      "WhatsApp is coming soon.",
-      "src/lib/veridian-kb.ts — 'Voice on Telegram (WhatsApp coming soon)'",
+    /**
+     * The mechanism is part of the offer, not fine print: what the customer
+     * has to do, and what it costs them if WhatsApp objects. Stating the
+     * first without the second is the dishonesty decisions#340 corrected.
+     */
+    howLinkingWorks: f(
+      "You link your own WhatsApp account once when you sign up, then you create a WhatsApp group and talk to Mira there. Mira replies into that group through your linked account. WhatsApp will not let you create a group containing only yourself, so you add one contact at the moment you create it and can remove them afterwards.",
+      "src/lib/veridian-kb.ts — 'How WhatsApp works — and the risk of linking your number'; requirements#62; gotchas#255",
+    ),
+    linkRisk: f(
+      "Linking a personal WhatsApp account to an automated assistant carries a real risk that WhatsApp restricts or blocks the connected number. The risk is the customer's, and it is stated before they link — never softened, never omitted if they ask.",
+      "src/lib/veridian-kb.ts — 'How WhatsApp works — and the risk of linking your number'; gotchas#249 (gate C1)",
     ),
     ownNumber: f(
       "Studio has the highest monthly cap at 200M tokens.",
@@ -227,7 +236,7 @@ export const KNOWLEDGE = deepFreeze({
       ),
     },
     {
-      id: "own_whatsapp",
+      id: "studio_cap",
       minTier: "studio",
       fact: f(
         "Studio gives you the highest cap, 200M tokens a month, and top of the queue.",
@@ -736,7 +745,7 @@ const RULES = [
 
 /**
  * Pretext framings. On their own these are innocent ("just for testing, does
- * voice work on Telegram?"), so they only count when paired with an internals
+ * voice work on WhatsApp?"), so they only count when paired with an internals
  * noun in the same message.
  */
 const PRETEXT_RE =
@@ -1276,7 +1285,8 @@ export function knowledgeAsContext() {
   L.push("");
   L.push("CHANNELS");
   L.push(KNOWLEDGE.channels.today.text);
-  L.push(KNOWLEDGE.channels.comingSoon.text);
+  L.push(KNOWLEDGE.channels.howLinkingWorks.text);
+  L.push(KNOWLEDGE.channels.linkRisk.text);
   L.push(KNOWLEDGE.channels.ownNumber.text);
   L.push("");
   L.push("WHAT SHE CAN DO");
@@ -1324,7 +1334,7 @@ export function allFactsWithProvenance() {
 export function buildSystemPrompt(opts = {}) {
   const tier = String(opts.tier ?? "free").toLowerCase();
   const name = opts.assistantName || "Mira";
-  const channel = opts.channel || "Telegram";
+  const channel = opts.channel || "WhatsApp";
   const userName = opts.userName ? String(opts.userName) : null;
   const caps = capabilitiesForTier(tier);
   const plan = KNOWLEDGE.plans.find((p) => p.id === tier) ?? KNOWLEDGE.plans[0];

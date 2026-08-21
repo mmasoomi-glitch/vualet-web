@@ -34,7 +34,7 @@ const FAMILY: Product[] = [
     id: "assistant",
     name: "Mira Assistant",
     blurb:
-      "A chat and voice helper that answers, remembers and builds — over Telegram today, with WhatsApp coming soon, in your language.",
+      "A chat and voice helper that answers, remembers and builds — inside your own WhatsApp, in a group you create, in your language.",
     status: "Available",
     cta: "Start free trial",
     href: "/mira/plans",
