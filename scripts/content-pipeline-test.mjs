@@ -255,19 +255,30 @@ test("12. the claim guard flags an unearned certification", () => {
   assert.ok(rules(f).includes("unearned-credential"), rules(f).join(","));
 });
 
-test("13. the claim guard flags an integration we have not shipped", () => {
+// The second half of this test used to certify "Mira works inside Telegram
+// today, with WhatsApp coming soon." as CLEAN — a passing assertion whose only
+// effect was to keep the retired claim shippable. decisions#340 took Telegram
+// out of the sourced corpus, so the assertion is inverted, not removed.
+test("13. the claim guard flags an integration we have not shipped, and the retired channel", () => {
   const f = guardClaims("Mira integrates with Slack and Salesforce, and offers a public API.");
   assert.ok(rules(f).includes("unsupported-capability"), rules(f).join(","));
   assert.ok(
     f.some((x) => /slack/i.test(x.detail)),
     "must name the unsupported term",
   );
-  // ...but a surface that IS sourced passes clean
-  const ok = guardClaims("Mira works inside Telegram today, with WhatsApp coming soon.");
+  // ...but the surface that IS sourced passes clean
+  const ok = guardClaims("Mira works inside WhatsApp, through your own WhatsApp account.");
   assert.equal(
     blocking(ok).filter((x) => x.rule === "unsupported-capability").length,
     0,
-    "Telegram/WhatsApp are sourced and must not be flagged",
+    "WhatsApp is sourced and must not be flagged",
+  );
+  // ...and the sentence this file used to bless is now the one that fails.
+  const stale = guardClaims("Mira works inside Telegram today, with WhatsApp coming soon.");
+  assert.ok(rules(stale).includes("unsupported-capability"), rules(stale).join(","));
+  assert.ok(
+    stale.some((x) => /telegram/i.test(x.detail)),
+    "Telegram left the sourced corpus with decisions#340; the guard must name it",
   );
 });
 
@@ -759,8 +770,11 @@ test("42. the guard still FLAGS and never EDITS, for every bypass case", async (
  * ========================================================================= */
 
 const LEGITIMATE_SENTENCES = [
-  "Mira is an AI assistant you talk to inside the chat apps you already use — Telegram today, with WhatsApp coming soon.",
-  "You can send it a voice note on Telegram today and it understands you and can reply naturally, in your own language.",
+  "Mira is an AI assistant you talk to inside WhatsApp — the chat app you already use.",
+  "You can send it a voice note on WhatsApp and it understands you and can reply naturally, in your own language.",
+  "Mira works inside WhatsApp through your own WhatsApp account, not a number of ours.",
+  "You link your account once when you sign up, then you create a WhatsApp group and talk to Mira there.",
+  "Linking a personal account to an automated assistant carries a real risk that WhatsApp restricts or blocks the connected number.",
   "Mira speaks many languages, out loud, with warmth and tone rather than a flat robotic read.",
   "You can load Mira with your own knowledge — your notes, documents, study material, or reference text.",
   "Mira can read text out of images and documents (OCR).",
@@ -779,6 +793,17 @@ const LEGITIMATE_SENTENCES = [
   "You can send it a photo of a page, a receipt, or a screenshot, and it can pull the text and work with it.",
 ];
 
+/**
+ * The mirror image of LEGITIMATE_SENTENCES. Every line here was honest copy
+ * until decisions#340; each is now unsourced, and a guard that still passed
+ * them would let the corrected copy be "corrected" straight back.
+ */
+const RETIRED_CLAIMS = [
+  "Mira works inside Telegram today, with WhatsApp coming soon.",
+  "You can send it a voice note on Telegram and it replies in your own language.",
+  "Mira lives inside Telegram, with no new app to install.",
+];
+
 test("43. legitimate, sourced sentences raise NO blocking findings", () => {
   assert.ok(LEGITIMATE_SENTENCES.length >= 8, "the anti-over-flagging corpus must be substantive");
   const overflagged = [];
@@ -790,6 +815,15 @@ test("43. legitimate, sourced sentences raise NO blocking findings", () => {
     overflagged,
     [],
     "over-flagging honest copy teaches writers to ignore the guard, which is how it stops working",
+  );
+
+  // The other half of the same property: the retired claims must NOT come back
+  // clean. Absence of over-flagging is only evidence while the guard still bites.
+  const passedThrough = RETIRED_CLAIMS.filter((x) => blocking(guardClaims(x)).length === 0);
+  assert.deepEqual(
+    passedThrough,
+    [],
+    "a retired claim that scans clean is a retired claim that gets published again",
   );
 });
 

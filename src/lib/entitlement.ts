@@ -28,6 +28,15 @@ export type Entitlement = {
   plan: PaidPlan | null; // which paid tier (companion/assistant/studio); null if none/unknown
   priceId: string | null; // Stripe price id; always null for Dodo-era records
   customerId: string | null; // Stripe customer id, or the DODO customer id — never faked
+  /**
+   * ISO end of the advertised 14-day free trial, or null when we hold none.
+   *
+   * Pairs with `status === "trialing"`: a customer inside their trial is
+   * `{ active: true, status: "trialing", trialEndsAt: <future ISO> }` on BOTH
+   * processors. `active` is unaffected either way — a trial is entitlement, not
+   * a lesser form of it.
+   */
+  trialEndsAt: string | null;
 };
 
 export async function entitlementForEmail(email: string): Promise<Entitlement> {

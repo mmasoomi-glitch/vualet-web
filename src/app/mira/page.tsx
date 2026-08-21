@@ -154,7 +154,7 @@ export default function MiraPage() {
               <div className="mha-qitem">
                 <img className="mha-qthumb" src="/brand/card-voice.png" alt="" aria-hidden width={600} height={400} />
                 <h4>Voice notes, where you already are</h4>
-                <p>Talk to her on Telegram today &mdash; WhatsApp is coming soon. Ramble a voice note; she keeps every word of it exact.</p>
+                <p>Talk to her in WhatsApp &mdash; in a group on your own account. Ramble a voice note; she keeps every word of it exact.</p>
               </div>
               <div className="mha-qitem">
                 <img className="mha-qthumb" src="/brand/card-memory.png" alt="" aria-hidden width={600} height={400} />
@@ -175,7 +175,7 @@ export default function MiraPage() {
           <div className="mha-wrap">
             <div className="mha-final-inner">
               <h2>Remembers everything.<br />Invents nothing.</h2>
-              <p>Start free in about two minutes &mdash; she&rsquo;s live on Telegram today. No card. No waiting.</p>
+              <p>Start free in about two minutes &mdash; she lives in a WhatsApp group on your own account. One scan to connect, and we show you what that involves before you do it. No card.</p>
               <Link className="mha-btn mha-btn-onlight" href="/mira/start">Start free &rarr;</Link>
               <p className="mha-microlight">No card. Cancel anytime.</p>
             </div>

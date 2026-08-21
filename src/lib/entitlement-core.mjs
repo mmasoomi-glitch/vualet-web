@@ -22,14 +22,14 @@
  * to "no plan", never to a 500.
  *
  * @typedef {"companion"|"assistant"|"studio"} PaidPlan
- * @typedef {{ active: boolean, status: string|null, plan: PaidPlan|null, priceId: string|null, customerId: string|null }} Entitlement
+ * @typedef {{ active: boolean, status: string|null, plan: PaidPlan|null, priceId: string|null, customerId: string|null, trialEndsAt: string|null }} Entitlement
  */
 
 import { PAID_PLANS } from "./plan-core.mjs";
 
 /** The well-formed "not entitled" answer. Callers get a fresh copy, never this object. */
 export const NONE = Object.freeze(
-  /** @type {Entitlement} */ ({ active: false, status: null, plan: null, priceId: null, customerId: null }),
+  /** @type {Entitlement} */ ({ active: false, status: null, plan: null, priceId: null, customerId: null, trialEndsAt: null }),
 );
 
 /** Stripe subscription statuses that still grant access. */
@@ -66,16 +66,47 @@ export function paidPlanOrNull(v) {
  * @param {{ customerId?: string, rec?: any }|null|undefined} found
  * @returns {Entitlement|null} null when there is no Dodo record at all
  */
-export function entitlementFromDodoRecord(found) {
+export function entitlementFromDodoRecord(found, deps = {}) {
   if (!found || !found.rec) return null;
   const rec = found.rec;
   const status = typeof rec.status === "string" ? rec.status : null;
+
+  // THE TRIAL PHASE, REPORTED WITHOUT TOUCHING THE GATE.
+  //
+  // A Dodo record is `status: "active"` for its whole life, trial included,
+  // because that literal string is what LIVE_DODO_STATUS grants access on. So
+  // until now there was no way for a Dodo customer inside their advertised
+  // 14-day free trial to be told so: /api/auth/me reported "active", the
+  // account page had no trial signal to read, and someone who had not been
+  // charged a penny was shown "Subscription active".
+  //
+  // The fix reports "trialing" as the STATUS while leaving `active` computed
+  // from the RECORD's status, exactly as before. Read that pair carefully,
+  // because the split is the whole safety property:
+  //
+  //   active  ← rec.status, via LIVE_DODO_STATUS   (the GATE — unchanged)
+  //   status  ← "trialing" when in trial            (the LABEL — new)
+  //
+  // So a trialing customer is `{ active: true, status: "trialing" }`, which is
+  // precisely the shape the legacy Stripe cohort already produces (Stripe's own
+  // "trialing" is in LIVE_STRIPE_STATUS). The account page's existing
+  // TRIALING_STATUSES branch therefore lights up for Dodo customers with no
+  // change to that file, and nothing anywhere gains or loses access.
+  //
+  // The date does the expiring, so nothing has to remember to clear a flag: a
+  // trialEndsAt in the past simply stops reading as a trial.
+  const nowMs = typeof deps.now === "number" ? deps.now : Date.now();
+  const trialEndsAt = typeof rec.trialEndsAt === "string" && rec.trialEndsAt ? rec.trialEndsAt : null;
+  const endMs = trialEndsAt ? Date.parse(trialEndsAt) : NaN;
+  const inTrial = status === "active" && Number.isFinite(endMs) && endMs > nowMs;
+
   return /** @type {Entitlement} */ ({
     active: status != null && LIVE_DODO_STATUS.has(status),
-    status,
+    status: inTrial ? "trialing" : status,
     plan: paidPlanOrNull(rec.plan),
     priceId: null,
     customerId: rec.customerId ?? found.customerId ?? null,
+    trialEndsAt,
   });
 }
 
@@ -90,6 +121,7 @@ export function entitlementFromDodoRecord(found) {
  *   listSubscriptions?: (customerId: string) => Promise<Array<any>>,
  *   planForPriceId?: (priceId: string|null) => PaidPlan|null,
  *   onError?: (source: "dodo"|"stripe", err: unknown) => void,
+ *   now?: number,
  * }} [deps]
  * @returns {Promise<Entitlement>}
  */
@@ -113,7 +145,7 @@ export async function resolveEntitlement(email, deps = {}) {
   let dodoFallback = null;
   if (typeof getSubscriptionByEmail === "function") {
     try {
-      const ent = entitlementFromDodoRecord(await getSubscriptionByEmail(clean));
+      const ent = entitlementFromDodoRecord(await getSubscriptionByEmail(clean), { now: deps.now });
       if (ent) {
         if (ent.active) return ent;
         // Known Dodo customer, no live subscription (cancelled/expired). Remember it,
@@ -143,6 +175,13 @@ export async function resolveEntitlement(email, deps = {}) {
             plan: planForPriceId(priceId),
             priceId,
             customerId: cust.id,
+            // Stripe sends trial_end as unix seconds. Mapped here so both eras
+            // answer the SAME shape — a consumer must not have to know which
+            // processor a customer came from to read their trial end.
+            trialEndsAt:
+              typeof live.trial_end === "number" && Number.isFinite(live.trial_end) && live.trial_end > 0
+                ? new Date(live.trial_end * 1000).toISOString()
+                : null,
           });
         }
       }
