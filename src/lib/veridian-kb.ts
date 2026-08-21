@@ -22,17 +22,17 @@ export const VERIDIAN_KB: KbEntry[] = [
   {
     topic: "What Mira is",
     body:
-      "Mira is an AI assistant you talk to inside the chat apps you already use — Telegram today, with WhatsApp coming soon. There is no separate app to install and no new phone number to manage. You message Mira like you would message a person, by voice or by text, and it helps you get things done.",
+      "Mira is an AI assistant you talk to inside WhatsApp — the chat app you already use. There is no separate app to install and no new phone number to manage: Mira works through your own WhatsApp account, in a group you create. You message Mira like you would message a person, by voice or by text, and it helps you get things done.",
   },
   {
-    topic: "Voice on Telegram (WhatsApp coming soon)",
+    topic: "Voice on WhatsApp",
     body:
-      "Mira is voice-first. You can send it a voice note on Telegram today, with WhatsApp coming soon, and it understands you and can reply naturally, in your own language. Because it lives in the chat you already use, there is nothing new to learn.",
+      "Mira is voice-first. You can send it a voice note on WhatsApp and it understands you and can reply naturally, in your own language. Because it lives in the chat you already use, there is nothing new to learn.",
   },
   {
     topic: "Multilingual voice — a headline strength",
     body:
-      "Mira speaks many languages, out loud, with real emotion — not a flat robotic read, but warmth, tone, and feeling. You can talk to it by voice on Telegram today, with WhatsApp coming soon, in your own language and it replies in kind, sounding human. Multilingual, emotional voice is one of Mira's headline strengths: it meets you where you are, in the language you think in.",
+      "Mira speaks many languages, out loud, with real emotion — not a flat robotic read, but warmth, tone, and feeling. You can talk to it by voice on WhatsApp, in your own language and it replies in kind, sounding human. Multilingual, emotional voice is one of Mira's headline strengths: it meets you where you are, in the language you think in.",
   },
   {
     topic: "Loadable knowledge base",
@@ -94,6 +94,11 @@ export const VERIDIAN_KB: KbEntry[] = [
     body:
       "Your Mira is private by design. Your conversations are yours, and your assistant is sealed off from everyone else's. Privacy is a core part of the product's design.",
   },
+  {
+    topic: "How WhatsApp works — and the risk of linking your number",
+    body:
+      "Mira works inside WhatsApp through your own WhatsApp account, not a number of ours. You link your account once when you sign up, then you create a WhatsApp group and talk to Mira there, and Mira replies into that group through your linked account. Two honest caveats before you link. WhatsApp will not let you create a group containing only yourself, so you add one contact at the moment you create it and can remove them afterwards. And linking a personal account to an automated assistant carries a real risk that WhatsApp restricts or blocks the connected number — that risk is yours, so link a number you are willing to take it with.",
+  },
 ];
 
 /**
@@ -123,10 +128,13 @@ export function kbFallbackAnswer(message: string): string | null {
     return "Veridian CLS Unlimited — a coming-soon flagship tier for Mira — is on the way. Terms and conditions apply. It's on the roadmap and not yet released.";
   }
   if (has("language", "languages", "multilingual", "bilingual", "accent", "arabic", "spanish", "french", "translate")) {
-    return "Mira speaks many languages out loud, with real emotion — warm and human, not robotic. Talk to it by voice on Telegram today (WhatsApp coming soon) in your own language and it replies in kind. Multilingual, emotional voice is one of its headline strengths.";
+    return "Mira speaks many languages out loud, with real emotion — warm and human, not robotic. Talk to it by voice on WhatsApp in your own language and it replies in kind. Multilingual, emotional voice is one of its headline strengths.";
+  }
+  if (has("link", "linking", "pair", "pairing", "qr", "group", "ban", "banned", "block", "blocked", "restrict", "risk")) {
+    return "Mira works inside WhatsApp through your own WhatsApp account, not a number of ours. You link your account once when you sign up, then you create a WhatsApp group and talk to Mira there. Two honest caveats: WhatsApp will not let you create a group containing only yourself, so you add one contact when you create it and can remove them afterwards; and linking a personal account to an automated assistant carries a real risk that WhatsApp restricts or blocks the connected number.";
   }
   if (has("voice", "whatsapp", "telegram", "call", "speak")) {
-    return "Mira is voice-first and lives in Telegram today, with WhatsApp coming soon — no new app and no new number. You can send it voice notes in your own language, and it replies out loud with real emotion in many languages.";
+    return "Mira is voice-first and lives in WhatsApp — no new app and no new number, because it runs through your own WhatsApp account in a group you create. You can send it voice notes in your own language, and it replies out loud with real emotion in many languages. Linking your own account does carry a real risk that WhatsApp restricts the connected number.";
   }
   if (has("ocr", "image", "photo", "scan", "picture", "document")) {
     return "Mira can read text out of images and documents (OCR) — send it a photo of a page or receipt and it pulls the text out.";
@@ -153,7 +161,7 @@ export function kbFallbackAnswer(message: string): string | null {
     return "I'm Mira — the assistant you're talking to. I'm powered by Veridian, a proprietary technology, but my name is Mira.";
   }
   if (has("what is", "what's mira", "what can", "what does", "help", "hello", "hi ", "hey")) {
-    return "Mira is an AI assistant you talk to inside Telegram today, with WhatsApp coming soon — voice-first, with a photographic memory for your world, that answers from what it actually knows. Ask me about voice, memory, OCR, small builds, pricing, or the company.";
+    return "Mira is an AI assistant you talk to inside WhatsApp — voice-first, with a photographic memory for your world, that answers from what it actually knows. Ask me about voice, memory, OCR, small builds, pricing, how WhatsApp linking works, or the company.";
   }
   return null;
 }

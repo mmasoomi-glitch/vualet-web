@@ -34,6 +34,61 @@ type Persona = { assistantName?: string; role?: string; vibe?: string; persona?:
 const VIBE_LABELS: Record<string, string> = { warm: "Warm & gentle", bright: "Bright & playful", calm: "Calm & grounded", sharp: "Sharp & direct" };
 const ROLE_LABELS: Record<string, string> = { friend: "Friend", tutor: "Tutor", assistant: "Assistant", coach: "Coach" };
 
+/* ── THE FREE-TRIAL PHASE, AND WHAT THIS PAGE CAN HONESTLY SAY ABOUT IT ─────
+
+   THE BUG THIS REPLACES. This card used to render exactly two labels:
+   `ent.status === "trialing" ? "Free trial active" : "Subscription active"`.
+   That is Stripe-era code. Money now comes in through Dodo, and a Dodo record's
+   status is set in exactly one place — src/lib/dodo-webhook-core.mjs, which
+   writes `status: "active"` as a literal — so `"trialing"` NEVER arrives for a
+   Dodo customer. Every single person on the current processor therefore fell to
+   the else-branch, and a customer sitting inside their advertised 14-day free
+   trial, who has not been charged a cent, was told "Subscription active". They
+   have every reason to read that as "you are paying for this now", and some of
+   them will cancel or dispute over a charge that never happened.
+
+   WHAT THIS PAGE ACTUALLY KNOWS. /api/auth/me returns exactly
+   { active, status, plan, customerId } (src/lib/entitlement.ts). For a Dodo
+   record `status` is always the literal "active", and there is NO trial flag and
+   NO start date anywhere in that payload — /api/support/order-status renders its
+   own dates into prose ("You've been with us since …") and hands back no machine
+   date either. So this page CANNOT currently tell a trialing customer apart from
+   a paying one, and no amount of code in this file can invent that fact.
+
+   THE FIX, GIVEN THAT. Two halves:
+
+   1. STOP ASSERTING A PHASE WE CANNOT SEE. "Subscription active" claims the paid
+      phase. "Active" claims only what the entitlement actually says. That single
+      word is the difference between telling a trialing customer something false
+      and telling them something true.
+
+   2. STATE THE TRIAL TERMS IN A FORM THAT IS TRUE IN BOTH PHASES. TRIAL_TERMS
+      below describes the PLAN, not the customer's current position in it, so it
+      is exactly as true on day 3 as on day 300 — while removing the "we are
+      charging you right now" reading that the old label carried.
+
+   And when a real trial signal does arrive, the correct label lights up on its
+   own: TRIALING_STATUSES is still honoured. "trialing" is not invented here —
+   it is Stripe's own status, already relied on by LIVE_STRIPE_STATUS in
+   src/lib/entitlement-core.mjs, and it is live today for the legacy Stripe
+   cohort, so this branch is correct code rather than dead code.
+
+   UPSTREAM CHANGE STILL NEEDED (not this writer's files, deliberately not made
+   here): for a DODO customer to ever see "Free trial active", the trial phase
+   has to survive into the record. dodo-webhook-core.mjs hardcodes
+   `status: "active"`; until it either emits a trial status or carries a
+   trial-end timestamp that entitlement.ts passes through, this page is doing the
+   most honest thing available to it. */
+const TRIALING_STATUSES = new Set(["trialing"]);
+
+/* Phase-independent, and therefore always true: it describes what the plan is,
+   never where this particular customer stands inside it. The "14" is the same
+   number src/lib/dodo.ts sends to Dodo as TRIAL_PERIOD_DAYS; the two are tied
+   together by scripts/dodo-trial-test.mjs rather than by an import, because
+   @/lib/dodo is a server-only module (it reads DODO_API_KEY) and must not be
+   pulled into this "use client" bundle just to render a digit. */
+const TRIAL_TERMS = "Every Mira plan starts with a 14-day free trial — you're only charged once it ends.";
+
 const card: React.CSSProperties = {
   background: "var(--mira-canvas)",
   border: "1px solid var(--mira-fog)",
@@ -174,6 +229,10 @@ export default function MiraAccount() {
   // Purchased tier name, from the SAME tier source of truth as /mira/plans.
   // planForPriceId already reversed the live Stripe price to a slug server-side;
   // here we just resolve its display name ("Companion" | "Assistant" | "Studio").
+  // See TRIALING_STATUSES above: true only when the entitlement genuinely says
+  // "trial". Never guessed, and never inferred from the mere absence of a
+  // charge — this page has no charge history to infer from.
+  const inTrial = ent.status != null && TRIALING_STATUSES.has(ent.status);
   const purchasedTier = tierById(ent.plan);
   const planName = purchasedTier?.name ?? null;
   // What the plan actually gives them, from the same tier source of truth.
@@ -204,10 +263,10 @@ export default function MiraAccount() {
               <p className="display" style={{ fontSize: 26, fontWeight: 400, margin: "6px 0 4px", display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                 {planName ? `Mira ${planName}` : "Mira plan"}
                 <span style={{ fontSize: 14, color: "var(--mira-slate)" }}>
-                  {ent.status === "trialing" ? "Free trial active" : "Subscription active"}
+                  {inTrial ? "Free trial active" : "Active"}
                 </span>
               </p>
-              <p style={{ fontSize: 13.5, color: "var(--mira-graphite)", margin: 0 }}>Update payment or view invoices in the billing portal. You can cancel any time — you keep everything you&rsquo;ve paid for until the end of your current period.</p>
+              <p style={{ fontSize: 13.5, color: "var(--mira-graphite)", margin: 0 }}>{TRIAL_TERMS} Update payment or view invoices in the billing portal. You can cancel any time — you keep everything you&rsquo;ve paid for until the end of your current period.</p>
               {portalError && <p role="alert" style={{ fontSize: 13, color: "var(--mira-rose-ink)", margin: "8px 0 0" }}>{portalError}</p>}
               {cancelMsg && <p role="status" style={{ fontSize: 13, color: "var(--mira-graphite)", margin: "8px 0 0" }}>{cancelMsg}</p>}
             </div>

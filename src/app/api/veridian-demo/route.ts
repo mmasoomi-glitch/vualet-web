@@ -323,7 +323,7 @@ export async function POST(req: Request) {
   if (!reply) reply = kbFallbackAnswer(message);
   if (!reply) {
     reply = process.env.OPENROUTER_API_KEY
-      ? "I don't have that in what I know about Mira. I can tell you about voice on Telegram today (WhatsApp coming soon), its memory, OCR, small builds, pricing, or the company — ask me any of those."
+      ? "I don't have that in what I know about Mira. I can tell you about voice on WhatsApp, how linking your own WhatsApp account works and what it risks, its memory, OCR, small builds, pricing, or the company — ask me any of those."
       : "The live demo is warming up — join the waitlist and we'll notify you.";
   }
 

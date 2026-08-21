@@ -22,9 +22,9 @@ export default function Home() {
             </h1>
             <p className="mt-6 max-w-2xl text-lg md:text-xl text-[var(--muted)] leading-relaxed">
               Vualet is a Dubai product family building software that runs your
-              business for you. Mira, our personal assistant, is first — live on
-              Telegram today. CRM automation, people tools and more are coming
-              soon, under one login and one bill.
+              business for you. Mira, our personal assistant, is first — she works
+              inside your own WhatsApp. CRM automation, people tools and more are
+              coming soon, under one login and one bill.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-3">
               <Link

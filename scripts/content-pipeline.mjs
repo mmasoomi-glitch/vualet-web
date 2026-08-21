@@ -92,14 +92,20 @@ export const SOURCED_FACTS = Object.freeze([
   {
     id: "surface",
     claim:
-      "Mira is an AI assistant you talk to inside the chat apps you already use — Telegram today, with WhatsApp coming soon. There is no separate app to install and no new phone number to manage.",
+      "Mira is an AI assistant you talk to inside WhatsApp — the chat app you already use. There is no separate app to install and no new phone number to manage: Mira works through your own WhatsApp account, in a group you create.",
     source: "src/lib/veridian-kb.ts:23-25",
   },
   {
     id: "voice",
     claim:
-      "Mira is voice-first. You can send it a voice note on Telegram today, with WhatsApp coming soon, and it understands you and can reply naturally, in your own language.",
+      "Mira is voice-first. You can send it a voice note on WhatsApp and it understands you and can reply naturally, in your own language.",
     source: "src/lib/veridian-kb.ts:28-30",
+  },
+  {
+    id: "whatsapp-linking",
+    claim:
+      "Mira works inside WhatsApp through the customer's own WhatsApp account, not a number of ours. You link your account once when you sign up, then you create a WhatsApp group and talk to Mira there, and Mira replies into that group through your linked account. WhatsApp will not let you create a group containing only yourself, so you add one contact at the moment you create it and can remove them afterwards. Linking a personal account to an automated assistant carries a real risk that WhatsApp restricts or blocks the connected number.",
+    source: "src/lib/veridian-kb.ts:98-100",
   },
   {
     id: "multilingual",
@@ -164,7 +170,7 @@ export const SOURCED_FACTS = Object.freeze([
   {
     id: "plan-studio",
     claim:
-      "Studio: $79 per month, 200M tokens per month. Everything in Assistant, plus the ability to use your own WhatsApp number and top-of-the-queue priority.",
+      "Studio: $79 per month, 200M tokens per month. Everything in Assistant, plus the highest monthly cap and top-of-the-queue priority.",
     source: "src/lib/veridian-kb.ts:78-80; src/app/mira/_components/tiers.ts:43-51",
   },
   {
@@ -216,15 +222,17 @@ export const AUDIENCES = Object.freeze([
 export const TOPICS = Object.freeze([
   {
     id: "assistant-in-the-chat-you-already-use",
-    slug: "ai-assistant-inside-telegram-no-new-app",
+    slug: "ai-assistant-inside-whatsapp-no-new-app",
     title: "An AI assistant that lives in the chat app you already use",
     description:
-      "Mira works inside Telegram today, with WhatsApp coming soon — no separate app to install and no second phone number to manage.",
-    factIds: ["surface", "voice", "memory"],
+      "Mira works inside WhatsApp — no separate app to install and no second phone number to manage, because it runs through your own WhatsApp account in a group you create.",
+    factIds: ["surface", "whatsapp-linking", "voice", "memory"],
     audiences: ["curious-newcomer", "gulf-professional"],
     intent: "informational",
     mustNotClaim: [
-      "Do not say WhatsApp is available today — the sourced fact says 'coming soon'.",
+      "Do not say WhatsApp is 'coming soon', not yet available, or on the roadmap — the sourced fact is that WhatsApp is the channel Mira works in (decisions#340).",
+      "Do not offer Telegram, or name it as a channel a new customer can choose — it is not in the sourced surface (decisions#340).",
+      "Do not describe the WhatsApp link without the restriction risk — the sourced fact states both, and splitting them is how the old copy became dishonest.",
       "Do not name chat platforms we have not shipped (Slack, Discord, iMessage, SMS).",
     ],
   },
@@ -233,7 +241,7 @@ export const TOPICS = Object.freeze([
     slug: "voice-notes-in-your-own-language",
     title: "Send a voice note in your own language and be understood",
     description:
-      "Mira is voice-first: send a voice note on Telegram in the language you think in, and it replies out loud with warmth and tone.",
+      "Mira is voice-first: send a voice note on WhatsApp in the language you think in, and it replies out loud with warmth and tone.",
     factIds: ["voice", "multilingual", "surface"],
     audiences: ["gulf-professional", "curious-newcomer"],
     intent: "informational",
@@ -550,10 +558,17 @@ const COMMERCIAL_TERMS = [
 /**
  * Terms that describe a capability, surface or integration. They are NOT
  * banned — they are simply required to appear in the sourced facts. If a term
- * is in the corpus (telegram, whatsapp, ocr, voice) it passes; if it is not
+ * is in the corpus (whatsapp, ocr, voice) it passes; if it is not
  * (slack, api, sso, offline) it is flagged for a human.
  */
 const CAPABILITY_TERMS = [
+  // "telegram" is here for the same reason as every other name on this list:
+  // it must appear in the sourced facts to pass. It did until decisions#340
+  // retired it as a customer channel, and it does not any more. Naming it
+  // here (rather than only relying on the proper-noun scan) is what catches
+  // it in a sentence with no capability predicate, e.g. "send it a voice
+  // note on Telegram" — which scanned perfectly clean without this line.
+  "telegram",
   "slack", "discord", "signal", "imessage", "sms", "messenger", "wechat", "line", "viber",
   "notion", "zapier", "salesforce", "hubspot", "gmail", "outlook", "google drive", "dropbox",
   "zoom", "teams", "jira", "trello", "shopify", "stripe", "paypal", "calendar", "crm",

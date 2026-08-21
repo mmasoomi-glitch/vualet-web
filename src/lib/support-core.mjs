@@ -163,7 +163,7 @@ export function statusLabelFor(status) {
 export function assertNoInternals(summary, rec) {
   const blob = JSON.stringify(summary);
 
-  const secrets = [rec?.customerId, rec?.subscriptionId, rec?.token, rec?.telegramId]
+  const secrets = [rec?.customerId, rec?.subscriptionId, rec?.token, rec?.telegramId, rec?.phone]
     .filter((v) => v !== undefined && v !== null && String(v).length > 0)
     .map(String);
 
