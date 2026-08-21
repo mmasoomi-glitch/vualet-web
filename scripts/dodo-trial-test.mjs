@@ -41,6 +41,17 @@ import os from "node:os";
 import path from "node:path";
 import { loadRoute, env, netCalls, resetNet, scriptFetch, ROOT } from "./route-harness/index.mjs";
 
+// PRE_FIX_REV — the revision this file's counterfactuals materialise.
+//
+// It is PINNED TO A SHA on purpose. It used to say "HEAD", which is
+// self-falsifying: the moment the fix is committed, HEAD becomes the FIXED
+// code, so every "this must fail before the fix" assertion starts running
+// against the fix and goes red. That is exactly what happened when 45c7247
+// landed — 21 counterfactuals across four files turned red simultaneously
+// while the product was perfectly healthy. A counterfactual must name the
+// revision it is contrasting against, never a moving reference.
+const PRE_FIX_REV = "f889ee5";
+
 const dodo = await loadRoute("src/lib/dodo.ts");
 
 /** Fully arm the Dodo money path with DUMMY values — never real credentials. */
@@ -469,7 +480,7 @@ test("the account page states the trial terms in a form that is true in BOTH pha
  * counterfactual case its own header calls out.
  */
 async function loadHeadDodo() {
-  const src = execFileSync("git", ["show", "HEAD:src/lib/dodo.ts"], { cwd: ROOT, encoding: "utf8" });
+  const src = execFileSync("git", ["show", PRE_FIX_REV + ":src/lib/dodo.ts"], { cwd: ROOT, encoding: "utf8" });
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dodo-head-"));
   const file = path.join(dir, "dodo-HEAD.ts");
   fs.writeFileSync(file, src, "utf8");
@@ -512,7 +523,7 @@ test("COUNTERFACTUAL: pre-fix there was no guard to fail — a 0-day trial came 
 
 test("COUNTERFACTUAL: pre-fix, the account page told a trialing customer their subscription was active", () => {
   const before = codeOnly(
-    execFileSync("git", ["show", "HEAD:src/app/mira/account/page.tsx"], { cwd: ROOT, encoding: "utf8" }),
+    execFileSync("git", ["show", PRE_FIX_REV + ":src/app/mira/account/page.tsx"], { cwd: ROOT, encoding: "utf8" }),
   );
   assert.match(before, OLD_LABEL_TERNARY, "sanity: the false label really was rendered");
   assert.match(before, /ent\.status === "trialing"/, "sanity: gated on a status Dodo never emits");

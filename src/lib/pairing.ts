@@ -43,16 +43,45 @@ export function channelOfRecord(rec: { channel?: Channel } | null | undefined): 
  * Where the WhatsApp pairing surface lives. Server-only (no NEXT_PUBLIC_
  * prefix) because the browser never needs it — it receives the finished URL.
  *
- * There is deliberately NO WhatsApp pairing route in this repo: the pairing
- * machinery lives in the Ballerina engine and its public surface is currently
- * closed (decisions#293 retracted it; reopening is gated on C1/C11). So nothing
- * here invents an endpoint — it composes a link onto a base URL the owner
- * configures WHEN the surface is genuinely reopened, and returns null until then.
+ * THERE IS NOW A PAIRING ENTRY ROUTE IN THIS REPO, AND THAT IS WHAT THIS
+ * VARIABLE POINTS AT [decisions#345].
  *
- * Set it to the full public pairing URL, e.g.
- *   MIRA_WHATSAPP_PAIR_BASE=https://api.vualet.com/wa/pair
+ * This comment used to say the opposite — "there is deliberately NO WhatsApp
+ * pairing route in this repo" — and the consequence was that nothing correct
+ * could be put in this variable, so `whatsappPairUrl` returned null, so
+ * `/api/begin` refused every WhatsApp signup with 503 whatsapp_unavailable.
+ * The product could not take a customer. The ruling placed the entry point
+ * HERE rather than on the engine gateway, for three reasons that all point the
+ * same way: this app minted the token and is the only side holding
+ * MIRA_TOKEN_SECRET to verify it; this app is behind Cloudflare with a working
+ * real_ip, so it is the only side that can see the customer's genuine address;
+ * and this app can reach the gateway server-to-server over the existing
+ * tunnel. Only the QR page itself has to reach the customer's browser, and
+ * nginx proxies that (docs/nginx-pair-proxy.conf).
+ *
+ * ── THE VALUE AN OPERATOR MUST SET, EXACTLY ───────────────────────────────
+ *
+ *     MIRA_WHATSAPP_PAIR_BASE=https://mira.vualet.com/api/pair/start
+ *
+ * The host is `mira.vualet.com` and NOT `api.mira.vualet.com`: the latter is a
+ * two-level subdomain outside Cloudflare's `*.vualet.com` universal
+ * certificate, so its TLS handshake fails at the edge (verified 2026-08-15,
+ * WA_V2_RUNBOOK). The path is the route in src/app/api/pair/start/route.ts.
+ *
+ * Two other variables must be set for that route to work, and it fails
+ * honestly rather than half-working if they are not:
+ *     WA_PROVISION_SECRET   the SAME string the gateway holds (it 401s otherwise)
+ *     MIRA_ENGINE_URL       only if the wa-tunnel forwards a port other than
+ *                           the default http://127.0.0.1:8790
+ *
  * The connect token is appended as a `token` query parameter, so a base that
  * already carries query parameters is preserved.
+ *
+ * UNSET STILL MEANS NULL, AND /api/begin STILL REFUSES. That behaviour is not
+ * weakened by any of the above and must not be: an unconfigured deployment
+ * handing out links to a route whose downstream secret is missing would be the
+ * dead link this whole module exists to prevent. It simply becomes unreachable
+ * once the variable is set.
  */
 export const PAIR_BASE_ENV = "MIRA_WHATSAPP_PAIR_BASE";
 

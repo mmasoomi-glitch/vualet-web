@@ -192,6 +192,49 @@ export type ConnectRecord = {
   customerId?: string;
   subscriptionId?: string;
   telegramId?: number;
+  /**
+   * THE WHATSAPP HALF OF THE SINGLE-USE INVARIANT — a HASH, never an identity.
+   *
+   * WHY THIS FIELD EXISTS AT ALL. Until now the whole single-use rule lived in
+   * `telegramId`: claimConnect's "foreign" check and its "already claimed"
+   * state are both that one number. A WhatsApp customer has no Telegram id, so
+   * without a second field a WhatsApp token could be claimed by anyone, twice,
+   * forever. Widening `telegramId` to also carry a WhatsApp JID was rejected
+   * outright: it is typed `number`, every reader of it (claimConnect,
+   * mirrorIdentityToSubscription, POST /api/connect, engine-push) assumes a
+   * Telegram chat id, and a JID squatting there would silently corrupt the
+   * uniqueness check on the channel that is currently working.
+   *
+   * WHY IT IS A HASH AND NOT THE JID. A WhatsApp JID IS a phone number with a
+   * suffix ("12025551234@s.whatsapp.net"). Storing it raw would put a full
+   * phone number into a field that support-core.mjs's assertNoInternals() does
+   * not guard — i.e. one refactor away from a customer-facing message. The
+   * claim only ever needs EQUALITY, never the value, so the value is not kept:
+   * this is HMAC-SHA256(MIRA_TOKEN_SECRET, jid), which answers "same account?"
+   * exactly and answers "which number?" not at all. See whatsappIdHash() in
+   * src/lib/whatsapp-claim.ts for the one place it is computed.
+   *
+   * OPTIONAL AND ABSENT on every record that has not completed a WhatsApp bind:
+   * a token that has merely been PRESENTED at the pairing entry point carries
+   * nothing here, because presentation is a read and the claim fires only on a
+   * successful bind [decisions#345 Q_C].
+   */
+  whatsappIdHash?: string;
+  /**
+   * The ENGINE tenant this record was bound to, once one exists.
+   *
+   * ABSENT UNTIL BIND, DELIBERATELY [decisions#345 Q_A]. No tenant is created
+   * because a token was presented; the engine defers creation until a scan
+   * proves control of the account, and only then does it report the id here.
+   * A value in this field is therefore evidence that a bind completed.
+   *
+   * It is here for the same reason telegramId is mirrored onto the durable
+   * subscription record (gotchas#267): the connect record expires after 7 days
+   * and a refund or chargeback arrives months later, so a revocation needs an
+   * identity that outlives the token. A tenant id is an opaque internal
+   * identifier, not PII.
+   */
+  tenantId?: string;
   // The customer's WhatsApp number, ALWAYS stored normalised to E.164 ("+" plus
   // 8..15 digits) by src/lib/phone.ts — never the raw typed input, so one person
   // cannot become two identities. This is PII: it is on the assertNoInternals

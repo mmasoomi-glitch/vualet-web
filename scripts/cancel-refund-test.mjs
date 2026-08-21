@@ -35,6 +35,17 @@ import { dirname, join } from "node:path";
 import { loadRoute, readJson, env, resetNet, scriptFetch, netCalls, ROOT } from "./route-harness/index.mjs";
 import { __cookies } from "./route-harness/stubs/next-headers.mjs";
 
+// PRE_FIX_REV — the revision this file's counterfactuals materialise.
+//
+// It is PINNED TO A SHA on purpose. It used to say "HEAD", which is
+// self-falsifying: the moment the fix is committed, HEAD becomes the FIXED
+// code, so every "this must fail before the fix" assertion starts running
+// against the fix and goes red. That is exactly what happened when 45c7247
+// landed — 21 counterfactuals across four files turned red simultaneously
+// while the product was perfectly healthy. A counterfactual must name the
+// revision it is contrasting against, never a moving reference.
+const PRE_FIX_REV = "f889ee5";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (...p) => readFileSync(join(root, ...p), "utf8");
 
@@ -526,7 +537,7 @@ test("Q: a Stripe-era record with no subscriptionId is sent to a human, and noth
 
 const headSrc = execFileSync(
   "git",
-  ["show", "HEAD:src/app/api/subscription/cancel/route.ts"],
+  ["show", PRE_FIX_REV + ":src/app/api/subscription/cancel/route.ts"],
   { cwd: ROOT, encoding: "utf8" },
 );
 
