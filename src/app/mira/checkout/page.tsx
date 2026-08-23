@@ -40,7 +40,7 @@ const card: React.CSSProperties = {
   padding: 24,
 };
 // The ONE place a WhatsApp number is collected, the release-gate-C1 disclosure
-// is shown, the three required consents are taken, and /api/begin is called.
+// is shown, the required consent is taken, and /api/begin is called.
 // It is also step 1 of <Stepper/> (Sign up -> Choose plan -> Payment).
 const CONNECT_STEP = "/mira/start";
 
@@ -98,8 +98,8 @@ function Checkout() {
   const phoneResult = useMemo(() => normalisePhone(phone), [phone]);
   const phoneE164 = phoneResult.ok ? phoneResult.e164 : null;
   const phoneError = !phoneResult.ok && phoneTouched ? phoneErrorText(phoneResult.reason) : null;
-  // The consent RULE lives in WhatsAppDisclosure (specs#160) and is not restated
-  // here - this only asks it whether the three required boxes are ticked.
+  // The consent RULE lives in WhatsAppDisclosure (specs#160r2) and is not restated
+  // here - this only asks it whether the required box is ticked.
   const consentComplete = whatsAppConsentComplete(consent);
 
   // Promotion code: validated server-side before it's applied.
@@ -191,7 +191,7 @@ function Checkout() {
     // button's `disabled` prop. A disabled button is a hint that can be
     // bypassed by a stray Enter key, a re-render or a future caller; this is
     // the gate. Nothing is charged, and no number leaves the browser, until
-    // the number normalises AND the three required consents are given. Both
+    // the number normalises AND the required consent is given. Both
     // branches surface the reason on screen rather than failing silently.
     if (!phoneResult.ok) {
       setPhoneTouched(true);
@@ -457,7 +457,7 @@ function Checkout() {
               GATE C1 (decisions#340): the risk copy is on screen BEFORE the
               number field, not after it and not behind a link. The wording is
               IMPORTED, never restated - WhatsAppDisclosure is the single
-              approved C1 surface (specs#160), so this page renders that
+              approved C1 surface (specs#160r2), so this page renders that
               component instead of paraphrasing it. It sits directly above the
               pay button, so the last thing read before paying is what
               connecting a number risks. */}
@@ -512,7 +512,7 @@ function Checkout() {
                     role="alert"
                     style={{ fontSize: 13, color: "var(--mira-rose-ink)", margin: "12px 0 0", lineHeight: 1.5 }}
                   >
-                    Please tick the three required boxes above. We can&apos;t connect a number until
+                    Please tick the required box above. We can&apos;t connect a number until
                     you&apos;ve confirmed you understand what WhatsApp can do to it.
                   </p>
                 )}

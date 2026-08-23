@@ -178,7 +178,7 @@ export default function ShapeYourMira() {
   const phoneE164 = phoneResult.ok ? phoneResult.e164 : null;
   const phoneError = !phoneResult.ok && phoneTouched ? phoneErrorText(phoneResult.reason) : null;
 
-  // The consent rule itself lives in WhatsAppDisclosure (writer C / specs#160) and is NOT
+  // The consent rule itself lives in WhatsAppDisclosure (writer C / specs#160r2) and is NOT
   // restated here. Three required boxes; the observation number is optional and excluded.
   const consentComplete = whatsAppConsentComplete(consent);
 
@@ -270,13 +270,13 @@ export default function ShapeYourMira() {
       setSubmitError(phoneErrorText(phoneResult.reason));
       return;
     }
-    // GATE C1. No connect call is made until the three required consents are given. This is a
+    // GATE C1 (specs#160r2). No connect call is made until the required consent is given. This is a
     // second, independent check rather than a repeat of canAdvance: reaching Review must never
     // be enough on its own to bind a real WhatsApp number.
     if (!consentComplete) {
       setConsentAttempted(true);
       setStep(STEP.WhatsApp);
-      setSubmitError("Please read the WhatsApp notice and tick the three required boxes first.");
+      setSubmitError("Please read the WhatsApp notice and tick the required box first.");
       return;
     }
     setSubmitError(null);
@@ -627,7 +627,7 @@ export default function ShapeYourMira() {
                   role="alert"
                   style={{ fontSize: 13, color: "var(--mira-rose-ink)", margin: "12px 0 0", lineHeight: 1.5 }}
                 >
-                  Please tick the three required boxes above. We can&apos;t connect a number until
+                  Please tick the required box above. We can&apos;t connect a number until
                   you&apos;ve confirmed you understand what WhatsApp can do to it.
                 </p>
               )}

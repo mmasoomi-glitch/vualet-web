@@ -53,7 +53,10 @@ const STRIPE_ARMED = {
 const RAW_PHONE = "050 123 4567";
 const RAW_PHONE_E164 = "+971501234567";
 
-/** All three REQUIRED scopes of specs#160 given; the optional one left alone. */
+/** A LEGACY three-box form, exactly as the pre-r2 wizard sent it. specs#160r2
+ *  requires only `banRisk`; this stays in its old shape on purpose, as the
+ *  standing proof that an old client is still accepted and its extra scopes are
+ *  PRESERVED rather than dropped. The optional scope is left alone. */
 const CONSENT_OK = {
   unofficialAutomation: true,
   banRisk: true,
@@ -422,7 +425,7 @@ test("e: consent is persisted with the paid record, with the optional scope and 
   assert.equal(rec.consent.banRisk, true);
   assert.equal(rec.consent.ownAccountReplies, true);
   assert.equal(rec.consent.observationNumber, true, "an opt-IN that was chosen must be recorded as chosen");
-  assert.equal(rec.consent.disclosure, "specs#160", "which disclosure they agreed to must be answerable later");
+  assert.equal(rec.consent.disclosure, "specs#160r2", "which disclosure they agreed to must be answerable later");
   assert.ok(rec.consent.acceptedAt >= before, "when they agreed must be recorded");
 });
 
@@ -495,7 +498,7 @@ test("e: an over-long phone is refused, and 200 chars is NOT (the bound is measu
   assert.equal(ctl.body.reason, "length", "200 chars must reach the normaliser and fail ITS length rule");
 });
 
-test("e: MISSING consent is 400 consent_required naming all three scopes, and nothing is charged", async () => {
+test("e: MISSING consent is 400 consent_required naming the required scope, and nothing is charged", async () => {
   for (const consent of [undefined, null, {}, "yes", 1, [], [true, true, true]]) {
     env(ALL_ARMED);
     resetNet();
@@ -507,15 +510,17 @@ test("e: MISSING consent is 400 consent_required naming all three scopes, and no
     assert.equal(status, 400, `consent=${JSON.stringify(consent)} must be refused`);
     assert.equal(body.error, "consent_required");
     assert.deepEqual(
-      body.missing, ["unofficialAutomation", "banRisk", "ownAccountReplies"],
-      "the customer must be told exactly which consents are outstanding",
+      body.missing, ["banRisk"],
+      "the customer must be told exactly which consent is outstanding",
     );
     assertNothingHappened(body, `consent=${JSON.stringify(consent)}`);
   }
 });
 
 test("e: INCOMPLETE consent — each required scope alone blocks the charge and is named", async () => {
-  for (const scope of ["unofficialAutomation", "banRisk", "ownAccountReplies"]) {
+  // specs#160r2: `banRisk` is the whole required set. The demoted scopes are
+  // swept in the sibling test below to prove they cannot stand in for it.
+  for (const scope of ["banRisk"]) {
     for (const value of [false, undefined, "true", 1, null]) {
       env(ALL_ARMED);
       resetNet();
@@ -541,7 +546,7 @@ test("e: consent must be exactly TRUE — a truthy value is a client bug, not in
   });
   assert.equal(status, 400);
   assert.equal(body.error, "consent_required");
-  assert.equal(body.missing.length, 3, "no truthy stand-in counts as consent to a ban risk");
+  assert.deepEqual(body.missing, ["banRisk"], "no truthy stand-in counts as consent to a ban risk");
   assertNothingHappened(body, "truthy consent");
 });
 
@@ -654,7 +659,7 @@ test("e: a ZERO-CHARGE order is bound too — phone, channel and consent all per
   assert.equal(rec.phone, RAW_PHONE_E164, "a comped customer must be as bindable as a paying one");
   assert.equal(rec.channel, "whatsapp");
   assert.equal(rec.consent.banRisk, true);
-  assert.equal(rec.consent.disclosure, "specs#160");
+  assert.equal(rec.consent.disclosure, "specs#160r2");
 });
 
 test("e: the WhatsApp number is never sent to the payment provider", async () => {

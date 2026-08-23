@@ -1,14 +1,33 @@
 "use client";
 
 /* RELEASE GATE C1 — honest disclosure before a customer connects WhatsApp.
-   The copy below is the canonical approved text (specs#160) and is rendered
-   faithfully: the same six sections in the same order, the risk NOT buried, and
-   the four consent checkboxes with only the fourth optional.
+   Revision r2 (specs#160r2). The six sections and four checkboxes of specs#160
+   are now three sections and TWO checkboxes, one of which is optional.
 
-   specs#160 records DELIBERATE OMISSIONS. Do not "improve" this file by adding
-   any of them back:
+   WHAT CHANGED AND WHY — read this before you "restore" anything:
+     - The product's normal shape is a PRIVATE SELF-CHAT: the customer messages
+       themselves and the assistant replies from their own account. specs#160's
+       section 3 ("It runs inside a WhatsApp group you create") had become
+       FACTUALLY WRONG. It is replaced by the truth, not softened.
+     - The three required ticks became ONE. "Unofficial automation" and "ban
+       risk" are two halves of one fact — the unofficial automation IS what
+       creates the ban risk — so they are merged into a single box that states
+       both. The judge (google/gemini-2.5-flash, gen-1787492131-bFj1wgqjjyikuMA3lZbv)
+       accepted the merge and REFUSED to demote the ban risk to prose at all.
+     - "Replies come from your own account" is now PROSE, not a tick. The judge:
+       it "is a product feature, not a risk or consequence". It is still on this
+       screen, above the box.
+   No RISK FACT was removed. Only the number of ticks changed. Two specs#160
+   sentences were dropped as redundant on the judge's ruling ("we recommend a
+   secondary or dedicated number", covered by the shout line; "you may decline
+   any part of this", inherent in an unticked box). A third the judge ordered
+   RESTORED, and it is back verbatim in the risk box below.
+
+   specs#160 records DELIBERATE OMISSIONS. They still bind. Do not "improve"
+   this file by adding any of them back:
      - no ban probability, frequency or likelihood ("rare", "unlikely", "we have
-       never seen it") — no substantiated data exists;
+       never seen it") — no substantiated data exists, and the self-chat shape is
+       NOT a licence to imply the risk is small;
      - no claim that a ban is reversible, appealable, or that we will intervene;
      - no promise of compensation, restoration or replacement;
      - no detail of what WhatsApp detects or how (speculative, and an evasion guide);
@@ -32,7 +51,7 @@ import { useId, useState } from "react";
    a form the customer genuinely completed. That module is plain TypeScript with no
    imports and no "use client" directive, which is exactly what lets a client
    component and a route handler share it. Do not re-add a local copy.
-   What lives in THIS file is the disclosure COPY (specs#160), and nothing else. */
+   What lives in THIS file is the disclosure COPY (specs#160r2), and nothing else. */
 import {
   EMPTY_WHATSAPP_CONSENT,
   whatsAppConsentComplete,
@@ -103,7 +122,8 @@ export default function WhatsAppDisclosure({ value, onChange, className }: Props
     const id = `${uid}-${key}`;
     return (
       <div className="wad-row">
-        <input type="checkbox" id={id} checked={consent[key]} onChange={() => toggle(key)} />
+        {/* treat absent optional key as false */}
+        <input type="checkbox" id={id} checked={consent[key] ?? false} onChange={() => toggle(key)} />
         <label htmlFor={id}>
           {optional && <span className="wad-opt">Optional</span>}
           {text}
@@ -116,99 +136,47 @@ export default function WhatsAppDisclosure({ value, onChange, className }: Props
     <section className={className ? `wad ${className}` : "wad"} aria-labelledby={`${uid}-h`}>
       <style>{CSS}</style>
 
-      <h2 id={`${uid}-h`} className="wad-h2">Before You Connect WhatsApp: Please Read This.</h2>
-      <p className="wad-lede">
-        This explains exactly how the WhatsApp connection works and what it risks. Read it before you connect a number.
-      </p>
+      <h2 id={`${uid}-h`} className="wad-h2">Your AI, your own WhatsApp</h2>
+      <p className="wad-lede">Message yourself and get AI replies from your own number&mdash;private by default.</p>
 
-      {/* 1 — HOW THIS WORKS */}
+      {/* HOW THIS WORKS. The self-chat shape is stated because it is the truth,
+          not because it makes the risk below sound smaller. */}
       <div className="wad-sec">
-        <span className="wad-k">1 &middot; How this works</span>
-        <p>
-          This assistant connects using headless WhatsApp Web (the Baileys library) &mdash; the same technology behind
-          WhatsApp Web in a browser, automated. It is <strong>not</strong> WhatsApp&rsquo;s official Business API. It
-          links as a paired device on your own WhatsApp account.
-        </p>
+        <span className="wad-k">How this works</span>
+        <p>This assistant links as a paired device using unofficial automation, not WhatsApp&rsquo;s official Business API.</p>
+        <p>By default, it&rsquo;s a private chat with yourself: you message yourself, it replies from your account, group mode off unless turned on.</p>
       </div>
 
-      {/* 2 — THE RISK. Stated bluntly, never buried, never softened. */}
+      {/* THE RISK. Stated bluntly, never buried, never softened. */}
       <div className="wad-risk">
-        <span className="wad-k">2 &middot; The risk &mdash; read this even if you skip everything else</span>
-        <p>
-          This method <strong>violates WhatsApp&rsquo;s Terms of Service</strong>. WhatsApp can detect this kind of use
-          and <strong>ban or restrict the phone number you connect</strong>, with no guaranteed appeal and no
-          compensation from us.
-        </p>
+        <span className="wad-k">The risk</span>
+        <p>This breaks WhatsApp&rsquo;s Terms of Service, and WhatsApp can ban or restrict the number you connect with no guaranteed appeal and no compensation from us.</p>
+        {/* RESTORED verbatim from specs#160 on the judge's ruling: "can ban" alone
+            reads as a one-off, and this risk does not stop after setup. */}
         <p>This is a real and ongoing risk, not a one-time possibility.</p>
         <p className="wad-shout">Do not connect a number you cannot afford to lose.</p>
-        <p>We recommend a secondary or dedicated number, not your primary line.</p>
       </div>
 
-      {/* 3 — HOW THE ASSISTANT APPEARS */}
+      {/* DATA + the optional observation number, described neutrally, never sold. */}
       <div className="wad-sec">
-        <span className="wad-k">3 &middot; How the assistant appears</span>
-        <p>
-          It runs inside a WhatsApp group you create, and depending on your setup its replies may appear to come from
-          your own account rather than a separate bot identity.
-        </p>
-      </div>
-
-      {/* 4 — OPTIONAL OBSERVATION NUMBER (described neutrally, never sold) */}
-      <div className="wad-sec">
-        <span className="wad-k">4 &middot; Optional observation number</span>
-        <p>
-          You may choose to add a company-operated WhatsApp number to your group. If added, it can read{" "}
-          <strong>every message in that group</strong>, for quality monitoring and escalation. It is:
-        </p>
-        <p>
-          <strong>Off by default</strong> &mdash; we do not add it without your action.{" "}
-          <strong>Not anonymous</strong> &mdash; it appears as a visible participant.{" "}
-          <strong>Removable at any time</strong> &mdash; by you, like any other member.{" "}
-          <strong>Not required</strong> &mdash; declining has no effect on the service you receive.
-        </p>
-      </div>
-
-      {/* 5 — DATA HANDLING (exactly this, and nothing broader) */}
-      <div className="wad-sec">
-        <span className="wad-k">5 &middot; Data handling</span>
+        <span className="wad-k">Your data</span>
         <p>Messages are encrypted at rest on our servers.</p>
+        <p>You may add a company-operated WhatsApp number that can read messages in the chat; it is off by default, appears as a visible participant, can be removed at any time, and declining does not affect the service you receive.</p>
       </div>
 
-      {/* 6 — DECLINING */}
-      <div className="wad-sec">
-        <span className="wad-k">6 &middot; If you would rather not</span>
-        <p>You may decline any part of this and use an alternative channel instead.</p>
-      </div>
-
-      {/* CONSENT — each required to proceed except where marked optional */}
+      {/* CONSENT — ONE required box (the merged unofficial-automation/ban-risk
+          acceptance) and ONE optional opt-in. */}
       <fieldset className="wad-fs">
-        <legend className="wad-lg">Your consent &mdash; each required to proceed except where marked optional</legend>
-
-        {box(
-          "unofficialAutomation",
-          false,
-          <>I understand this uses unofficial WhatsApp automation, not WhatsApp&rsquo;s Business API.</>
-        )}
+        <legend className="wad-lg">Your consent</legend>
         {box(
           "banRisk",
           false,
-          <>
-            I understand this may cause WhatsApp to ban or restrict the phone number I connect, and I am choosing to
-            accept that risk.
-          </>
-        )}
-        {box(
-          "ownAccountReplies",
-          false,
-          <>I understand the assistant&rsquo;s replies may appear to come from my own WhatsApp account.</>
+          <>I understand this connects to WhatsApp in a way WhatsApp does not officially allow, that WhatsApp can ban or restrict the number I connect, and I accept that risk.</>
         )}
         {box(
           "observationNumber",
           true,
-          <>
-            I choose to add the observation number to my group, understanding it can read all group messages, is not
-            anonymous, and can be removed at any time.
-          </>
+          <>I choose to add the company-operated number, understanding it can read messages in the chat and can be removed at any time.</>
         )}
       </fieldset>
     </section>
