@@ -179,7 +179,7 @@ export default function MiraStore() {
         <Link href="/" className="underline hover:text-[var(--foreground)]">
           Vualet
         </Link>{" "}
-        family — powered by Veridian, from Satellite World (a sole proprietorship).
+        family — powered by Veridian, from Vualet Trading (a sole proprietorship).
       </p>
     </div>
   );

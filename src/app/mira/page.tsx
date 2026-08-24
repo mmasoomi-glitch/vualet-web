@@ -204,7 +204,7 @@ export default function MiraPage() {
               <Link href="/legal/privacy">Privacy</Link>
             </nav>
           </div>
-          <p className="mha-foot-legal">Mira, a Veridian product &mdash; from Satellite World (a sole proprietorship). Photographic memory, zero hallucination: claims we hold ourselves to.</p>
+          <p className="mha-foot-legal">Mira, a Veridian product &mdash; from Vualet Trading (a sole proprietorship). Photographic memory, zero hallucination: claims we hold ourselves to.</p>
         </div>
       </footer>
     </div>

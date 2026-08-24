@@ -1,6 +1,7 @@
 /**
- * Brand identity guard – stops the retired trading name from creeping back
- * into the codebase. Run with `node --test scripts/brand-identity-test.mjs`.
+ * Brand identity guard – ensures the current trading name 'Vualet Trading' is used correctly
+ * and retired names ('Afaq Alnaseem Trading LLC', 'Satellite World') do not reappear.
+ * Run with `node --test scripts/brand-identity-test.mjs`.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -14,6 +15,7 @@ const FORBIDDEN = [
   /alnaseem/i,
   /al\s+naseem/i,
   "100475523500003",
+  /satellite\s+world/i,
 ];
 
 function getTrackedNonPublicFiles() {
@@ -96,11 +98,31 @@ test("COUNTERFACTUAL: the retired identity WAS present at 4eb9aa9", () => {
   }
 });
 
+test("COUNTERFACTUAL: the retired 'Satellite World' identity WAS present at fd3dd22", () => {
+  const SHA = "fd3dd22";
+  const paths = [
+    "src/components/footer.tsx",
+    "src/app/legal/terms/page.tsx",
+    "src/lib/system-knowledge.mjs",
+  ];
+  const pattern = /satellite\s+world/i;
+  for (const p of paths) {
+    const content = execFileSync("git", ["show", `${SHA}:${p}`], {
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    assert.ok(
+      pattern.test(content),
+      `Counterfactual failed for ${p}: the blob at ${SHA} no longer contains 'Satellite World', meaning the guard proves nothing.`
+    );
+  }
+});
+
 test("replacement identity is present in footer", () => {
   const content = readFileSync("src/components/footer.tsx", "utf8");
   assert.ok(
-    content.includes("Satellite World"),
-    "Footer must contain 'Satellite World'"
+    content.includes("Vualet Trading"),
+    "Footer must contain 'Vualet Trading'"
   );
 });
 
@@ -110,12 +132,17 @@ test("exact spelling is enforced", () => {
     "utf8"
   );
   assert.ok(
-    systemKnowledge.includes("Satellite World"),
-    "src/lib/system-knowledge.mjs must contain 'Satellite World'"
+    systemKnowledge.includes("Vualet Trading"),
+    "src/lib/system-knowledge.mjs must contain 'Vualet Trading'"
   );
 
   const files = getTrackedNonPublicFiles();
-  const misspellings = ["Satelite World", "Satellite Word"];
+  const misspellings = [
+    "Vualet trading",
+    "VualetTrading",
+    "Valuet Trading",
+    "Vaulet Trading",
+  ];
   const violations = [];
 
   for (const file of files) {
@@ -137,5 +164,28 @@ test("exact spelling is enforced", () => {
     violations.length,
     0,
     `Misspellings found:\n${violations.join("\n")}`
+  );
+});
+
+test("new identity must not be written with an incorporation suffix", () => {
+  const files = getTrackedNonPublicFiles();
+  const pattern = /vualet\s+trading\s+(LLC|L\.L\.C\.|Ltd|FZE|FZ-LLC)/i;
+  const violations = [];
+
+  for (const file of files) {
+    const lines = readFileLinesSafe(file);
+    if (!lines) continue;
+
+    for (let i = 0; i < lines.length; i++) {
+      if (pattern.test(lines[i])) {
+        violations.push(`${file}:${i + 1}`);
+      }
+    }
+  }
+
+  assert.strictEqual(
+    violations.length,
+    0,
+    `Incorporation suffix violations found:\n${violations.join("\n")}`
   );
 });

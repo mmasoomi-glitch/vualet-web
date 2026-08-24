@@ -182,7 +182,7 @@ export const SOURCED_FACTS = Object.freeze([
   {
     id: "company",
     claim:
-      "Mira is a product powered by Veridian — its proprietary technology — provided by a sole proprietor trading as Satellite World, based in Dubai, United Arab Emirates. It is not a registered company, and purchases are sold by Dodo Payments as merchant of record. Vualet is a family of software products built in Dubai, and Mira is its flagship. Mira is backed by Satellite Electronic Trading, a Dubai technology company.",
+      "Mira is a product powered by Veridian — its proprietary technology — provided by a sole proprietor trading as Vualet Trading, based in Dubai, United Arab Emirates. It is not a registered company, and purchases are sold by Dodo Payments as merchant of record. Vualet is a family of software products built in Dubai, and Mira is its flagship. Mira is backed by Satellite Electronic Trading, a Dubai technology company.",
     source: "src/app/about/page.tsx:20-34; src/lib/veridian-kb.ts:88-90",
   },
 ]);
@@ -340,7 +340,7 @@ export const TOPICS = Object.freeze([
     slug: "built-in-dubai-mira-by-veridian",
     title: "Built in Dubai: who is behind Mira",
     description:
-      "Mira is powered by Veridian and operated by Satellite World, the trading name of a sole proprietor in Dubai, United Arab Emirates.",
+      "Mira is powered by Veridian and operated by Vualet Trading, the trading name of a sole proprietor in Dubai, United Arab Emirates.",
     factIds: ["company", "surface"],
     audiences: ["gulf-professional", "privacy-conscious"],
     intent: "brand",
@@ -1166,7 +1166,7 @@ function buildJsonLd({ title, description, canonical, lang, createdAt }) {
     mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
     publisher: {
       "@type": "Organization",
-      name: "Satellite World",
+      name: "Vualet Trading",
       brand: "Vualet",
     },
     dateCreated: createdAt,

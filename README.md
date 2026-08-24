@@ -69,6 +69,6 @@ Logo system: parent **V** in iOS-style squircle, indigo fill, white glyph. Each 
 
 ## Operated by
 
-Satellite World — the trading name of a sole proprietor, Dubai, UAE. Not a registered
+Vualet Trading — the trading name of a sole proprietor, Dubai, UAE. Not a registered
 company; there is no trade licence, VAT or TRN number. Dodo Payments is the merchant of
 record for all sales.

@@ -24,7 +24,7 @@ Open these tabs in order. Each step is ~5 minutes.
 
 1. Open https://paddle.com → Sign up.
 2. Use these details when asked:
-   - Trading name: **Satellite World**
+   - Trading name: **Vualet Trading**
    - Business type: **sole proprietor / individual** (not a registered company)
    - Country: **United Arab Emirates**
    - Address: your own residential/correspondence address

@@ -35,7 +35,7 @@ export default function TermsAndConditionsPage() {
         and use of Mira and the Veridian technology that powers it, together
         with any related products, sites, and services (together, the
         &quot;Service&quot;). The Service is provided by{" "}
-        a sole proprietor trading as <strong>Satellite World</strong>, Dubai,
+        a sole proprietor trading as <strong>Vualet Trading</strong>, Dubai,
         United Arab Emirates (&quot;we,&quot; &quot;us,&quot; the
         &quot;Provider&quot;). Purchases are sold by Dodo Payments, the merchant
         of record for all payment transactions. By using the Service, or by ticking the

@@ -75,7 +75,7 @@ Veridian CLS Unlimited is **coming soon, not released**. Describe it that way or
 *(veridian-kb.ts:83-85)*
 
 ### The company
-Mira is powered by Veridian and operated by **Satellite World**, the trading name of a sole
+Mira is powered by Veridian and operated by **Vualet Trading**, the trading name of a sole
 proprietor based in Dubai, United Arab Emirates. It is not a registered company, and purchases
 are sold by Dodo Payments as merchant of record. Vualet is a family of software products built in Dubai; Mira is its
 flagship. *(about/page.tsx:20-34, veridian-kb.ts:88-90)*

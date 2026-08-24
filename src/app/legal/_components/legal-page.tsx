@@ -47,7 +47,7 @@ export function LegalPage({
       <div className={styles.footerNote}>
         <p>
           This policy is issued by a sole proprietor trading as{" "}
-          <strong>Satellite World</strong>, Dubai, United Arab Emirates, the
+          <strong>Vualet Trading</strong>, Dubai, United Arab Emirates, the
           operator of Vualet and Mira. Your purchase contract is with Dodo
           Payments, the merchant of record for all payment transactions.
           Questions? Contact{" "}

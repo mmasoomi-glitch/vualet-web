@@ -19,7 +19,7 @@ export default function PrivacyPolicyPage() {
       <h2>1. Who we are</h2>
       <p>
         Vualet and Mira are services provided by a sole proprietor trading as{" "}
-        <strong>Satellite World</strong>, based in Dubai, United Arab Emirates.
+        <strong>Vualet Trading</strong>, based in Dubai, United Arab Emirates.
         Your payment contract is with Dodo Payments, our merchant of record.
         This policy applies to our website, apps, in-product Mira assistant, and
         any other service that links to it.
@@ -182,7 +182,7 @@ export default function PrivacyPolicyPage() {
       <h2>12. Contact us</h2>
       <p>
         For any questions about this Privacy Policy or how we handle your
-        data, contact <strong>Satellite World</strong> at{" "}
+        data, contact <strong>Vualet Trading</strong> at{" "}
         <a href="mailto:info@vualet.com">info@vualet.com</a>.
       </p>
 

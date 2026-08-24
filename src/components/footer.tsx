@@ -80,7 +80,7 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-[var(--border)] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <p className="text-xs text-[var(--muted)]">
-            © {new Date().getFullYear()} Vualet — from Satellite World (a sole proprietorship), Dubai, UAE.
+            © {new Date().getFullYear()} Vualet — from Vualet Trading (a sole proprietorship), Dubai, UAE.
           </p>
           <p className="text-xs text-[var(--muted)]">
             Sold by Dodo Payments, our merchant of record

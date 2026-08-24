@@ -1,7 +1,7 @@
 export const metadata = {
   title: "About",
   description:
-    "Vualet is a Dubai-based product family building Mira and more, operated by Satellite World.",
+    "Vualet is a Dubai-based product family building Mira and more, operated by Vualet Trading.",
 };
 
 export default function AboutPage() {
@@ -25,7 +25,7 @@ export default function AboutPage() {
         </p>
         <p>
           Vualet and its products are provided by a sole proprietor trading as{" "}
-          <span className="text-[var(--foreground)]">Satellite World</span>, based
+          <span className="text-[var(--foreground)]">Vualet Trading</span>, based
           in Dubai, United Arab Emirates. Your payment contract is with Dodo
           Payments, our merchant of record. The technology powering Mira is built
           on Veridian.

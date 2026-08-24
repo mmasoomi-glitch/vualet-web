@@ -87,7 +87,7 @@ export const VERIDIAN_KB: KbEntry[] = [
   {
     topic: "Company — Mira by Veridian",
     body:
-      "Mira is a product powered by Veridian — its proprietary technology — provided by a sole proprietor trading as Satellite World. Purchases are sold by Dodo Payments as merchant of record. Mira is backed by Satellite Electronic Trading, a Dubai technology company pioneering dormant and local AI. Mira's focus is a private, trustworthy assistant that lives in the chats people already use.",
+      "Mira is a product powered by Veridian — its proprietary technology — provided by a sole proprietor trading as Vualet Trading. Purchases are sold by Dodo Payments as merchant of record. Mira is backed by Satellite Electronic Trading, a Dubai technology company pioneering dormant and local AI. Mira's focus is a private, trustworthy assistant that lives in the chats people already use.",
   },
   {
     topic: "Privacy — yours alone",
@@ -152,7 +152,7 @@ export function kbFallbackAnswer(message: string): string | null {
     return "You can load Mira with your own knowledge — notes, documents, study material — and it answers grounded in exactly what you gave it.";
   }
   if (has("company", "who made", "primaion", "veridian", "satellite", "backed", "story", "about")) {
-    return "Mira is a product powered by Veridian — its proprietary technology — provided by a sole proprietor trading as Satellite World, with Dodo Payments as merchant of record. It's backed by Satellite Electronic Trading, a Dubai technology company pioneering dormant and local AI.";
+    return "Mira is a product powered by Veridian — its proprietary technology — provided by a sole proprietor trading as Vualet Trading, with Dodo Payments as merchant of record. It's backed by Satellite Electronic Trading, a Dubai technology company pioneering dormant and local AI.";
   }
   if (has("privacy", "private", "secure", "data", "conversation")) {
     return "Your Mira is private by design — your conversations are yours alone, sealed off from everyone else's.";
