@@ -99,7 +99,7 @@ test("2. identity facts: what Mira is, that she is an AI, and Veridian", () => {
 });
 
 test("3. company facts match /about and the legal pages exactly", () => {
-  assert.match(KNOWLEDGE.company.operator.text, /Afaq Alnaseem Trading LLC/);
+  assert.match(KNOWLEDGE.company.operator.text, /Satellite World/);
   assert.match(KNOWLEDGE.company.operator.text, /Dubai/);
   assert.match(KNOWLEDGE.company.operator.source, /about|privacy|terms/);
   assert.match(KNOWLEDGE.company.brandFamily.text, /Vualet/);
@@ -190,7 +190,7 @@ test("8. KNOWLEDGE is frozen — no caller can bend the facts at runtime", () =>
     "use strict";
     KNOWLEDGE.company.operator.text = "Someone Else Ltd";
   });
-  assert.match(KNOWLEDGE.company.operator.text, /Afaq Alnaseem Trading LLC/);
+  assert.match(KNOWLEDGE.company.operator.text, /Satellite World/);
 });
 
 test("9. tier gating: capabilities unlock upward, never leak downward", () => {
@@ -215,7 +215,7 @@ test("9. tier gating: capabilities unlock upward, never leak downward", () => {
 
 test("10. buildSystemPrompt renders facts, deny-list, data-fencing and voice", () => {
   const p = buildSystemPrompt({ tier: "companion", channel: "WhatsApp", userName: "Sam" });
-  assert.match(p, /Afaq Alnaseem Trading LLC/);
+  assert.match(p, /Satellite World/);
   assert.match(p, /\$14\.99/);
   assert.match(p, /WhatsApp/);
   assert.match(p, /Sam/);

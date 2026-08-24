@@ -546,7 +546,7 @@ function assertBlocked(body, opts, why) {
 
 test("29. BYPASS: a capability claim with no grammatical subject", () => {
   // The core defect. The capability and statistic scans only ran when the
-  // sentence named mira/veridian/vualet/afaq/we/our/us, carried a "$", or put a
+  // sentence named mira/veridian/vualet/satellite/we/our/us, carried a "$", or put a
   // number next to one of five units. Ordinary marketing prose asserts a
   // capability without a subject, and was scanned for nothing at all.
   const f = assertBlocked(

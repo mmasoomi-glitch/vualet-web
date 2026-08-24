@@ -155,7 +155,7 @@ export default function Home() {
             {[
               ["One login", "Across every product"],
               ["One bill", "In USD or AED"],
-              ["VAT-ready", "TRN 100475523500003"],
+              ["Merchant of record", "Tax & invoicing handled"],
               ["Arabic & English", "RTL built in"],
             ].map(([t, s]) => (
               <div key={t}>

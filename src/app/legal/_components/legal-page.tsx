@@ -46,9 +46,11 @@ export function LegalPage({
 
       <div className={styles.footerNote}>
         <p>
-          This policy is issued by <strong>Afaq Alnaseem Trading LLC</strong>,
-          Dubai, United Arab Emirates (TRN 100475523500003), the operator of
-          Vualet and Mira. Questions? Contact{" "}
+          This policy is issued by a sole proprietor trading as{" "}
+          <strong>Satellite World</strong>, Dubai, United Arab Emirates, the
+          operator of Vualet and Mira. Your purchase contract is with Dodo
+          Payments, the merchant of record for all payment transactions.
+          Questions? Contact{" "}
           <a href="mailto:legal@vualet.com">legal@vualet.com</a>.
         </p>
       </div>

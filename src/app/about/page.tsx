@@ -1,7 +1,7 @@
 export const metadata = {
   title: "About",
   description:
-    "Vualet is a Dubai-based product family building Mira and more, operated by Afaq Alnaseem Trading LLC.",
+    "Vualet is a Dubai-based product family building Mira and more, operated by Satellite World.",
 };
 
 export default function AboutPage() {
@@ -24,13 +24,11 @@ export default function AboutPage() {
           are on the way.
         </p>
         <p>
-          Vualet and its products are operated by{" "}
-          <span className="text-[var(--foreground)]">
-            Afaq Alnaseem Trading LLC
-          </span>
-          , a company registered in Dubai, United Arab Emirates
-          (TRN&nbsp;100475523500003). The technology powering Mira is built on
-          Veridian.
+          Vualet and its products are provided by a sole proprietor trading as{" "}
+          <span className="text-[var(--foreground)]">Satellite World</span>, based
+          in Dubai, United Arab Emirates. Your payment contract is with Dodo
+          Payments, our merchant of record. The technology powering Mira is built
+          on Veridian.
         </p>
       </div>
     </div>
