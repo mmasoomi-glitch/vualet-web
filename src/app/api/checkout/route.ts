@@ -158,6 +158,30 @@ export async function POST(req: Request) {
     consent = checked.consent;
   }
 
+  // One builder for both outcomes. The comped path and the charged path differ by
+  // exactly one field - the status - and previously repeated the whole record. A
+  // field added to one and missed on the other would silently cost a comped
+  // customer their binding parameters, so there is now only one place to change.
+  const newConnectRecord = (
+    status: ConnectRecord["status"],
+  ): { token: string; record: ConnectRecord } => {
+    const token = mintConnectToken();
+    const record: ConnectRecord = {
+      token,
+      plan,
+      email: cleanEmail,
+      status,
+      persona,
+      // A comped customer is still a customer who has to be connected: the
+      // binding parameters are recorded here exactly as on the charged path.
+      phone: e164,
+      channel,
+      consent,
+      createdAt: new Date().toISOString(),
+    };
+    return { token, record };
+  };
+
   // ── Promotion code ──────────────────────────────────────────────────────
   // Defect A (jury #120): the checkout form sends promoCode in the body, but
   // this route never read it — the customer was told $0 and then charged full
@@ -199,20 +223,8 @@ export async function POST(req: Request) {
 
     // 100%-off: activate directly. The customer never visits a payment page.
     if (promoResult.total === 0) {
-      const token = mintConnectToken();
-      const record: ConnectRecord = {
-        token,
-        plan,
-        email: cleanEmail,
-        status: "active", // no payment needed — already "paid" by the code
-        persona,
-        // A comped customer is still a customer who has to be connected: the
-        // binding parameters are recorded here exactly as on the charged path.
-        phone: e164,
-        channel,
-        consent,
-        createdAt: new Date().toISOString(),
-      };
+      // "active": no payment needed — already "paid" by the code.
+      const { token, record } = newConnectRecord("active");
       try {
         await putConnect(record);
         return NextResponse.json({
@@ -287,18 +299,7 @@ export async function POST(req: Request) {
   // number, the channel and the consent ride along on the same record, so the
   // webhook that marks this order paid is marking a record that can actually be
   // bound — and one that can prove what the customer was shown before they paid.
-  const token = mintConnectToken();
-  const record: ConnectRecord = {
-    token,
-    plan,
-    email: cleanEmail,
-    status: "pending",
-    persona,
-    phone: e164,
-    channel,
-    consent,
-    createdAt: new Date().toISOString(),
-  };
+  const { token, record } = newConnectRecord("pending");
 
   try {
     await putConnect(record);

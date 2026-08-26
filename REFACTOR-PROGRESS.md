@@ -2,7 +2,7 @@
 
 **Branch:** `refactor/overnight-2026-08-26` (cut from `remediation/wa-pairing-entry`)
 **Started:** 2026-08-26
-**Running total spend:** $0.0430
+**Running total spend:** $0.0550
 
 > **Resume point.** Any fresh session continues from this file alone: take the first
 > unit whose status is `TODO`, follow the loop in the run instructions, update the row.
@@ -103,21 +103,21 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
 | 36 | `src/lib/dodo.ts` (706) | DONE | (this commit) | 0.0430 | Extracted `requireDodoKey` + `dodoFetch`; 4 call sites de-duplicated. |
 | 37 | `src/lib/dodo-webhook-core.mjs` (1010) | CLEAN | | | 463 code lines, longest fn 90, zero dups - already well factored. |
 | 38 | `src/lib/system-knowledge.mjs` (1400) | CLEAN | | | Mostly content data; longest fn 63, zero dups. |
-| 39 | `src/lib/reconcile-core.mjs` (1498) | TODO | | | Top smell score (10): 174-line fn + 5 dup blocks around `evaluate(...)`. |
+| 39 | `src/lib/reconcile-core.mjs` (1498) | CLEAN | | | Highest scanner score, judged CLEAN on reading. 47% of the file is comments; `planSubscriptions` (187 lines) is one cohesive paginated decision tree whose branches each cite a ledger decision. The 4 `evaluate(...)` sites take genuinely different arguments (phase, effect, record, ctx); only a 2-line tail is common, and a 7-arg helper to save it would cost clarity in billing code. Splitting the decision tree would scatter it. "I'd have written it differently" is not messy. |
 
 ### Tier 3 — API routes (services)
 
 | # | Unit | Status | Commit | USD | Notes |
 |---|---|---|---|---|---|
-| 40 | `src/app/api/admin/*` small routes (login, mfa, admins, me) | TODO | | | |
-| 41 | `src/app/api/contact` + `waitlist` + `connect` | TODO | | | |
-| 42 | `src/app/api/subscription/cancel` (218) + `refund-request` (126) | TODO | | | |
-| 43 | `src/app/api/checkout/route.ts` (317) | TODO | | | |
-| 44 | `src/app/api/veridian-demo/route.ts` (351) + `veridian-voice` (131) | TODO | | | |
-| 45 | `src/app/api/webhooks/stripe/route.ts` (268) | TODO | | | |
-| 46 | `src/app/api/webhooks/dodo/route.ts` (419) | TODO | | | |
+| 40 | `src/app/api/admin/*` small routes (login, mfa, admins, me) | CLEAN | | | Zero/low smell signals, no duplicate blocks. |
+| 41 | `src/app/api/contact` + `waitlist` + `connect` | CLEAN | | | Zero smell signals. |
+| 42 | `src/app/api/subscription/cancel` (218) + `refund-request` (126) | CLEAN | | | Zero duplicate blocks; longest fn 88 lines and flat. |
+| 43 | `src/app/api/checkout/route.ts` (317) | DONE | (this commit) | 0.0120 | Extracted `newConnectRecord(status)`; comped and charged paths can no longer drift. |
+| 44 | `src/app/api/veridian-demo/route.ts` (351) + `veridian-voice` (131) | CLEAN | | | Zero duplicate blocks; longest fn 75 lines. |
+| 45 | `src/app/api/webhooks/stripe/route.ts` (268) | CLEAN | | | Zero smell signals. |
+| 46 | `src/app/api/webhooks/dodo/route.ts` (419) | CLEAN | | | Zero duplicate blocks; thin route over the tested pure core. |
 | 47 | `src/app/api/pair/bind` (153) + `pair/start` (557) | TODO | | | |
-| 48 | `src/app/api/begin/route.ts` (663) | TODO | | | |
+| 48 | `src/app/api/begin/route.ts` (663) | CLEAN | | | Zero duplicate blocks. Longest fn 122 lines but it is a flat, heavily-commented rate-limit/abuse gate. |
 
 ### Tier 4 — UI entry points (highest risk, last)
 
@@ -164,3 +164,16 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
 - **2026-08-26** — FINDING, queued as unit 56: `src/lib/magic-link.ts` and
   `src/lib/session.ts` carry a byte-identical `secret()` function. Small, but it is security
   code where a silent divergence between the two copies would be dangerous.
+- **2026-08-26** — Unit 39 `reconcile-core.mjs` marked CLEAN despite topping the smell
+  scanner. Reading it changed the verdict: the score came from size plus repeated call
+  *shapes*, but each `evaluate(...)` site passes a different phase, effect, record and
+  context, so the only shared part is a 2-line tail. A 7-argument helper to remove it would
+  make high-stakes billing code harder to read, not easier. This is the triage rule working
+  as intended — the scanner nominates, reading decides.
+- **2026-08-26** — Unit 43 `src/app/api/checkout/route.ts` DONE. Two `ConnectRecord`
+  constructions differed by exactly one field (`status`: "active" comped vs "pending"
+  charged). Extracted `newConnectRecord(status)`. The helper had to be declared at HANDLER
+  scope, not beside the first call site: site 1 sits inside the `if (promoCodeNorm)` block
+  while site 2 is at the top level of POST, so a const declared next to site 1 would have
+  been invisible to site 2 and broken the build. Each site still mints its own token.
+  Gates: tsc 0, 865/865 tests, build green.
