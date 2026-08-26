@@ -2,7 +2,7 @@
 
 **Branch:** `refactor/overnight-2026-08-26` (cut from `remediation/wa-pairing-entry`)
 **Started:** 2026-08-26
-**Running total spend:** $0.0705
+**Running total spend:** $0.0793
 
 > **Resume point.** Any fresh session continues from this file alone: take the first
 > unit whose status is `TODO`, follow the loop in the run instructions, update the row.
@@ -123,10 +123,10 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
 
 | # | Unit | Status | Commit | USD | Notes |
 |---|---|---|---|---|---|
-| 49 | `src/components/*` (nav, footer, logo, site-chrome, cs-bot) | TODO | | | |
-| 50 | `src/app/mira/_components/MiraBot.tsx` (502) | TODO | | | |
+| 49 | `src/components/*` (nav, footer, logo, site-chrome, cs-bot) | CLEAN | | | No duplicate blocks in any of them; footer/logo/site-chrome score zero. |
+| 50 | `src/app/mira/_components/MiraBot.tsx` (502) | CLEAN | | | Zero duplicate blocks. Longest 'function' is the component body itself, which is what a React component is. |
 | 51 | `src/app/veridian/VeridianChat.tsx` (708) | TODO | | | |
-| 52 | `src/app/mira/start/page.tsx` (701) | TODO | | | |
+| 52 | `src/app/mira/start/page.tsx` (701) | DONE | (this commit) | 0.0088 | Extracted `buildPersona()`; the stored persona and the sent persona can no longer drift. |
 | 53 | `src/app/mira/checkout/page.tsx` (558) | TODO | | | |
 | 54 | `src/app/mira/account/page.tsx` (357) + `welcome` (287) | TODO | | | |
 | 55 | `src/app/admin/team/page.tsx` (337) | TODO | | | 2 dup blocks, 11 long lines. |
@@ -190,3 +190,14 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
   (mid-file, line 378) to just below the imports — it was correct either way, because a
   module-scope `const` initialises before any handler runs, but a constant belongs at the top.
   Gates: tsc 0, 865/865 tests, build green.
+- **2026-08-26** — Unit 52 `src/app/mira/start/page.tsx` DONE, and the most valuable change
+  of the run so far. Nine lines building the assistant's persona were duplicated verbatim:
+  once in the `useEffect` that mirrors wizard state into localStorage, once in the submit
+  handler that POSTs to `/api/begin`. Editing the wording in one place only would have made
+  the persona shown/stored in the browser disagree with the persona actually sent to the
+  server — a silent, customer-visible divergence. Extracted a module-scope pure
+  `buildPersona({ name, roleLabel, vibe, vibeText, lang })` returning both `assistantName`
+  and `persona` (both call sites need the name too, and the submit handler reuses it in a
+  later error message). Verified the persona template survives exactly once in the file, so
+  the string is byte-identical. Pure and hook-free by design: every input is an argument, so
+  it cannot read stale state. Gates: tsc 0, 865/865 tests, build green.
