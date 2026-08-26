@@ -2,7 +2,7 @@
 
 **Branch:** `refactor/overnight-2026-08-26` (cut from `remediation/wa-pairing-entry`)
 **Started:** 2026-08-26
-**Running total spend:** $0.1156
+**Running total spend:** $0.1285
 
 > **Resume point.** Any fresh session continues from this file alone: take the first
 > unit whose status is `TODO`, follow the loop in the run instructions, update the row.
@@ -125,7 +125,7 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
 |---|---|---|---|---|---|
 | 49 | `src/components/*` (nav, footer, logo, site-chrome, cs-bot) | CLEAN | | | No duplicate blocks in any of them; footer/logo/site-chrome score zero. |
 | 50 | `src/app/mira/_components/MiraBot.tsx` (502) | CLEAN | | | Zero duplicate blocks. Longest 'function' is the component body itself, which is what a React component is. |
-| 51 | `src/app/veridian/VeridianChat.tsx` (708) | TODO | | | 2 dup blocks: a shared chat-bubble inline style object. |
+| 51 | `src/app/veridian/VeridianChat.tsx` (708) | DONE | (this commit) | 0.0129 | Extracted `bubbleBase`; spread-first keeps the per-corner override winning. |
 | 52 | `src/app/mira/start/page.tsx` (701) | DONE | (this commit) | 0.0088 | Extracted `buildPersona()`; the stored persona and the sent persona can no longer drift. |
 | 53 | `src/app/mira/checkout/page.tsx` (558) | CLEAN | | | Zero duplicate blocks; the long 'function' is the component body. |
 | 54 | `src/app/mira/account/page.tsx` (357) + `welcome` (287) | CLEAN | | | Zero duplicate blocks in either. |
@@ -228,3 +228,10 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
   so cancelling the dialog leaves the busy flag untouched and fires no `onChange()`. Note
   that `setBusy(false)` and `onChange()` run on BOTH the success and failure paths, exactly
   as before — they sit after the `if`, not inside it. Gates: tsc 0, 865/865 tests, build green.
+- **2026-08-26** — Unit 51 `src/app/veridian/VeridianChat.tsx` DONE, and the last TODO on
+  the checklist. The bubble-style ternary repeated five identical properties across both
+  branches and differed in four. Extracted a module-scope `bubbleBase: React.CSSProperties`.
+  The spread deliberately comes FIRST in each branch: `borderRadius: 16` is shared while each
+  branch overrides a single corner to 5, so a trailing spread would have reset that corner
+  and quietly changed the bubble shape — a silent visual regression that no test would catch.
+  Gates: tsc 0, 865/865 tests, build green.
