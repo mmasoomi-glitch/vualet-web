@@ -2,7 +2,7 @@
 
 **Branch:** `refactor/overnight-2026-08-26` (cut from `remediation/wa-pairing-entry`)
 **Started:** 2026-08-26
-**Running total spend:** $0.0793
+**Running total spend:** $0.0895
 
 > **Resume point.** Any fresh session continues from this file alone: take the first
 > unit whose status is `TODO`, follow the loop in the run instructions, update the row.
@@ -131,7 +131,7 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
 | 54 | `src/app/mira/account/page.tsx` (357) + `welcome` (287) | TODO | | | |
 | 55 | `src/app/admin/team/page.tsx` (337) | TODO | | | 2 dup blocks, 11 long lines. |
 | 56 | Shared `secret()` helper for `magic-link.ts` + `session.ts` | TODO | | | Byte-identical duplicate in security code; extract one source. |
-| 57 | `src/app/admin-login/page.tsx` (218) | TODO | | | **16 duplicate blocks in 198 code lines** - highest dup density in the repo. |
+| 57 | `src/app/admin-login/page.tsx` (218) | DONE | (this commit) | 0.0102 | Extracted `CodeEntryFields`; dup blocks 16 -> 0. |
 
 ---
 
@@ -201,3 +201,12 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
   later error message). Verified the persona template survives exactly once in the file, so
   the string is byte-identical. Pure and hook-free by design: every input is an argument, so
   it cannot read stale state. Gates: tsc 0, 865/865 tests, build green.
+- **2026-08-26** — Unit 57 `src/app/admin-login/page.tsx` DONE. The MFA-enrolment step and
+  the MFA-verification step each rendered a byte-identical 6-digit code field, error line and
+  submit button, differing only in the button's idle label. Extracted `CodeEntryFields`,
+  declared at MODULE scope rather than nested in the page component — a nested component is a
+  new type on every render, which would remount the input and drop the user's focus while
+  they type a code. Duplicate-block count for this file went **16 -> 0**. Every Tailwind
+  class string was reproduced character-for-character (they carry `var(--color-vualet-*)`
+  custom properties, where one typo silently unstyles the control). Gates: tsc 0, 865/865
+  tests, build green.
