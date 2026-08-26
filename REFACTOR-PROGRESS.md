@@ -2,7 +2,7 @@
 
 **Branch:** `refactor/overnight-2026-08-26` (cut from `remediation/wa-pairing-entry`)
 **Started:** 2026-08-26
-**Running total spend:** $0.0550
+**Running total spend:** $0.0705
 
 > **Resume point.** Any fresh session continues from this file alone: take the first
 > unit whose status is `TODO`, follow the loop in the run instructions, update the row.
@@ -116,7 +116,7 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
 | 44 | `src/app/api/veridian-demo/route.ts` (351) + `veridian-voice` (131) | CLEAN | | | Zero duplicate blocks; longest fn 75 lines. |
 | 45 | `src/app/api/webhooks/stripe/route.ts` (268) | CLEAN | | | Zero smell signals. |
 | 46 | `src/app/api/webhooks/dodo/route.ts` (419) | CLEAN | | | Zero duplicate blocks; thin route over the tested pure core. |
-| 47 | `src/app/api/pair/bind` (153) + `pair/start` (557) | TODO | | | |
+| 47 | `src/app/api/pair/bind` (153) + `pair/start` (557) | DONE | (this commit) | 0.0155 | Hoisted `NO_STORE_HEADERS`; `pair/bind` had no smell signals and was left alone. |
 | 48 | `src/app/api/begin/route.ts` (663) | CLEAN | | | Zero duplicate blocks. Longest fn 122 lines but it is a flat, heavily-commented rate-limit/abuse gate. |
 
 ### Tier 4 — UI entry points (highest risk, last)
@@ -176,4 +176,17 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
   scope, not beside the first call site: site 1 sits inside the `if (promoCodeNorm)` block
   while site 2 is at the top level of POST, so a const declared next to site 1 would have
   been invisible to site 2 and broken the build. Each site still mints its own token.
+  Gates: tsc 0, 865/865 tests, build green.
+- **2026-08-26** — Unit 47 `src/app/api/pair/start/route.ts` DONE. Three security/privacy
+  headers (`cache-control: no-store...`, `referrer-policy: no-referrer`,
+  `x-robots-tag: noindex, nofollow`) were repeated on both the HTML interstitial and the 302
+  redirect. Hoisted to a frozen module constant `NO_STORE_HEADERS` and spread into both, so
+  one path can no longer silently lose a header. `pair/bind` was inspected and left alone.
+  **The author's output again included invented code** — a reconstructed `GET` handler it
+  labelled "replace them with the existing route logic if it differs". Pasting it would have
+  deleted the real 557-line route. Only the two authored artifacts (the constant and the two
+  rewritten `headers` objects) were applied; its HTML-escaped generics were also restored.
+  A second placement pass moved the constant from where the insertion anchor put it
+  (mid-file, line 378) to just below the imports — it was correct either way, because a
+  module-scope `const` initialises before any handler runs, but a constant belongs at the top.
   Gates: tsc 0, 865/865 tests, build green.
