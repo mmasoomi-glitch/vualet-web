@@ -2,7 +2,7 @@
 
 **Branch:** `refactor/overnight-2026-08-26` (cut from `remediation/wa-pairing-entry`)
 **Started:** 2026-08-26
-**Running total spend:** $0.0895
+**Running total spend:** $0.1033
 
 > **Resume point.** Any fresh session continues from this file alone: take the first
 > unit whose status is `TODO`, follow the loop in the run instructions, update the row.
@@ -130,7 +130,7 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
 | 53 | `src/app/mira/checkout/page.tsx` (558) | TODO | | | |
 | 54 | `src/app/mira/account/page.tsx` (357) + `welcome` (287) | TODO | | | |
 | 55 | `src/app/admin/team/page.tsx` (337) | TODO | | | 2 dup blocks, 11 long lines. |
-| 56 | Shared `secret()` helper for `magic-link.ts` + `session.ts` | TODO | | | Byte-identical duplicate in security code; extract one source. |
+| 56 | Shared `secret()` helper for `magic-link.ts` + `session.ts` | DONE | (this commit) | 0.0138 | New `src/lib/session-secret.ts`; both files delegate. |
 | 57 | `src/app/admin-login/page.tsx` (218) | DONE | (this commit) | 0.0102 | Extracted `CodeEntryFields`; dup blocks 16 -> 0. |
 
 ---
@@ -210,3 +210,14 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
   class string was reproduced character-for-character (they carry `var(--color-vualet-*)`
   custom properties, where one typo silently unstyles the control). Gates: tsc 0, 865/865
   tests, build green.
+- **2026-08-26** — Unit 56 DONE, **and a correction to my own earlier note**: I recorded the
+  two `secret()` functions as "byte-identical". They are not. Seven of eight lines match —
+  the env precedence, the production hard-fail and the dev fallback — but the thrown message
+  differs by one noun ("magic links" vs "sessions"). The extraction was still worth doing for
+  the reason that mattered: if the env precedence or the dev fallback were changed in one
+  file and not the other, the two token systems would silently disagree about which secret
+  signs what. New `src/lib/session-secret.ts` exports `sessionSecret(artefact)`; each file
+  keeps a zero-argument `const secret = () => sessionSecret("...")` wrapper so its ~8
+  existing call sites are untouched. The dev fallback stays one shared literal on purpose —
+  it is what lets a dev-minted session and a dev-minted magic link verify against each other.
+  Gates: tsc 0, 865/865 tests, build green.

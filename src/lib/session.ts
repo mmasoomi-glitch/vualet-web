@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import { sessionSecret } from "@/lib/session-secret";
 
 /**
  * Server-side login session for Mira (magic-link auth, jury verdict A 2026-07-18).
@@ -13,14 +14,7 @@ import { cookies } from "next/headers";
 export const SESSION_COOKIE = "mira_session";
 const TTL_S = 60 * 60 * 24 * 30; // 30 days
 
-function secret(): string {
-  const s = process.env.MIRA_SESSION_SECRET || process.env.MIRA_TOKEN_SECRET;
-  if (s) return s;
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("MIRA_SESSION_SECRET/MIRA_TOKEN_SECRET unset in production — refusing to mint forgeable sessions.");
-  }
-  return "mira-dev-session-secret-not-for-production";
-}
+const secret = () => sessionSecret("sessions");
 
 export type SessionData = { email: string; exp: number };
 
