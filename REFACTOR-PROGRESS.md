@@ -2,7 +2,7 @@
 
 **Branch:** `refactor/overnight-2026-08-26` (cut from `remediation/wa-pairing-entry`)
 **Started:** 2026-08-26
-**Running total spend:** $0.1033
+**Running total spend:** $0.1156
 
 > **Resume point.** Any fresh session continues from this file alone: take the first
 > unit whose status is `TODO`, follow the loop in the run instructions, update the row.
@@ -125,11 +125,11 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
 |---|---|---|---|---|---|
 | 49 | `src/components/*` (nav, footer, logo, site-chrome, cs-bot) | CLEAN | | | No duplicate blocks in any of them; footer/logo/site-chrome score zero. |
 | 50 | `src/app/mira/_components/MiraBot.tsx` (502) | CLEAN | | | Zero duplicate blocks. Longest 'function' is the component body itself, which is what a React component is. |
-| 51 | `src/app/veridian/VeridianChat.tsx` (708) | TODO | | | |
+| 51 | `src/app/veridian/VeridianChat.tsx` (708) | TODO | | | 2 dup blocks: a shared chat-bubble inline style object. |
 | 52 | `src/app/mira/start/page.tsx` (701) | DONE | (this commit) | 0.0088 | Extracted `buildPersona()`; the stored persona and the sent persona can no longer drift. |
-| 53 | `src/app/mira/checkout/page.tsx` (558) | TODO | | | |
-| 54 | `src/app/mira/account/page.tsx` (357) + `welcome` (287) | TODO | | | |
-| 55 | `src/app/admin/team/page.tsx` (337) | TODO | | | 2 dup blocks, 11 long lines. |
+| 53 | `src/app/mira/checkout/page.tsx` (558) | CLEAN | | | Zero duplicate blocks; the long 'function' is the component body. |
+| 54 | `src/app/mira/account/page.tsx` (357) + `welcome` (287) | CLEAN | | | Zero duplicate blocks in either. |
+| 55 | `src/app/admin/team/page.tsx` (337) | DONE | (this commit) | 0.0123 | Extracted `runAction`; busy flag, alert and refresh now shared. |
 | 56 | Shared `secret()` helper for `magic-link.ts` + `session.ts` | DONE | (this commit) | 0.0138 | New `src/lib/session-secret.ts`; both files delegate. |
 | 57 | `src/app/admin-login/page.tsx` (218) | DONE | (this commit) | 0.0102 | Extracted `CodeEntryFields`; dup blocks 16 -> 0. |
 
@@ -221,3 +221,10 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
   existing call sites are untouched. The dev fallback stays one shared literal on purpose —
   it is what lets a dev-minted session and a dev-minted magic link verify against each other.
   Gates: tsc 0, 865/865 tests, build green.
+- **2026-08-26** — Unit 55 `src/app/admin/team/page.tsx` DONE. `patch()` and `remove()`
+  repeated the same busy-flag handling, the same failure alert and the same refresh
+  callback; only the request differed. Extracted a local `runAction(send)`. The `confirm()`
+  guard in `remove()` deliberately stays FIRST and still returns before anything else runs,
+  so cancelling the dialog leaves the busy flag untouched and fires no `onChange()`. Note
+  that `setBusy(false)` and `onChange()` run on BOTH the success and failure paths, exactly
+  as before — they sit after the `if`, not inside it. Gates: tsc 0, 865/865 tests, build green.
