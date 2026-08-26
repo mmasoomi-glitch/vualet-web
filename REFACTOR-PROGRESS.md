@@ -235,3 +235,80 @@ Ordered lowest-risk first: leaf utilities → isolated modules → services → 
   branch overrides a single corner to 5, so a trailing spread would have reset that corner
   and quietly changed the bubble shape — a silent visual regression that no test would catch.
   Gates: tsc 0, 865/865 tests, build green.
+
+---
+
+# Morning report
+
+**Status: complete.** All 57 units resolved — **8 refactored, 49 left alone, 0 skipped, 0
+outstanding.** The branch is green on all three gates and every unit was committed
+separately, so any single change can be reverted on its own.
+
+| Gate | Baseline (before) | Now |
+|---|---|---|
+| `npx tsc --noEmit` | exit 0 | **exit 0** |
+| `node --test "scripts/*-test.mjs"` | 865 pass / 0 fail | **865 pass / 0 fail** |
+| `npm run build` | green | **green** |
+
+**Total spend: $0.1285.** Nine commits (one plan + eight refactors), 469 insertions,
+171 deletions across 11 files.
+
+## What changed, one line each
+
+| Unit | Change | Why it mattered |
+|---|---|---|
+| 36 `src/lib/dodo.ts` | Extracted `requireDodoKey()` + `dodoFetch()` | Four API call sites each repeated the key check, auth headers, `JSON.stringify` and the non-2xx branch |
+| 43 `src/app/api/checkout/route.ts` | Extracted `newConnectRecord(status)` | Two `ConnectRecord` builds differed by one field; a field added to one and missed on the other would silently cost a comped customer their binding parameters |
+| 47 `src/app/api/pair/start/route.ts` | Hoisted `NO_STORE_HEADERS` | Three security/privacy headers duplicated across two response paths; editing one copy would drop a header from the other |
+| 51 `src/app/veridian/VeridianChat.tsx` | Extracted `bubbleBase` | Five style properties duplicated per branch; spread ordering preserved so each bubble's single rounded corner still wins |
+| 52 `src/app/mira/start/page.tsx` | Extracted `buildPersona()` | **Highest-value change.** The persona saved to localStorage and the persona POSTed to the server were built by two separate copies of the same nine lines |
+| 55 `src/app/admin/team/page.tsx` | Extracted `runAction(send)` | `patch()` and `remove()` repeated busy-flag, failure alert and refresh callback |
+| 56 `src/lib/session-secret.ts` (new) | Shared `sessionSecret(artefact)` | `magic-link.ts` and `session.ts` each resolved the signing secret independently; divergence would break token verification across the pair |
+| 57 `src/app/admin-login/page.tsx` | Extracted `CodeEntryFields` | Highest duplication density in the repo — duplicate blocks **16 → 0** |
+
+## Behaviour-affecting fixes
+
+**None.** Every unit was behaviour-preserving by construction, and three properties were
+protected deliberately because a plausible-looking rewrite would have broken them silently:
+
+- **Unit 36** — the Dodo error strings are regex-asserted by `scripts/payment-lifecycle-test.mjs`,
+  so every message is byte-identical, and the API key is still read at call time (the tests
+  mutate `process.env` between cases).
+- **Unit 51** — the style spread comes first so each bubble's corner override still beats the
+  shared `borderRadius`. A trailing spread would have changed the bubble shape with no test
+  to catch it.
+- **Unit 55** — the `confirm()` guard still returns before anything else, so cancelling the
+  dialog leaves the busy flag untouched and fires no refresh.
+
+## What was left alone, and why that is the result
+
+49 units were read or scanned and deliberately not touched. **85 of 136 source files carry
+zero structural smell signals.** This codebase is unusually well-factored and heavily
+commented; the honest outcome of a triage-first run here is mostly CLEAN. The most notable
+refusal was `src/lib/reconcile-core.mjs`, which topped the smell scanner: reading it showed
+47% of the file is comments, its 187-line function is one cohesive paginated decision tree
+whose branches each cite a ledger decision, and its four `evaluate(...)` sites take genuinely
+different arguments. Extracting a seven-argument helper to save a two-line tail would have
+made billing code harder to read. The scanner nominates; reading decides.
+
+## Skipped units, ranked by how much they matter
+
+**None were skipped.** Nothing was abandoned for cost, failure or budget.
+
+## One thing to know about the tooling
+
+The `code-author` MCP returned code twice that a judge had APPROVED and that would have
+destroyed working logic: once a `const body = {}` placeholder that would have shipped an
+empty checkout body and deleted ~30 lines of live billing code, and once a fabricated `GET`
+handler that would have replaced a real 557-line route. Both were caught because application
+is gated on the local build and tests, never on the verdict. The pipeline also fell back off
+its free intent model (`z-ai/glm-5.2:free`, upstream 429) to a paid one on every call —
+worth setting `CA_INTENT_MODEL` to a live free model if that cost matters at scale.
+
+## To merge
+
+```
+git checkout remediation/wa-pairing-entry && git merge --no-ff refactor/overnight-2026-08-26
+```
+
+Not merged — that call is yours.
