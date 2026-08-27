@@ -512,3 +512,63 @@ export async function getSubscriptionByEmail(
   if ((rec.email || "").trim().toLowerCase() !== email.trim().toLowerCase()) return null;
   return { customerId, rec };
 }
+
+/**
+ * Enumerate subscription records for the ADMIN console.
+ *
+ * This store had no listing primitive at all - only kvGet/kvSet/kvDel - which is
+ * precisely why the admin pages could never show anything but hard-coded data.
+ * Customer-facing paths must keep resolving ONE record from a verified session
+ * (see getSubscriptionByEmail); this is the operator view, not a customer view.
+ */
+export async function listSubscriptions(limit?: number): Promise<{ customerId: string; rec: ConnectRecord }[]> {
+  const out: { customerId: string; rec: ConnectRecord }[] = [];
+  try {
+    // Cap keeps admin listings bounded and avoids over-fetching.
+    const cap = Math.min(Math.max(0, limit ?? 500), 500);
+    if (cap <= 0) return out;
+    if (useUpstash) {
+      let cursor = "0";
+      let guard = 0;
+      do {
+        // SCAN is non-blocking; KEYS would block the server.
+        const [next, keys] = (await upstash(["SCAN", cursor, "MATCH", "mira:sub:*", "COUNT", 100])) as [string, string[]];
+        cursor = next;
+        for (const key of keys) {
+          if (out.length >= cap) return out;
+          const customerId = key.slice("mira:sub:".length);
+          if (!customerId) continue;
+          const rec = await kvGet<ConnectRecord>(key);
+          if (!rec) continue;
+          out.push({ customerId, rec });
+          if (out.length >= cap) return out;
+        }
+        guard++;
+      } while (cursor !== "0" && guard < 1000);
+    } else {
+      loadOnce();
+      for (const [key, e] of memory.entries()) {
+        if (out.length >= cap) break;
+        if (!key.startsWith("mira:sub:")) continue;
+        // Expired entries should not appear in an admin list.
+        if (e.exp && e.exp <= Date.now()) continue;
+        const customerId = key.slice("mira:sub:".length);
+        if (!customerId) continue;
+        try {
+          const rec = JSON.parse(e.v) as ConnectRecord;
+          if (rec) {
+            out.push({ customerId, rec });
+            if (out.length >= cap) break;
+          }
+        } catch {
+          // Unparseable row: skip it rather than fail the whole listing.
+        }
+      }
+    }
+  } catch {
+    // NEVER THROWS: this backs an admin page, so a store hiccup renders a partial
+    // list rather than a 500. Count only - never a key, never record contents.
+    console.error(`[store] listSubscriptions failed after ${out.length} record(s)`);
+  }
+  return out;
+}
