@@ -233,7 +233,7 @@ Blocker 5 (small items).** Nothing was begun and abandoned; they are untouched.
 
 # OWNER ACTIONS - only you can do these
 
-### A. Provision the billing push secret (unblocks 1a - **highest value, ~10 minutes**)
+### A. Provision the billing push secret — ✅ DONE 2026-08-27 ~20:15. Set by owner via one-line SSH block; value fingerprint 7bb0f6e20444 identical on BOTH hosts (web /opt/mira-web/runtime.conf + engine /etc/mira/mira-whatsapp.env), both services restarted and active. Entitlement pushes are live. (Historic instructions kept below for reference.)
 
 `MIRA_BILLING_PUSH_SECRET` must be the **same value on both hosts**.
 `docs/provision_shared_secrets.sh` already exists for exactly this. Set it on:
