@@ -12,12 +12,18 @@ import { getSubscriptionByEmail } from "@/lib/store";
  * The old version took customer_id from the request body, which let anyone who knew
  * any customer id open that customer's portal. That is fixed here.
  *
- * Only works for Stripe-era customers. Dodo customers cancel via /api/subscription/cancel
- * and manage billing through the account page.
+ * The payment processor has changed and self-serve billing management is no longer
+ * available through this endpoint. In production, `paymentsConfigured()` is permanently
+ * false, so the 503 branch below is the permanent production path rather than a
+ * temporary "not configured yet" state. Cancellation deliberately lives at
+ * `/api/subscription/cancel` and remains fully working.
  */
 export async function POST() {
   if (!paymentsConfigured()) {
-    return NextResponse.json({ error: "not_configured" }, { status: 503 });
+    return NextResponse.json({
+      error: "not_configured",
+      message: "Self-serve billing management is not available for this account. You can view your plan and cancel from the account page; for plan changes or card updates, please contact support."
+    }, { status: 503 });
   }
 
   const session = await getSession();
