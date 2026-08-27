@@ -157,7 +157,7 @@ webhook and an admin console that cannot tell you the truth about your own busin
 # Phase 2 - Remediation log (2026-08-27)
 
 **Branch:** `remediation/sales-blockers-2026-08-27` (cut from `remediation/wa-pairing-entry`)
-**MCP spend this run:** **$0.0439** (code-author; 4 calls, 1 discarded)
+**MCP spend this run:** **$0.1046** (code-author; 9 calls, 4 discarded)
 **Gates after every commit:** `tsc --noEmit` 0 - eslint 0 - **865 tests / 865 pass / 0 fail** - build green
 **All code authored by the code-author MCP.** No code was hand-written.
 
@@ -308,3 +308,66 @@ prudent hygiene; neither is known to be abused.
 Reviewed and green, but **not merged** - that call is yours:
 
     git checkout remediation/wa-pairing-entry && git merge --no-ff remediation/sales-blockers-2026-08-27
+
+---
+
+## Phase 2 continued - blockers 3 and 4 (2026-08-27)
+
+### Blocker 3 - billing portal: DONE (`c53d31c`)
+
+**Mostly already built, and the audit under-reported that.** Viewing the plan works through
+`/api/auth/me` (Dodo-first entitlement, including `trialEndsAt`), and **cancellation already ran
+on Dodo** via `/api/subscription/cancel` -> `cancelDodoSubscription()`, resolved from the verified
+session email (anti-IDOR). The one genuine defect was the **error message**.
+
+`/api/portal` opens a *Stripe* portal; Stripe is permanently off in production, so it always 503s
+with a body carrying **no `message`**. The account page therefore fell back to *"Couldn't open
+billing. Please try again."* - inviting a paying customer to retry forever something that can
+never succeed. There is **no Dodo portal wired or documented anywhere in this repo**, so this is a
+permanent state, not an outage, and inventing a Dodo portal endpoint would have fabricated an API
+that 404s in production.
+
+The 503 now carries truthful, actionable copy naming what *does* work (view plan, cancel from the
+account page; contact support for plan changes or card updates). It deliberately names **no
+payment provider, env var or "configuration"** - a customer does not care what is behind the
+product, and naming it leaks vendor detail into customer-facing text.
+
+**Still genuinely missing:** self-serve **plan change/upgrade**. Today that is a support action.
+
+### Blocker 4 - multilingual crisis detection: **SKIPPED (author-timeout). THE SAFETY GAP REMAINS OPEN.**
+
+This is the highest-priority outstanding item and it is **not** fixed. What was proved:
+
+**The crisis gate fires on 1 of 8 real phrasings - English only.** Measured against the live
+`crisisCheck`:
+
+| Fires | Silent |
+|---|---|
+| English *"i want to die"* | Arabic, Urdu, Persian, Hindi (native script), **Roman Urdu**, **Arabizi**, Tagalog |
+
+Root cause: one English regex in `apps/engine/src/safety.mjs` using ``, an **ASCII** word
+boundary that cannot match Arabic or Devanagari script at all. Romanised forms - which dominate
+real WhatsApp input in this market - had no patterns whatsoever.
+
+A working fix was authored and **passed a 14-case probe 14/14** (including three near-miss safe
+phrases correctly staying silent), then **reverted**, because it broke `language-lock.test.mjs`
+D3 - a *characterisation* test that asserts the defect exists and says *"update this test"* once
+the gate starts firing. That test also exposed the fix as **too literal**: it uses different
+spellings (Hindi `हूँ` vs `हूं`; Persian spaced `می خواهم` vs joined `میخواهم`), so Arabic and Urdu
+began firing while Hindi and Persian still missed. Two corrective passes to broaden the patterns
+into phrase *families* both timed out at the author's 120s ceiling, exhausting the retry, so the
+engine was reverted rather than left with a red suite.
+
+**Engine repo is green and unchanged: 589 tests / 587 pass / 0 fail.** The work is preserved at
+`scratchpad/blocker4-crisis.patch` (35 lines) - do not re-derive it.
+
+**To finish it:** apply that patch; broaden `CRISIS_NATIVE` to verb-phrase families tolerating
+optional whitespace in Persian/Urdu compound verbs and the Hindi final-vowel variants, plus the
+standalone suicide nouns (`انتحار`, `خودکشی`, `आत्महत्या`); then update the obsolete D3 test.
+
+**OWNER ITEM, and I will not do it myself:** the hotline string is US/UK-centric (`988`,
+`116 123`) for a market where those numbers do not work. `findahelpline.com` is the only globally
+usable line in it. **Adding regional emergency numbers is owner work because I must not fabricate
+an emergency number** - a wrong one could cost a life.
+
+**Blocker 5 (small items) not started.**
