@@ -74,6 +74,29 @@ function languageClause(langId: string): string {
 
 /* ---------- shared styles ---------- */
 
+// Keeps the persona stored locally and the persona sent to the server from
+// drifting apart by building both from the same pure helper. Pure on purpose:
+// every input is an argument, so it needs no hook and can never read stale state.
+function buildPersona(input: {
+  name: string;
+  roleLabel: string;
+  vibe: string;
+  vibeText: string;
+  lang: string;
+}): { assistantName: string; persona: string } {
+  const assistantName = input.name.trim() || "Mira";
+  const roleText = (input.roleLabel || "personal assistant").toLowerCase();
+  const vibeBlurb = VIBES.find((v) => v.id === input.vibe)?.blurb ?? "";
+  const vibe_ = input.vibeText.trim() || vibeBlurb;
+  const persona =
+    `You are ${assistantName}, a ${roleText}. ${vibe_} ` +
+    `Talk warmly and in character, keep replies short and natural, ` +
+    `never mention being an AI, a model, or any company/technology.` +
+    languageClause(input.lang);
+
+  return { assistantName, persona };
+}
+
 const card: React.CSSProperties = {
   background: "var(--mira-canvas)",
   border: "1px solid var(--mira-fog)",
@@ -191,15 +214,7 @@ export default function ShapeYourMira() {
   // written — never a half-typed string, so nothing downstream can inherit an unusable number.
   // (This wizard has never rehydrated state on load; that is unchanged here.)
   useEffect(() => {
-    const assistantName = name.trim() || "Mira";
-    const roleText = (roleLabel || "personal assistant").toLowerCase();
-    const vibeBlurb = VIBES.find((v) => v.id === vibe)?.blurb ?? "";
-    const vibe_ = vibeText.trim() || vibeBlurb;
-    const persona =
-      `You are ${assistantName}, a ${roleText}. ${vibe_} ` +
-      `Talk warmly and in character, keep replies short and natural, ` +
-      `never mention being an AI, a model, or any company/technology.` +
-      languageClause(lang);
+    const { assistantName, persona } = buildPersona({ name, roleLabel, vibe, vibeText, lang });
     try {
       localStorage.setItem(
         "mira_setup",
@@ -281,15 +296,7 @@ export default function ShapeYourMira() {
     }
     setSubmitError(null);
     setSubmitBusy(true);
-    const assistantName = name.trim() || "Mira";
-    const roleText = (roleLabel || "personal assistant").toLowerCase();
-    const vibeBlurb = VIBES.find((v) => v.id === vibe)?.blurb ?? "";
-    const vibe_ = vibeText.trim() || vibeBlurb;
-    const persona =
-      `You are ${assistantName}, a ${roleText}. ${vibe_} ` +
-      `Talk warmly and in character, keep replies short and natural, ` +
-      `never mention being an AI, a model, or any company/technology.` +
-      languageClause(lang);
+    const { assistantName, persona } = buildPersona({ name, roleLabel, vibe, vibeText, lang });
 
     try {
       const res = await fetch("/api/begin", {

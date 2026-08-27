@@ -11,6 +11,42 @@ import { Logo } from "@/components/logo";
  *   2b. returning  → MFA VERIFY     → POST /api/admin/mfa/verify (6-digit code)
  * The full session cookie is only minted after the TOTP code is verified.
  */
+// Both MFA steps ask for the same code and previously duplicated the whole field,
+// so a change to one would miss the other. Declared at MODULE scope, not nested in
+// the page component: a nested component is a new type on every render, which would
+// remount the input and drop focus mid-typing.
+function CodeEntryFields(props: {
+  code: string;
+  setCode: (v: string) => void;
+  error: string;
+  busy: boolean;
+  submitLabel: string;
+}): React.ReactElement {
+  return (
+    <>
+      <label className="block">
+        <span className="text-xs font-medium text-[var(--muted)]">6-digit code</span>
+        <input
+          inputMode="numeric"
+          value={props.code}
+          onChange={(e) => props.setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          placeholder="000000"
+          autoFocus
+          className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm tracking-[0.3em] outline-none focus:border-[var(--color-vualet-indigo)]"
+        />
+      </label>
+      {props.error && <p className="text-sm text-[var(--color-vualet-danger)]">{props.error}</p>}
+      <button
+        type="submit"
+        disabled={props.busy || props.code.length !== 6}
+        className="w-full rounded-lg bg-[var(--color-vualet-indigo)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-vualet-indigo-hover)] transition-colors disabled:opacity-60"
+      >
+        {props.busy ? "Verifying…" : props.submitLabel}
+      </button>
+    </>
+  );
+}
+
 export default function AdminLoginPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[var(--surface-2)]" />}>
@@ -163,25 +199,7 @@ function AdminLogin() {
                 Open in authenticator app →
               </a>
             </div>
-            <label className="block">
-              <span className="text-xs font-medium text-[var(--muted)]">6-digit code</span>
-              <input
-                inputMode="numeric"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="000000"
-                autoFocus
-                className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm tracking-[0.3em] outline-none focus:border-[var(--color-vualet-indigo)]"
-              />
-            </label>
-            {error && <p className="text-sm text-[var(--color-vualet-danger)]">{error}</p>}
-            <button
-              type="submit"
-              disabled={busy || code.length !== 6}
-              className="w-full rounded-lg bg-[var(--color-vualet-indigo)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-vualet-indigo-hover)] transition-colors disabled:opacity-60"
-            >
-              {busy ? "Verifying…" : "Finish setup & sign in"}
-            </button>
+            <CodeEntryFields code={code} setCode={setCode} error={error} busy={busy} submitLabel="Finish setup & sign in" />
           </form>
         )}
 
@@ -191,25 +209,7 @@ function AdminLogin() {
               <h1 className="text-lg font-semibold tracking-tight">Two-factor</h1>
               <p className="mt-1 text-sm text-[var(--muted)]">Enter the 6-digit code from your authenticator app.</p>
             </div>
-            <label className="block">
-              <span className="text-xs font-medium text-[var(--muted)]">6-digit code</span>
-              <input
-                inputMode="numeric"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="000000"
-                autoFocus
-                className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm tracking-[0.3em] outline-none focus:border-[var(--color-vualet-indigo)]"
-              />
-            </label>
-            {error && <p className="text-sm text-[var(--color-vualet-danger)]">{error}</p>}
-            <button
-              type="submit"
-              disabled={busy || code.length !== 6}
-              className="w-full rounded-lg bg-[var(--color-vualet-indigo)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-vualet-indigo-hover)] transition-colors disabled:opacity-60"
-            >
-              {busy ? "Verifying…" : "Sign in"}
-            </button>
+            <CodeEntryFields code={code} setCode={setCode} error={error} busy={busy} submitLabel="Sign in" />
           </form>
         )}
       </div>

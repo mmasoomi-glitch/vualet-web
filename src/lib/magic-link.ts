@@ -1,5 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { kvSet, kvGet, kvDel } from "@/lib/store";
+import { sessionSecret } from "@/lib/session-secret";
 
 /**
  * One-time email magic-link tokens (jury verdict A 2026-07-18).
@@ -12,14 +13,7 @@ import { kvSet, kvGet, kvDel } from "@/lib/store";
 
 const TTL_S = 15 * 60;
 
-function secret(): string {
-  const s = process.env.MIRA_SESSION_SECRET || process.env.MIRA_TOKEN_SECRET;
-  if (s) return s;
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("MIRA_SESSION_SECRET/MIRA_TOKEN_SECRET unset in production — refusing to mint forgeable magic links.");
-  }
-  return "mira-dev-session-secret-not-for-production";
-}
+const secret = () => sessionSecret("magic links");
 
 type MagicData = { email: string; nonce: string; exp: number };
 const key = (nonce: string) => `mira:magic:${nonce}`;

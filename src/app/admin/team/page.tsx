@@ -221,13 +221,11 @@ function AdminRow({
   const [sessions, setSessions] = useState<SessionInfo[] | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function patch(body: Record<string, unknown>) {
+  // One place for the parts every admin action shares: the busy flag, the failure
+  // alert and the refresh callback. Only the request itself differs per action.
+  async function runAction(send: () => Promise<Response>): Promise<void> {
     setBusy(true);
-    const res = await apiWithReauth(`/api/admin/admins/${admin.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await send();
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
       alert(d.message || "Action failed.");
@@ -236,16 +234,23 @@ function AdminRow({
     onChange();
   }
 
+  async function patch(body: Record<string, unknown>) {
+    await runAction(() =>
+      apiWithReauth(`/api/admin/admins/${admin.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+    );
+  }
+
   async function remove() {
+    // The confirm stays FIRST: a cancelled confirm must not touch the busy flag
+    // and must not fire onChange().
     if (!confirm(`Remove ${admin.email}? Their sessions are killed immediately.`)) return;
-    setBusy(true);
-    const res = await apiWithReauth(`/api/admin/admins/${admin.id}`, { method: "DELETE" });
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      alert(d.message || "Action failed.");
-    }
-    setBusy(false);
-    onChange();
+    await runAction(() =>
+      apiWithReauth(`/api/admin/admins/${admin.id}`, { method: "DELETE" })
+    );
   }
 
   async function loadSessions() {

@@ -516,16 +516,60 @@ export async function verifyTrialProducts(deps: {
  * The REAL product read: GET /products/{id}. Used only by
  * scripts/verify-trial-config.mjs — never from the checkout path.
  */
-export async function fetchDodoProduct(productId: string): Promise<unknown> {
+// Reads DODO_API_KEY at call time and fails fast before any argument validation or
+// network work, so every exported Dodo call shares one env check. Call-time rather
+// than module-scope is load-bearing: the tests mutate process.env between cases.
+function requireDodoKey(): string {
   const apiKey = process.env.DODO_API_KEY;
   if (!apiKey) throw new Error("DODO_API_KEY unset");
-  const res = await fetch(`${dodoBaseUrl()}/products/${encodeURIComponent(productId)}`, {
-    headers: { "Authorization": `Bearer ${apiKey}` },
-  });
+  return apiKey;
+}
+
+// Shared fetch wrapper: adds auth, conditionally JSON-encodes the body, and turns a
+// non-2xx into the same error every call site used to build by hand. failLabel is the
+// caller's operation name, so the thrown text stays byte-identical to what it replaced
+// - those messages are regex-asserted by scripts/payment-lifecycle-test.mjs.
+async function dodoFetch(
+  apiKey: string,
+  opts: {
+    url: string;
+    method?: string;
+    body?: Record<string, unknown>;
+    failLabel: string;
+  },
+): Promise<Response> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+  };
+
+  const init: RequestInit = { headers };
+
+  if (opts.method !== undefined) {
+    init.method = opts.method;
+  }
+
+  // Content-Type only when there IS a body: the product GET must send none.
+  if (opts.body !== undefined) {
+    headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(opts.body);
+  }
+
+  const res = await fetch(opts.url, init);
+
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    throw new Error(`Dodo get-product failed ${res.status}: ${detail.slice(0, 300)}`);
+    throw new Error(`${opts.failLabel} ${res.status}: ${detail.slice(0, 300)}`);
   }
+
+  return res;
+}
+
+export async function fetchDodoProduct(productId: string): Promise<unknown> {
+  const apiKey = requireDodoKey();
+  const res = await dodoFetch(apiKey, {
+    url: `${dodoBaseUrl()}/products/${encodeURIComponent(productId)}`,
+    failLabel: "Dodo get-product failed",
+  });
   return res.json();
 }
 
@@ -549,8 +593,7 @@ export interface DodoCheckoutInput {
  * hosted checkout URL. Throws on a non-2xx or a missing payment_link.
  */
 export async function createDodoCheckout(input: DodoCheckoutInput): Promise<{ url: string; subscriptionId?: string }> {
-  const apiKey = process.env.DODO_API_KEY;
-  if (!apiKey) throw new Error("DODO_API_KEY unset");
+  const apiKey = requireDodoKey();
   const productId = productIdFor(input.plan);
   if (!productId) throw new Error(`no Dodo product id configured for plan ${input.plan}`);
 
@@ -591,19 +634,13 @@ export async function createDodoCheckout(input: DodoCheckoutInput): Promise<{ ur
     metadata: { connect_token: input.connectToken, plan: input.plan },
   };
 
-  const res = await fetch(`${dodoBaseUrl()}/subscriptions`, {
+  const res = await dodoFetch(apiKey, {
+    url: `${dodoBaseUrl()}/subscriptions`,
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
+    body,
+    failLabel: "Dodo create-subscription failed",
   });
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`Dodo create-subscription failed ${res.status}: ${detail.slice(0, 300)}`);
-  }
   const json = (await res.json()) as {
     payment_link?: string;
     subscription_id?: string;
@@ -640,8 +677,7 @@ export async function cancelDodoSubscription(
   subscriptionId: string,
   opts: { atPeriodEnd?: boolean; comment?: string } = {},
 ): Promise<{ ok: true }> {
-  const apiKey = process.env.DODO_API_KEY;
-  if (!apiKey) throw new Error("DODO_API_KEY unset");
+  const apiKey = requireDodoKey();
   if (!subscriptionId) throw new Error("subscriptionId required");
 
   const body: Record<string, unknown> = {
@@ -650,19 +686,13 @@ export async function cancelDodoSubscription(
   };
   if (opts.comment) body.cancellation_comment = opts.comment.slice(0, 3000);
 
-  const res = await fetch(`${dodoBaseUrl()}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+  await dodoFetch(apiKey, {
+    url: `${dodoBaseUrl()}/subscriptions/${encodeURIComponent(subscriptionId)}`,
     method: "PATCH",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
+    body,
+    failLabel: "Dodo cancel-subscription failed",
   });
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`Dodo cancel-subscription failed ${res.status}: ${detail.slice(0, 300)}`);
-  }
   return { ok: true };
 }
 
@@ -681,26 +711,19 @@ export async function refundDodoPayment(
   paymentId: string,
   opts: { reason?: string } = {},
 ): Promise<{ refundId?: string; status?: string }> {
-  const apiKey = process.env.DODO_API_KEY;
-  if (!apiKey) throw new Error("DODO_API_KEY unset");
+  const apiKey = requireDodoKey();
   if (!paymentId) throw new Error("paymentId required");
 
   const body: Record<string, unknown> = { payment_id: paymentId };
   if (opts.reason) body.reason = opts.reason.slice(0, 3000);
 
-  const res = await fetch(`${dodoBaseUrl()}/refunds`, {
+  const res = await dodoFetch(apiKey, {
+    url: `${dodoBaseUrl()}/refunds`,
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
+    body,
+    failLabel: "Dodo refund failed",
   });
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`Dodo refund failed ${res.status}: ${detail.slice(0, 300)}`);
-  }
   const json = (await res.json()) as { refund_id?: string; status?: string };
   return { refundId: json.refund_id, status: json.status };
 }

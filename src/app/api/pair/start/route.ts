@@ -5,6 +5,19 @@ import { requestPairSession } from "@/lib/pair-gateway";
 import { signupPhoneHash } from "@/lib/signup-phone-hash";
 import { clientAddress, CLIENT_IP_HEADER, describeBadAddress } from "@/lib/client-address";
 
+
+const NO_STORE_HEADERS: Readonly<{
+  "cache-control": string;
+  "referrer-policy": string;
+  "x-robots-tag": string;
+}> = Object.freeze({
+  // Nothing on this path is ever cacheable: the request carries a token in
+  // its query string and a cached answer would be shown to the wrong person.
+  "cache-control": "no-store, no-cache, must-revalidate",
+  "referrer-policy": "no-referrer",
+  "x-robots-tag": "noindex, nofollow",
+});
+
 /**
  * GET /api/pair/start?token=<connect token>
  *
@@ -296,11 +309,7 @@ function failurePage(status: number, heading: string, body: string): Response {
     status,
     headers: {
       "content-type": "text/html; charset=utf-8",
-      // Nothing on this path is ever cacheable: the request carries a token in
-      // its query string and a cached answer would be shown to the wrong person.
-      "cache-control": "no-store, no-cache, must-revalidate",
-      "referrer-policy": "no-referrer",
-      "x-robots-tag": "noindex, nofollow",
+      ...NO_STORE_HEADERS,
     },
   });
 }
@@ -549,9 +558,7 @@ export async function GET(req: Request) {
     status: 302,
     headers: {
       location: session.path,
-      "cache-control": "no-store, no-cache, must-revalidate",
-      "referrer-policy": "no-referrer",
-      "x-robots-tag": "noindex, nofollow",
+      ...NO_STORE_HEADERS,
     },
   });
 }
