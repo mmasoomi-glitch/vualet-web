@@ -1393,8 +1393,6 @@ test("P: events that change nothing the customer can feel push NOTHING", () => {
     "payment.cancelled",
     "refund.failed",
     "subscription.update_payment_method",
-    "subscription.plan_changed",
-    "subscription.updated",
     "subscription.active",
     "subscription.renewed",
     "payment.succeeded",
@@ -1407,6 +1405,20 @@ test("P: events that change nothing the customer can feel push NOTHING", () => {
   }
   assert.equal(enginePush.engineEventForEffect(null), null);
   assert.equal(enginePush.engineEventForEffect(undefined), null);
+});
+
+test("P: plan changes push the TIER-SHAPED verb, never an access change", () => {
+  // Finding 1c: before ENGINE_REPRICE_EVENT existed, a paid upgrade never
+  // reached the engine at all. It now pushes entitlement.repriced, which the
+  // engine applies to tier/credits only - the access gate is untouched, so
+  // this push can never re-open a cancelled record.
+  for (const type of ["subscription.plan_changed", "subscription.updated"]) {
+    assert.equal(
+      enginePush.engineEventForEffect(dodoEventEffect(type)),
+      enginePush.ENGINE_REPRICE_EVENT,
+      `${type} must push the reprice verb`,
+    );
+  }
 });
 
 // ── eventAt: the provider's clock, never ours ─────────────────────────────

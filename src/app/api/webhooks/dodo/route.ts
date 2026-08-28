@@ -181,9 +181,9 @@ async function pushLifecycleToEngine(
 ): Promise<void> {
   try {
     const engineEvent = engineEventForEffect(effect);
-    if (!engineEvent) return; // flag / log / reprice: nothing the customer can feel
+    if (!engineEvent) return; // flag / log: nothing the customer can feel
     if (!outcome.ok) return; // already alerted; nothing was changed here either
-    if (outcome.action !== "revoke" && outcome.action !== "restore") return;
+    if (outcome.action !== "revoke" && outcome.action !== "restore" && outcome.action !== "reprice") return;
     if (!outcome.customerId) return;
 
     const rec = await getSubscription(outcome.customerId);
@@ -214,7 +214,10 @@ async function pushLifecycleToEngine(
       event: engineEvent,
       // Restores carry the plan so the engine can put the tier back exactly
       // where it was; a restore without one leaves tier/credits untouched.
-      plan: outcome.action === "restore" ? rec?.plan : undefined,
+      // Reprices ALWAYS carry it - the record was re-read after the lifecycle
+      // wrote the new plan, so rec.plan is the tier actually paid for, and a
+      // tier-shaped push without a plan would be refused by the engine.
+      plan: outcome.action === "restore" || outcome.action === "reprice" ? rec?.plan : undefined,
       eventId: provenance.eventId,
       eventAt: provenance.eventAt,
       context: type,
