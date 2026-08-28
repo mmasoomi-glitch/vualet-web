@@ -194,6 +194,8 @@ const EXCLUDED_PREFIXES: readonly string[] = [
   "/mira/account",
   "/mira/login",
   "/mira/start",
+  // Leftover waitlist page - the live funnel entry is /mira/start; excluded so the sitemap cannot split the funnel again.
+  "/mira/signup",
 ];
 
 /** True when a path must be kept out of the sitemap and out of the index. */
@@ -304,13 +306,6 @@ export function buildPublicRoutes(): PublicRoute[] {
       priority: 0.7,
       lastModified: CONTENT_REVISION,
       why: "Mira product family — src/app/mira/store/page.tsx",
-    },
-    {
-      path: "/mira/signup",
-      changeFrequency: "monthly",
-      priority: 0.6,
-      lastModified: CONTENT_REVISION,
-      why: "Public waitlist — src/app/mira/signup/page.tsx",
     },
     {
       path: "/mira/vpn",

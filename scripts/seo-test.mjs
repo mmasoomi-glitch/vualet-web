@@ -392,8 +392,15 @@ test("buildPublicRoutes refuses to publish an excluded path", () => {
   for (const p of ["/", "/pricing", "/mira/plans", "/legal/terms"]) {
     assert.equal(isExcluded(p), false, `${p} must be indexable`);
   }
-  // Real routes and the sitemap agree on count.
-  assert.equal(buildPublicRoutes().length, entries.length);
+  // Real routes and the sitemap agree on count - after dedupe. Re-homing
+  // every URL onto the Mira host collapses the corporate home onto the Mira
+  // home, so the sitemap deliberately lists one entry fewer than the route
+  // table has rows; what must hold is that the sitemap equals the DEDUPED
+  // set of re-homed canonical URLs.
+  const dedupedCount = new Set(
+    buildPublicRoutes().map((r) => canonicalFor(r.path).replace("https://vualet.com", "https://mira.vualet.com")),
+  ).size;
+  assert.equal(dedupedCount, entries.length);
 });
 
 /**
@@ -408,8 +415,7 @@ test("buildPublicRoutes refuses to publish an excluded path", () => {
  */
 const INTERNAL_ONLY = new Set([
   // Used inside seo.ts; exported so this suite can unit-test them directly.
-  "ORIGIN_MAIN",
-  "ORIGIN_MIRA",
+  // ORIGIN_MAIN and ORIGIN_MIRA moved out of this set when sitemap.ts began re-homing URLs - the dead-code guard itself demanded it.
   "normalizePath",
   "originFor",
   "isExcluded",
@@ -492,7 +498,7 @@ test("DEAD-CODE GUARD: every export of seo.ts has a real call site", () => {
   });
   assert.deepEqual(
     productionConsumed.slice().sort(),
-    ["SITEMAP_URL", "buildPublicRoutes", "canonicalFor", "robotsDisallow"].sort(),
+    ["ORIGIN_MAIN", "ORIGIN_MIRA", "SITEMAP_URL", "buildPublicRoutes", "canonicalFor", "robotsDisallow"].sort(),
     "the set of seo.ts exports used by real routes changed — update this list on purpose",
   );
 });
