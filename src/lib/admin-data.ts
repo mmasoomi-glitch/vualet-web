@@ -1,5 +1,5 @@
 /**
- * Replaces admin-stub's fabricated data with metrics derived from the live
+ * Replaces the deleted stub's fabricated data with metrics derived from the live
  * subscription store. Any metric this app cannot truthfully know is declared
  * as unavailable rather than invented.
  */
