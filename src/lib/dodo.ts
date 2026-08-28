@@ -727,3 +727,37 @@ export async function refundDodoPayment(
   const json = (await res.json()) as { refund_id?: string; status?: string };
   return { refundId: json.refund_id, status: json.status };
 }
+
+/**
+ * Create a Dodo customer-portal session for the given customer.
+ *
+ * Reference: POST /customers/{customer_id}/customer-portal/session
+ * The `customerId` is the Dodo customer id - in this app that is the store key
+ * (the same id the webhook writes), NOT the legacy Stripe field `rec.customerId`.
+ * The hosted portal lets the customer manage their payment method and view
+ * invoices with Dodo as merchant of record.
+ *
+ * This function NEVER throws. On any failure it returns `null` so that callers
+ * can degrade gracefully to the pre-existing account-page redirect. A broken
+ * portal must never make billing management worse than it was.
+ */
+export async function createDodoPortalSession(
+  customerId: string
+): Promise<string | null> {
+  try {
+    const apiKey = requireDodoKey();
+    const res = await dodoFetch(apiKey, {
+      url: `${dodoBaseUrl()}/customers/${encodeURIComponent(customerId)}/customer-portal/session`,
+      method: "POST",
+      failLabel: "Dodo portal-session failed",
+    });
+    const json: { link?: unknown } = await res.json();
+    if (typeof json.link === "string" && json.link.length > 0) {
+      return json.link;
+    }
+    return null;
+  } catch (err) {
+    console.error("Dodo portal-session failed", err);
+    return null;
+  }
+}

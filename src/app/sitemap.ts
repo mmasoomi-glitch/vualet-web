@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { buildPublicRoutes, canonicalFor, ORIGIN_MAIN, ORIGIN_MIRA } from "@/lib/seo";
+import { buildPublicRoutes, canonicalFor } from "@/lib/seo";
 
 /**
  * /sitemap.xml
@@ -21,17 +21,11 @@ import { buildPublicRoutes, canonicalFor, ORIGIN_MAIN, ORIGIN_MIRA } from "@/lib
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const entries = buildPublicRoutes().map((route) => ({
-    // vualet.com currently serves a different product (Primaion), so a
-    // sitemap URL on that host 404s - including the legal pages that payment
-    // providers and reviewers check. Every advertised URL is therefore
-    // re-homed to mira.vualet.com, where this build actually answers.
-    //
-    // Accepted trade-off: page metadata canonicals still name vualet.com for
-    // corporate routes, so until the owner either points vualet.com at this
-    // build or flips canonicalFor, search engines see a sitemap/canonical
-    // mismatch on those routes - a smaller harm than advertising 404s. The
-    // owner decision is flagged in the ledger.
-    url: canonicalFor(route.path).replace(ORIGIN_MAIN, ORIGIN_MIRA),
+    // originFor() itself now answers the serving host for every route while
+    // the apex is parked on another product (see src/lib/seo.ts), so no
+    // re-homing is needed here; the dedupe below still matters because the
+    // corporate home and the Mira home collapse onto one URL.
+    url: canonicalFor(route.path),
     lastModified: new Date(`${route.lastModified}T00:00:00Z`),
     changeFrequency: route.changeFrequency,
     priority: route.priority,

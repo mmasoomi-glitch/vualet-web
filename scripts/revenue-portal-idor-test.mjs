@@ -40,6 +40,19 @@ function signOut() {
   __cookies.clear();
 }
 
+/** Seed a DODO-era subscription: same shape, deliberately NO legacy customerId
+ * field - that Stripe-era marker is what routes a record down the Stripe
+ * portal branch, and a Dodo-era record lacks it. */
+async function seedDodoOnlyCustomer({ email, customerId }) {
+  await store.putSubscription(customerId, {
+    token: `tok_${customerId}`,
+    plan: "companion",
+    email,
+    status: "active",
+    createdAt: new Date().toISOString(),
+  });
+}
+
 /** Seed a Stripe-era subscription through the real store API. */
 async function seedStripeCustomer({ email, customerId }) {
   await store.putSubscription(customerId, {
@@ -213,17 +226,38 @@ test("c: session whose record has NO Stripe customerId -> 409 dodo_managed with 
   );
 });
 
-test("c: payments not configured -> 503, before any auth work", async () => {
+test("c: a STRIPE-ERA customer with payments unconfigured gets the truthful 503", async () => {
+  // The config gate moved: it now guards only the legacy Stripe-era branch,
+  // because gating the whole route made the Dodo portal unreachable. Auth
+  // therefore runs first, and the 503 needs a signed-in Stripe-era customer.
   env({}); // no STRIPE_SECRET_KEY / PAYMENTS_LIVE
+  await seedStripeCustomer(VICTIM);
+  signIn(VICTIM.email);
   const res = await POST().then(readJson);
   assert.equal(res.status, 503);
   assert.equal(res.body.error, "not_configured");
 });
 
-test("c: PAYMENTS_LIVE must be exactly 1 for the portal to open", async () => {
+test("c: PAYMENTS_LIVE must be exactly 1 for the Stripe portal to open", async () => {
   env({ STRIPE_SECRET_KEY: "sk_test_dummy_not_real", PAYMENTS_LIVE: "0" });
+  await seedStripeCustomer(VICTIM);
+  signIn(VICTIM.email);
   const res = await POST().then(readJson);
   assert.equal(res.status, 503);
+});
+
+test("c: a DODO-ERA customer degrades to the account page when no portal session can be minted", async () => {
+  // No DODO_API_KEY in tests, so createDodoPortalSession always returns null
+  // (it never throws) and the route falls back to the pre-existing 409
+  // redirect - deterministic, no network. This pins the fail-safe: a broken
+  // portal can never make billing management worse than the account page.
+  env({});
+  await seedDodoOnlyCustomer(VICTIM);
+  signIn(VICTIM.email);
+  const res = await POST().then(readJson);
+  assert.equal(res.status, 409);
+  assert.equal(res.body.error, "dodo_managed");
+  assert.match(String(res.body.redirect), /\/mira\/account$/);
 });
 
 test("c: a Stripe failure is a 502 with a redirect, never a leak or a crash", async () => {
