@@ -1,0 +1,27 @@
+# Mira reconciliation sweep - repair path when a webhook is missed.
+# This is the ONLY repair path until the sweep runs; without it,
+# subscription records can drift from engine entitlements indefinitely.
+#
+# Why oneshot + timer rather than a daemon:
+#   The reconciliation script (dodo-reconcile.mjs) is a batch job that
+#   completes in a few seconds. A oneshot service triggered by a timer
+#   is the natural systemd pattern for periodic batch work. A long-running
+#   daemon would add complexity (idle resource consumption, supervision,
+#   restart logic) with no benefit.
+#
+# Logs land in the journal:
+#   journalctl -u mira-reconcile
+
+[Unit]
+Description=Mira: reconcile web subscription records with engine entitlements (dodo-reconcile.mjs)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+# Adjust to the mira-web checkout if it differs - `systemctl show mira-web -p WorkingDirectory` tells you
+WorkingDirectory=/opt/mira-web
+# The same env the web service loads, dash-prefixed so a missing file does not fail the unit - adjust to where mira-web keeps its environment
+EnvironmentFile=-/etc/mira-web.env
+ExecStart=/usr/bin/npm run reconcile

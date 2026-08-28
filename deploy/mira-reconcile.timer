@@ -1,0 +1,14 @@
+# Timer that triggers mira-reconcile.service hourly.
+
+[Unit]
+Description=Hourly Mira reconciliation sweep
+
+[Timer]
+OnCalendar=hourly
+# Jitter so the sweep never lines up with other timers
+RandomizedDelaySec=300
+# A missed window (host down, deploy in progress) runs on next boot instead of silently skipping
+Persistent=true
+
+[Install]
+WantedBy=timers.target
