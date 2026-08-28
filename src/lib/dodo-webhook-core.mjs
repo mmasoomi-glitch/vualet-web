@@ -122,6 +122,53 @@ export function productIdFromDodoPayload(payload) {
 }
 
 /**
+ * Decide whether a Dodo webhook event is provably for a Mira product.
+ *
+ * Dodo fans every event on a merchant account out to EVERY configured
+ * endpoint and signs each delivery with that endpoint's OWN secret - so a
+ * valid signature proves the sender is Dodo, not that the event is ours.
+ * This is the check that decides ownership.
+ *
+ * It fails closed on purpose: ownership must be positively proven through
+ * the product-id allowlist; anything unproven (no resolver, no product id,
+ * or a product id the allowlist does not know) is treated as not owned.
+ *
+ * The resolver is injected via `deps` rather than read from env so this
+ * module stays pure and testable.
+ *
+ * @param {object} payload The parsed Dodo event `data` object.
+ * @param {object} [deps] Injected collaborators.
+ * @param {(id: string) => string | null | undefined} [deps.planForProductId]
+ *   Resolves a Dodo product id to a Mira plan, or a falsy value when the
+ *   product is not one of ours.
+ * @returns {{ owned: boolean, productId: string | undefined, reason: string }}
+ */
+export function dodoEventIsMiraOwned(payload, deps = {}) {
+  const resolver =
+    deps && typeof deps.planForProductId === "function"
+      ? deps.planForProductId
+      : null;
+  const productId = productIdFromDodoPayload(payload);
+  if (!resolver) {
+    return { owned: false, productId, reason: "no_resolver" };
+  }
+  if (productId === undefined) {
+    return { owned: false, productId: undefined, reason: "no_product_id" };
+  }
+  let plan;
+  try {
+    plan = resolver(productId);
+  } catch {
+    // A throwing resolver must not become a webhook Dodo retries forever.
+    plan = null;
+  }
+  if (plan) {
+    return { owned: true, productId, reason: "owned" };
+  }
+  return { owned: false, productId, reason: "foreign_product" };
+}
+
+/**
  * Decide WHICH TIER a Dodo payment event grants (decisions#341 Q3 —
  * CALL_PLANFORPRODUCTID, with GRANT_LOWEST_AND_ALERT as the fallback).
  *
