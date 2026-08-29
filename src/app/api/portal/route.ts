@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { stripe, appUrl, paymentsConfigured } from "@/lib/stripe";
+import { createDodoPortalSession } from "@/lib/dodo";
 import { getSession } from "@/lib/session";
 import { getSubscriptionByEmail } from "@/lib/store";
 
@@ -12,14 +13,13 @@ import { getSubscriptionByEmail } from "@/lib/store";
  * The old version took customer_id from the request body, which let anyone who knew
  * any customer id open that customer's portal. That is fixed here.
  *
- * Only works for Stripe-era customers. Dodo customers cancel via /api/subscription/cancel
- * and manage billing through the account page.
+ * The payment processor has changed and self-serve billing management is no longer
+ * available through this endpoint. In production, `paymentsConfigured()` is permanently
+ * false, so the 503 branch below is the permanent production path rather than a
+ * temporary "not configured yet" state. Cancellation deliberately lives at
+ * `/api/subscription/cancel` and remains fully working.
  */
 export async function POST() {
-  if (!paymentsConfigured()) {
-    return NextResponse.json({ error: "not_configured" }, { status: 503 });
-  }
-
   const session = await getSession();
   if (!session?.email) {
     return NextResponse.json(
@@ -44,10 +44,26 @@ export async function POST() {
 
   const { customerId, rec } = found;
 
-  // The Stripe billing portal only works for Stripe-era customers (those with a
-  // Stripe customer id). Dodo-era customers manage their plan through the account
-  // page instead.
+  // The Stripe configuration gate used to 503 the WHOLE route, which made the
+  // Dodo portal below unreachable in production (Stripe is off for good). It
+  // now guards only the legacy Stripe-era branch it actually protects; the
+  // truthful 503 copy is preserved for those customers.
+  if (rec.customerId && !paymentsConfigured()) {
+    return NextResponse.json({
+      error: "not_configured",
+      message: "Self-serve billing management is not available for this account. You can view your plan and cancel from the account page; for plan changes or card updates, please contact support."
+    }, { status: 503 });
+  }
+
+  // Dodo-era customers (no legacy Stripe customer id) get Dodo's hosted
+  // customer portal. The session call NEVER throws (it returns null on any
+  // failure), so a Dodo outage degrades to exactly the pre-existing account
+  // page redirect rather than an error the customer cannot act on.
   if (!rec.customerId) {
+    const portalUrl = await createDodoPortalSession(customerId);
+    if (portalUrl) {
+      return NextResponse.json({ url: portalUrl });
+    }
     return NextResponse.json(
       {
         error: "dodo_managed",

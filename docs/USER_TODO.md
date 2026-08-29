@@ -23,12 +23,14 @@ Open these tabs in order. Each step is ~5 minutes.
 ## 3. Paddle merchant-of-record account (15 min)
 
 1. Open https://paddle.com → Sign up.
-2. Use these company details when asked:
-   - Legal name: **Afaq Alnaseem Trading LLC**
+2. Use these details when asked:
+   - Trading name: **Vualet Trading**
+   - Business type: **sole proprietor / individual** (not a registered company)
    - Country: **United Arab Emirates**
-   - TRN: **100475523500003**
-   - Address: your Dubai trade-licence address
-3. Upload trade licence + Emirates ID when prompted (Paddle's KYC takes ~24-72 h).
+   - Address: your own residential/correspondence address
+   - Tax number: none — leave blank. There is no trade licence, VAT or TRN.
+3. Upload Emirates ID / passport when prompted. Do **not** promise a trade licence:
+   there isn't one, which is exactly why a merchant of record is being used.
 4. Skip product creation for now. Just complete the account-onboarding form and submit for review.
 5. Tell Claude when the account is approved. The approval email will say "You can now create live products."
 

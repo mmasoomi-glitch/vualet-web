@@ -78,7 +78,7 @@ export const KNOWLEDGE = deepFreeze({
 
   company: {
     operator: f(
-      "Mira and Vualet are operated by Afaq Alnaseem Trading LLC, a company registered in Dubai, United Arab Emirates (TRN 100475523500003).",
+      "Mira and Vualet are services provided by a sole proprietor trading as Vualet Trading, based in Dubai, United Arab Emirates. Your payment contract is with Dodo Payments, our merchant of record.",
       "src/app/about/page.tsx; src/app/legal/privacy/page.tsx §1; src/app/legal/terms/page.tsx §1",
     ),
     brandFamily: f(

@@ -1,0 +1,46 @@
+# Mira reconciliation sweep - repair path when a webhook is missed.
+# This is the ONLY repair path until the sweep runs; without it,
+# subscription records can drift from engine entitlements indefinitely.
+#
+# Why oneshot + timer rather than a daemon:
+#   The reconciliation script (dodo-reconcile.mjs) is a batch job that
+#   completes in a few seconds. A oneshot service triggered by a timer
+#   is the natural systemd pattern for periodic batch work. A long-running
+#   daemon would add complexity (idle resource consumption, supervision,
+#   restart logic) with no benefit.
+#
+# Logs land in the journal:
+#   journalctl -u mira-reconcile
+
+[Unit]
+Description=Mira: reconcile web subscription records with engine entitlements (dodo-reconcile.mjs)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# The sweep uses three exit codes: 0 clean, 1 could not run at all, 2 ran fine
+# and found things a person should look at ("findings need a human - nothing is
+# broken, but somebody must look"). Only 1 is a failure of this unit.
+#
+# Without this line the timer goes red every hour that the sweep finds anything,
+# which is most hours - and an operator who sees red every hour stops reading
+# red. That would bury exit 1, the code that means the repair path is actually
+# dead. Findings are read from `journalctl -u mira-reconcile`; a red unit here
+# means the sweep could not run.
+SuccessExitStatus=2
+User=root
+# Adjust to the mira-web checkout if it differs - `systemctl show mira-web -p WorkingDirectory` tells you
+WorkingDirectory=/opt/mira-web
+# The SAME env file the web service itself loads - verified with
+# `systemctl show mira-web -p EnvironmentFiles`, which reports
+# /opt/mira-web/runtime.conf (ignore_errors=no).
+#
+# NO dash prefix, deliberately. A dash means "run anyway if this file is
+# missing", and that is what made the first install fail silently-ish: with no
+# environment the sweep started, found no DODO_API_KEY, refused to touch
+# anything and exited 1 on a schedule. For a repair path, being unable to run
+# must be LOUD - a visibly failed unit gets noticed, a quietly no-op one does
+# not. The web service is configured the same way.
+EnvironmentFile=/opt/mira-web/runtime.conf
+ExecStart=/usr/bin/npm run reconcile

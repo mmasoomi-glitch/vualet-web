@@ -141,6 +141,17 @@ function VoiceNote({ src, autoplay }: { src: string; autoplay?: boolean }) {
   );
 }
 
+// What both message bubbles share. Each branch spreads this FIRST, so the single
+// rounded corner it then sets still overrides borderRadius - spreading last would
+// reset that corner to 16 and quietly change the bubble shape.
+const bubbleBase: React.CSSProperties = {
+  maxWidth: "84%",
+  padding: "10px 14px",
+  fontSize: 14,
+  lineHeight: 1.5,
+  borderRadius: 16,
+};
+
 export default function VeridianChat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -510,26 +521,18 @@ export default function VeridianChat() {
             style={
               m.role === "me"
                 ? {
+                    ...bubbleBase,
                     alignSelf: "flex-end",
                     background: "var(--mira-grad-presence)",
                     color: "#fff",
                     borderBottomRightRadius: 5,
-                    maxWidth: "84%",
-                    padding: "10px 14px",
-                    fontSize: 14,
-                    lineHeight: 1.5,
-                    borderRadius: 16,
                   }
                 : {
+                    ...bubbleBase,
                     alignSelf: "flex-start",
                     background: "var(--mira-frost)",
                     color: "var(--mira-ink)",
                     borderBottomLeftRadius: 5,
-                    maxWidth: "84%",
-                    padding: "10px 14px",
-                    fontSize: 14,
-                    lineHeight: 1.5,
-                    borderRadius: 16,
                   }
             }
           >

@@ -192,6 +192,49 @@ export type ConnectRecord = {
   customerId?: string;
   subscriptionId?: string;
   telegramId?: number;
+  /**
+   * THE WHATSAPP HALF OF THE SINGLE-USE INVARIANT — a HASH, never an identity.
+   *
+   * WHY THIS FIELD EXISTS AT ALL. Until now the whole single-use rule lived in
+   * `telegramId`: claimConnect's "foreign" check and its "already claimed"
+   * state are both that one number. A WhatsApp customer has no Telegram id, so
+   * without a second field a WhatsApp token could be claimed by anyone, twice,
+   * forever. Widening `telegramId` to also carry a WhatsApp JID was rejected
+   * outright: it is typed `number`, every reader of it (claimConnect,
+   * mirrorIdentityToSubscription, POST /api/connect, engine-push) assumes a
+   * Telegram chat id, and a JID squatting there would silently corrupt the
+   * uniqueness check on the channel that is currently working.
+   *
+   * WHY IT IS A HASH AND NOT THE JID. A WhatsApp JID IS a phone number with a
+   * suffix ("12025551234@s.whatsapp.net"). Storing it raw would put a full
+   * phone number into a field that support-core.mjs's assertNoInternals() does
+   * not guard — i.e. one refactor away from a customer-facing message. The
+   * claim only ever needs EQUALITY, never the value, so the value is not kept:
+   * this is HMAC-SHA256(MIRA_TOKEN_SECRET, jid), which answers "same account?"
+   * exactly and answers "which number?" not at all. See whatsappIdHash() in
+   * src/lib/whatsapp-claim.ts for the one place it is computed.
+   *
+   * OPTIONAL AND ABSENT on every record that has not completed a WhatsApp bind:
+   * a token that has merely been PRESENTED at the pairing entry point carries
+   * nothing here, because presentation is a read and the claim fires only on a
+   * successful bind [decisions#345 Q_C].
+   */
+  whatsappIdHash?: string;
+  /**
+   * The ENGINE tenant this record was bound to, once one exists.
+   *
+   * ABSENT UNTIL BIND, DELIBERATELY [decisions#345 Q_A]. No tenant is created
+   * because a token was presented; the engine defers creation until a scan
+   * proves control of the account, and only then does it report the id here.
+   * A value in this field is therefore evidence that a bind completed.
+   *
+   * It is here for the same reason telegramId is mirrored onto the durable
+   * subscription record (gotchas#267): the connect record expires after 7 days
+   * and a refund or chargeback arrives months later, so a revocation needs an
+   * identity that outlives the token. A tenant id is an opaque internal
+   * identifier, not PII.
+   */
+  tenantId?: string;
   // The customer's WhatsApp number, ALWAYS stored normalised to E.164 ("+" plus
   // 8..15 digits) by src/lib/phone.ts — never the raw typed input, so one person
   // cannot become two identities. This is PII: it is on the assertNoInternals
@@ -468,4 +511,64 @@ export async function getSubscriptionByEmail(
   // Defence in depth: the record's own email must still match the session.
   if ((rec.email || "").trim().toLowerCase() !== email.trim().toLowerCase()) return null;
   return { customerId, rec };
+}
+
+/**
+ * Enumerate subscription records for the ADMIN console.
+ *
+ * This store had no listing primitive at all - only kvGet/kvSet/kvDel - which is
+ * precisely why the admin pages could never show anything but hard-coded data.
+ * Customer-facing paths must keep resolving ONE record from a verified session
+ * (see getSubscriptionByEmail); this is the operator view, not a customer view.
+ */
+export async function listSubscriptions(limit?: number): Promise<{ customerId: string; rec: ConnectRecord }[]> {
+  const out: { customerId: string; rec: ConnectRecord }[] = [];
+  try {
+    // Cap keeps admin listings bounded and avoids over-fetching.
+    const cap = Math.min(Math.max(0, limit ?? 500), 500);
+    if (cap <= 0) return out;
+    if (useUpstash) {
+      let cursor = "0";
+      let guard = 0;
+      do {
+        // SCAN is non-blocking; KEYS would block the server.
+        const [next, keys] = (await upstash(["SCAN", cursor, "MATCH", "mira:sub:*", "COUNT", 100])) as [string, string[]];
+        cursor = next;
+        for (const key of keys) {
+          if (out.length >= cap) return out;
+          const customerId = key.slice("mira:sub:".length);
+          if (!customerId) continue;
+          const rec = await kvGet<ConnectRecord>(key);
+          if (!rec) continue;
+          out.push({ customerId, rec });
+          if (out.length >= cap) return out;
+        }
+        guard++;
+      } while (cursor !== "0" && guard < 1000);
+    } else {
+      loadOnce();
+      for (const [key, e] of memory.entries()) {
+        if (out.length >= cap) break;
+        if (!key.startsWith("mira:sub:")) continue;
+        // Expired entries should not appear in an admin list.
+        if (e.exp && e.exp <= Date.now()) continue;
+        const customerId = key.slice("mira:sub:".length);
+        if (!customerId) continue;
+        try {
+          const rec = JSON.parse(e.v) as ConnectRecord;
+          if (rec) {
+            out.push({ customerId, rec });
+            if (out.length >= cap) break;
+          }
+        } catch {
+          // Unparseable row: skip it rather than fail the whole listing.
+        }
+      }
+    }
+  } catch {
+    // NEVER THROWS: this backs an admin page, so a store hiccup renders a partial
+    // list rather than a 500. Count only - never a key, never record contents.
+    console.error(`[store] listSubscriptions failed after ${out.length} record(s)`);
+  }
+  return out;
 }

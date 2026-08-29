@@ -10,6 +10,7 @@ import {
   droppedFields,
   resolveDodoPlan,
   productIdFromDodoPayload,
+  dodoEventIsMiraOwned,
   LOWEST_PAID_PLAN,
   // Writer K — the Dodo lifecycle event handlers (decisions#341 Q1 / #342).
   DODO_EVENT_EFFECTS,
@@ -1392,8 +1393,6 @@ test("P: events that change nothing the customer can feel push NOTHING", () => {
     "payment.cancelled",
     "refund.failed",
     "subscription.update_payment_method",
-    "subscription.plan_changed",
-    "subscription.updated",
     "subscription.active",
     "subscription.renewed",
     "payment.succeeded",
@@ -1406,6 +1405,20 @@ test("P: events that change nothing the customer can feel push NOTHING", () => {
   }
   assert.equal(enginePush.engineEventForEffect(null), null);
   assert.equal(enginePush.engineEventForEffect(undefined), null);
+});
+
+test("P: plan changes push the TIER-SHAPED verb, never an access change", () => {
+  // Finding 1c: before ENGINE_REPRICE_EVENT existed, a paid upgrade never
+  // reached the engine at all. It now pushes entitlement.repriced, which the
+  // engine applies to tier/credits only - the access gate is untouched, so
+  // this push can never re-open a cancelled record.
+  for (const type of ["subscription.plan_changed", "subscription.updated"]) {
+    assert.equal(
+      enginePush.engineEventForEffect(dodoEventEffect(type)),
+      enginePush.ENGINE_REPRICE_EVENT,
+      `${type} must push the reprice verb`,
+    );
+  }
 });
 
 // ── eventAt: the provider's clock, never ours ─────────────────────────────
@@ -1845,4 +1858,167 @@ test("P: with the push layer unconfigured the webhook still works, and says why"
   assert.equal(pushCalls().length, 0, "the engine 401s every caller until the secret is set on both sides");
   assert.equal((await store.getSubscription("cus_P_nosecret")).status, "refunded");
   pushEnv();
+});
+
+// ── UNIT 1: DODO FAN-OUT OWNERSHIP GUARD ────────────────────────────────────
+// A second product (FileHub) now shares this Dodo merchant account. Dodo fans
+// every event out to every endpoint and signs each with THAT endpoint's own
+// secret, so a FileHub event reaches this endpoint with a VALID signature. A
+// valid signature proves the sender is Dodo; it does NOT prove the event is
+// ours. These tests pin that distinction.
+
+test("OWNERSHIP: a MIRA product event still grants, exactly once", async () => {
+  env({
+    DODO_API_KEY: "dodo_test_key",
+    DODO_MODE: "test",
+    DODO_PRODUCT_COMPANION: "prod_c",
+    DODO_PRODUCT_ASSISTANT: "prod_a",
+    DODO_PRODUCT_STUDIO: "prod_s",
+  });
+  process.env.DODO_WEBHOOK_SECRET = SECRET;
+  resetNet();
+  const store = await loadRoute("src/lib/store.ts");
+
+  const res = await postEvent("evt_own_mira_grant", "subscription.active", {
+    customer: { customer_id: "cus_own_mira", email: "mira@example.com" },
+    subscription_id: "sub_own_mira",
+    product_id: "prod_s",
+  });
+  assert.equal(res.status, 200, "webhook should answer 200");
+
+  const record = await store.getSubscription("cus_own_mira");
+  assert.equal(record.plan, "studio", "mira event should grant the studio plan");
+  assert.equal(record.provider, "dodo", "grant should be recorded against dodo");
+});
+
+test("OWNERSHIP: a FILEHUB event grants NOTHING even though its signature is valid", async () => {
+  env({
+    DODO_API_KEY: "dodo_test_key",
+    DODO_MODE: "test",
+    DODO_PRODUCT_COMPANION: "prod_c",
+    DODO_PRODUCT_ASSISTANT: "prod_a",
+    DODO_PRODUCT_STUDIO: "prod_s",
+  });
+  process.env.DODO_WEBHOOK_SECRET = SECRET;
+  resetNet();
+  const store = await loadRoute("src/lib/store.ts");
+
+  const res = await postEvent("evt_own_foreign_grant", "subscription.active", {
+    customer: { customer_id: "cus_own_foreign", email: "foreign@example.com" },
+    subscription_id: "sub_own_foreign",
+    product_id: "prod_filehub_pro",
+  });
+  // 200 is correct and deliberate: the event was genuinely received and must
+  // not be retried forever - the point is that it granted nothing.
+  assert.equal(res.status, 200, "foreign event should still answer 200");
+
+  const record = await store.getSubscription("cus_own_foreign");
+  assert.ok(!record, "a FileHub sale must never mint a Mira subscription");
+});
+
+test("OWNERSHIP: a FILEHUB event on a COLLIDING customer cannot touch an existing Mira subscription", async () => {
+  env({
+    DODO_API_KEY: "dodo_test_key",
+    DODO_MODE: "test",
+    DODO_PRODUCT_COMPANION: "prod_c",
+    DODO_PRODUCT_ASSISTANT: "prod_a",
+    DODO_PRODUCT_STUDIO: "prod_s",
+  });
+  process.env.DODO_WEBHOOK_SECRET = SECRET;
+  resetNet();
+  const store = await loadRoute("src/lib/store.ts");
+
+  const grant = await postEvent("evt_own_collide_mira", "subscription.active", {
+    customer: { customer_id: "cus_collide", email: "collide@example.com" },
+    subscription_id: "sub_collide",
+    product_id: "prod_c",
+  });
+  assert.equal(grant.status, 200, "mira grant should answer 200");
+
+  const before = await store.getSubscription("cus_collide");
+  assert.equal(before.plan, "companion", "mira event should grant the companion plan");
+
+  const foreign = await postEvent("evt_own_collide_filehub", "subscription.active", {
+    customer: { customer_id: "cus_collide", email: "collide@example.com" },
+    subscription_id: "sub_filehub",
+    product_id: "prod_filehub_pro",
+  });
+  assert.equal(foreign.status, 200, "foreign event should still answer 200");
+
+  // Without the guard this foreign event would have rewritten this real
+  // customer's subscription record.
+  const after = await store.getSubscription("cus_collide");
+  assert.equal(after.plan, "companion", "foreign event must not change the plan");
+  // deepEqual against the record captured before the foreign event also proves
+  // the stored subscription id was not overwritten by "sub_filehub".
+  assert.deepEqual(after, before, "foreign event must not overwrite the stored record");
+});
+
+test("OWNERSHIP: replaying the same MIRA event does not grant twice", async () => {
+  env({
+    DODO_API_KEY: "dodo_test_key",
+    DODO_MODE: "test",
+    DODO_PRODUCT_COMPANION: "prod_c",
+    DODO_PRODUCT_ASSISTANT: "prod_a",
+    DODO_PRODUCT_STUDIO: "prod_s",
+  });
+  process.env.DODO_WEBHOOK_SECRET = SECRET;
+  resetNet();
+  const store = await loadRoute("src/lib/store.ts");
+
+  const data = {
+    customer: { customer_id: "cus_own_replay", email: "replay@example.com" },
+    subscription_id: "sub_own_replay",
+    product_id: "prod_s",
+  };
+
+  const first = await postEvent("evt_own_replay", "subscription.active", data);
+  assert.equal(first.status, 200, "first delivery should answer 200");
+  const afterFirst = await store.getSubscription("cus_own_replay");
+  assert.equal(afterFirst.plan, "studio", "first delivery should grant studio");
+
+  // The guard must not have disturbed the existing idempotency behaviour.
+  const second = await postEvent("evt_own_replay", "subscription.active", data);
+  assert.equal(second.status, 200, "replayed delivery should still answer 200");
+  const afterSecond = await store.getSubscription("cus_own_replay");
+  assert.equal(afterSecond.plan, "studio", "replayed delivery should keep the studio plan");
+  assert.deepEqual(afterSecond, afterFirst, "replay must not change the stored record");
+});
+
+test("OWNERSHIP: the predicate FAILS CLOSED on every unproven shape", () => {
+  const planForProductId = (id) => (id === "prod_s" ? "studio" : null);
+
+  const owned = dodoEventIsMiraOwned({ product_id: "prod_s" }, { planForProductId });
+  assert.equal(owned.owned, true, "allowlisted product should be owned");
+  assert.equal(owned.reason, "owned", "allowlisted product should report owned");
+  assert.equal(owned.productId, "prod_s", "product id should be carried back");
+
+  const foreign = dodoEventIsMiraOwned({ product_id: "prod_filehub_pro" }, { planForProductId });
+  assert.equal(foreign.owned, false, "unlisted product must not be owned");
+  assert.equal(foreign.reason, "foreign_product", "unlisted product should report foreign_product");
+  assert.equal(foreign.productId, "prod_filehub_pro", "product id should be carried back");
+
+  const noProduct = dodoEventIsMiraOwned({ customer: { customer_id: "cus_noprod" } }, { planForProductId });
+  assert.equal(noProduct.owned, false, "payload without a product must not be owned");
+  assert.equal(noProduct.reason, "no_product_id", "missing product should report no_product_id");
+  assert.equal(noProduct.productId, undefined, "no product id should be carried back");
+
+  const noResolver = dodoEventIsMiraOwned({ product_id: "prod_s" }, {});
+  assert.equal(noResolver.owned, false, "missing resolver must not be owned");
+  assert.equal(noResolver.reason, "no_resolver", "missing resolver should report no_resolver");
+  assert.equal(noResolver.productId, "prod_s", "product id should be carried back");
+});
+
+test("OWNERSHIP: a throwing resolver is not owned and does not throw", () => {
+  // A throw here would become a webhook Dodo retries forever.
+  const deps = {
+    planForProductId: () => {
+      throw new Error("boom");
+    },
+  };
+  let result;
+  assert.doesNotThrow(() => {
+    result = dodoEventIsMiraOwned({ product_id: "prod_s" }, deps);
+  }, "guard must not throw");
+  assert.equal(result.owned, false, "throwing resolver must not be owned");
 });

@@ -115,6 +115,15 @@ export const ENGINE_REVOKE_EVENT_FOR_STATUS: Readonly<Record<string, string>> = 
  */
 export const ENGINE_RESTORE_EVENT = "entitlement.restored";
 
+/**
+ * The engine's TIER-SHAPED verb: updates which tier the customer is on and
+ * never touches the access gate, so it cannot re-open a cancelled record -
+ * which is exactly why reprice could not be pushed with a restore-shaped
+ * event before this verb existed (finding 1c: a paid upgrade never reached
+ * the engine until the reconciliation sweep, which is not scheduled).
+ */
+export const ENGINE_REPRICE_EVENT = "entitlement.repriced";
+
 /** A row of DODO_EVENT_EFFECTS, as much of it as this module reads. */
 export type DodoEffectLike = { kind?: string; status?: string } | null | undefined;
 
@@ -140,6 +149,7 @@ export function engineEventForEffect(effect: DodoEffectLike): string | null {
     return ENGINE_REVOKE_EVENT_FOR_STATUS[status] ?? null;
   }
   if (effect.kind === "restore") return ENGINE_RESTORE_EVENT;
+  if (effect.kind === "reprice") return ENGINE_REPRICE_EVENT;
   return null;
 }
 

@@ -18,6 +18,7 @@ import {
   activateDodo,
   applyDodoLifecycle,
   dodoEventEffect,
+  dodoEventIsMiraOwned,
 } from "@/lib/dodo-webhook-core.mjs";
 import { planForProductId } from "@/lib/dodo";
 // THE PUSH HALF OF decisions#342 Q_B. Until this import existed, every handler
@@ -180,9 +181,9 @@ async function pushLifecycleToEngine(
 ): Promise<void> {
   try {
     const engineEvent = engineEventForEffect(effect);
-    if (!engineEvent) return; // flag / log / reprice: nothing the customer can feel
+    if (!engineEvent) return; // flag / log: nothing the customer can feel
     if (!outcome.ok) return; // already alerted; nothing was changed here either
-    if (outcome.action !== "revoke" && outcome.action !== "restore") return;
+    if (outcome.action !== "revoke" && outcome.action !== "restore" && outcome.action !== "reprice") return;
     if (!outcome.customerId) return;
 
     const rec = await getSubscription(outcome.customerId);
@@ -213,7 +214,10 @@ async function pushLifecycleToEngine(
       event: engineEvent,
       // Restores carry the plan so the engine can put the tier back exactly
       // where it was; a restore without one leaves tier/credits untouched.
-      plan: outcome.action === "restore" ? rec?.plan : undefined,
+      // Reprices ALWAYS carry it - the record was re-read after the lifecycle
+      // wrote the new plan, so rec.plan is the tier actually paid for, and a
+      // tier-shaped push without a plan would be refused by the engine.
+      plan: outcome.action === "restore" || outcome.action === "reprice" ? rec?.plan : undefined,
       eventId: provenance.eventId,
       eventAt: provenance.eventAt,
       context: type,
@@ -288,6 +292,21 @@ export async function POST(req: Request) {
       case "subscription.active":
       case "subscription.renewed":
       case "payment.succeeded": {
+        // A second product now shares this Dodo merchant account, and Dodo
+        // fans every event out to every endpoint, signing each with that
+        // endpoint's own secret - so a valid signature proves the sender is
+        // Dodo, not that the event is ours. Without this guard a foreign
+        // purchase would mint an active Mira subscription and, on a colliding
+        // customer email, attach it to a real Mira user. This guards the
+        // GRANT path only. It breaks rather than returns so the handler tail
+        // still runs: the event is marked processed and answered HTTP 200 -
+        // an early return would skip the idempotency marker and make Dodo
+        // retry a foreign event forever.
+        const ownership = dodoEventIsMiraOwned(data, { planForProductId });
+        if (!ownership.owned) {
+          console.log(`[dodo-webhook] ${type} → foreign.ignored`, { productId: ownership.productId ?? "none", reason: ownership.reason });
+          break;
+        }
         const rec: ConnectRecord = await activateDodo(data, {
           getConnect,
           // RENEWAL RECOVERY (gotchas#258): this case handles renewals, not just

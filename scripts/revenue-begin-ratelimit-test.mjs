@@ -74,9 +74,12 @@ const PAIR_BASE = "https://pair.example.test/wa/pair";
 const RAW_PHONE = "050 123 4567";
 const RAW_PHONE_E164 = "+971501234567";
 
-// Gate C1 (specs#160): the three required boxes, ticked. observationNumber is
-// opt-IN and deliberately left false so the default body proves the optional
-// scope is not needed to succeed.
+// Gate C1: a LEGACY three-box form, exactly as the pre-r2 wizard sent it.
+// specs#160r2 requires only `banRisk`, but this body is deliberately left in
+// its old shape: it is the standing proof that a client still on the old
+// release is accepted, and that its extra scopes are PRESERVED, not discarded.
+// observationNumber is opt-IN and deliberately left false so the default body
+// proves the optional scope is not needed to succeed.
 const FULL_CONSENT = {
   unofficialAutomation: true,
   banRisk: true,
@@ -914,7 +917,7 @@ test("g: consent is PERSISTED, stamped with the disclosure revision and a timest
   assert.equal(rec.consent.banRisk, true);
   assert.equal(rec.consent.ownAccountReplies, true);
   assert.equal(rec.consent.observationNumber, false, "an opt-IN extra must not be flipped on for them");
-  assert.equal(rec.consent.disclosure, "specs#160", "we must know WHICH copy they agreed to");
+  assert.equal(rec.consent.disclosure, "specs#160r2", "we must know WHICH copy they agreed to");
   const at = Date.parse(rec.consent.acceptedAt);
   assert.ok(Number.isFinite(at), "acceptedAt must be a real timestamp");
   assert.ok(at >= before - 1000 && at <= Date.now() + 1000, "and must be when it actually happened");
@@ -948,8 +951,8 @@ test("g: NO consent at all is refused, and names every scope that is missing", a
     assert.equal(res.body.error, "consent_required");
     assert.deepEqual(
       [...res.body.missing].sort(),
-      ["banRisk", "ownAccountReplies", "unofficialAutomation"],
-      "all three required scopes must be reported missing",
+      ["banRisk"],
+      "the one required scope must be reported missing",
     );
     assert.ok(String(res.body.message).length > 0, "the customer must be told what to do");
     assert.equal(res.body.token, undefined, "nothing may be provisioned without consent");
@@ -960,11 +963,15 @@ test("g: NO consent at all is refused, and names every scope that is missing", a
 test("g: an INCOMPLETE form is refused and names exactly the box that is not ticked", async () => {
   const { POST } = await freshRoute();
 
+  // specs#160r2: only `banRisk` is required, so "incomplete" now means exactly
+  // one thing — that box unticked. The demoted scopes are listed here ticked on
+  // their own precisely to prove they can NEVER stand in for it.
   const cases = [
-    [consentWith("banRisk", "ownAccountReplies"), ["unofficialAutomation"]],
+    [consentWith(), ["banRisk"]],
+    [consentWith("unofficialAutomation"), ["banRisk"]],
+    [consentWith("ownAccountReplies"), ["banRisk"]],
     [consentWith("unofficialAutomation", "ownAccountReplies"), ["banRisk"]],
-    [consentWith("unofficialAutomation", "banRisk"), ["ownAccountReplies"]],
-    [consentWith("unofficialAutomation"), ["banRisk", "ownAccountReplies"]],
+    [consentWith("observationNumber"), ["banRisk"]],
   ];
 
   for (const [consent, expected] of cases) {
@@ -1039,14 +1046,14 @@ test("g: consent is checked BEFORE the pairing surface — a customer bug outran
 
   const incomplete = await callFrom(POST, "203.0.113.37", {
     ...DEFAULT_BODY,
-    consent: consentWith("banRisk"),
+    consent: consentWith("unofficialAutomation", "ownAccountReplies"),
   });
   assert.equal(incomplete.status, 400, "an incomplete form is told about ITSELF");
   assert.equal(incomplete.body.error, "consent_required");
 });
 
 test("g: ONE rule — the browser predicate and the server validator cannot disagree", async () => {
-  // The whole point of @/lib/consent. Every combination of the three required
+  // The whole point of @/lib/consent. Every combination of the required
   // boxes: whatever whatsAppConsentComplete lets the wizard submit is exactly
   // what readConsent accepts. If someone adds a required scope to one and not
   // the other, this goes red.
@@ -1055,12 +1062,12 @@ test("g: ONE rule — the browser predicate and the server validator cannot disa
 
   assert.deepEqual(
     [...REQUIRED_CONSENT_SCOPES].sort(),
-    ["banRisk", "ownAccountReplies", "unofficialAutomation"],
-    "the required scopes are the three from specs#160",
+    ["banRisk"],
+    "specs#160r2: one merged required scope, stating unofficial automation AND the ban risk",
   );
   assert.equal(whatsAppConsentComplete(EMPTY_WHATSAPP_CONSENT), false, "nothing is pre-agreed");
 
-  for (let mask = 0; mask < 8; mask++) {
+  for (let mask = 0; mask < 1 << REQUIRED_CONSENT_SCOPES.length; mask++) {
     const form = { ...EMPTY_WHATSAPP_CONSENT };
     REQUIRED_CONSENT_SCOPES.forEach((scope, i) => {
       form[scope] = Boolean(mask & (1 << i));
@@ -1078,13 +1085,15 @@ test("g: the shared predicate already matches the disclosure component it will r
   // import must already agree with it, or handing over the import would be a
   // silent behaviour change.
   const { whatsAppConsentComplete } = await consentLib();
-  assert.equal(whatsAppConsentComplete(FULL_CONSENT), true, "the three required boxes are enough");
+  assert.equal(whatsAppConsentComplete(FULL_CONSENT), true, "a legacy three-box form is still enough");
+  assert.equal(whatsAppConsentComplete(consentWith("banRisk")), true, "the one merged box is enough");
   assert.equal(
     whatsAppConsentComplete({ ...FULL_CONSENT, observationNumber: true }),
     true,
     "the optional scope changes nothing about completeness",
   );
-  assert.equal(whatsAppConsentComplete(consentWith("unofficialAutomation", "banRisk")), false);
+  // The DEMOTED scopes are prose now. Ticking them cannot substitute for the box.
+  assert.equal(whatsAppConsentComplete(consentWith("unofficialAutomation", "ownAccountReplies")), false);
 });
 
 // ── COUNTERFACTUAL: prove the new tests can tell fixed from broken ────────
@@ -1098,7 +1107,8 @@ test("g: the shared predicate already matches the disclosure component it will r
 // extracted into a temp directory at run time; nothing under src/ is touched,
 // and the suite is reproducible on any clone.
 
-const OLD_REV = "HEAD";
+const OLD_REV = "f889ee5"; // PINNED, not "HEAD": once the fix is committed HEAD IS the fix,
+                      // and every pre-fix assertion silently starts testing the fix.
 let OLD_BEGIN = null;
 let OLD_SRC = "";
 

@@ -74,6 +74,29 @@ function languageClause(langId: string): string {
 
 /* ---------- shared styles ---------- */
 
+// Keeps the persona stored locally and the persona sent to the server from
+// drifting apart by building both from the same pure helper. Pure on purpose:
+// every input is an argument, so it needs no hook and can never read stale state.
+function buildPersona(input: {
+  name: string;
+  roleLabel: string;
+  vibe: string;
+  vibeText: string;
+  lang: string;
+}): { assistantName: string; persona: string } {
+  const assistantName = input.name.trim() || "Mira";
+  const roleText = (input.roleLabel || "personal assistant").toLowerCase();
+  const vibeBlurb = VIBES.find((v) => v.id === input.vibe)?.blurb ?? "";
+  const vibe_ = input.vibeText.trim() || vibeBlurb;
+  const persona =
+    `You are ${assistantName}, a ${roleText}. ${vibe_} ` +
+    `Talk warmly and in character, keep replies short and natural, ` +
+    `never mention being an AI, a model, or any company/technology.` +
+    languageClause(input.lang);
+
+  return { assistantName, persona };
+}
+
 const card: React.CSSProperties = {
   background: "var(--mira-canvas)",
   border: "1px solid var(--mira-fog)",
@@ -178,7 +201,7 @@ export default function ShapeYourMira() {
   const phoneE164 = phoneResult.ok ? phoneResult.e164 : null;
   const phoneError = !phoneResult.ok && phoneTouched ? phoneErrorText(phoneResult.reason) : null;
 
-  // The consent rule itself lives in WhatsAppDisclosure (writer C / specs#160) and is NOT
+  // The consent rule itself lives in WhatsAppDisclosure (writer C / specs#160r2) and is NOT
   // restated here. Three required boxes; the observation number is optional and excluded.
   const consentComplete = whatsAppConsentComplete(consent);
 
@@ -191,15 +214,7 @@ export default function ShapeYourMira() {
   // written — never a half-typed string, so nothing downstream can inherit an unusable number.
   // (This wizard has never rehydrated state on load; that is unchanged here.)
   useEffect(() => {
-    const assistantName = name.trim() || "Mira";
-    const roleText = (roleLabel || "personal assistant").toLowerCase();
-    const vibeBlurb = VIBES.find((v) => v.id === vibe)?.blurb ?? "";
-    const vibe_ = vibeText.trim() || vibeBlurb;
-    const persona =
-      `You are ${assistantName}, a ${roleText}. ${vibe_} ` +
-      `Talk warmly and in character, keep replies short and natural, ` +
-      `never mention being an AI, a model, or any company/technology.` +
-      languageClause(lang);
+    const { assistantName, persona } = buildPersona({ name, roleLabel, vibe, vibeText, lang });
     try {
       localStorage.setItem(
         "mira_setup",
@@ -270,26 +285,18 @@ export default function ShapeYourMira() {
       setSubmitError(phoneErrorText(phoneResult.reason));
       return;
     }
-    // GATE C1. No connect call is made until the three required consents are given. This is a
+    // GATE C1 (specs#160r2). No connect call is made until the required consent is given. This is a
     // second, independent check rather than a repeat of canAdvance: reaching Review must never
     // be enough on its own to bind a real WhatsApp number.
     if (!consentComplete) {
       setConsentAttempted(true);
       setStep(STEP.WhatsApp);
-      setSubmitError("Please read the WhatsApp notice and tick the three required boxes first.");
+      setSubmitError("Please read the WhatsApp notice and tick the required box first.");
       return;
     }
     setSubmitError(null);
     setSubmitBusy(true);
-    const assistantName = name.trim() || "Mira";
-    const roleText = (roleLabel || "personal assistant").toLowerCase();
-    const vibeBlurb = VIBES.find((v) => v.id === vibe)?.blurb ?? "";
-    const vibe_ = vibeText.trim() || vibeBlurb;
-    const persona =
-      `You are ${assistantName}, a ${roleText}. ${vibe_} ` +
-      `Talk warmly and in character, keep replies short and natural, ` +
-      `never mention being an AI, a model, or any company/technology.` +
-      languageClause(lang);
+    const { assistantName, persona } = buildPersona({ name, roleLabel, vibe, vibeText, lang });
 
     try {
       const res = await fetch("/api/begin", {
@@ -627,7 +634,7 @@ export default function ShapeYourMira() {
                   role="alert"
                   style={{ fontSize: 13, color: "var(--mira-rose-ink)", margin: "12px 0 0", lineHeight: 1.5 }}
                 >
-                  Please tick the three required boxes above. We can&apos;t connect a number until
+                  Please tick the required box above. We can&apos;t connect a number until
                   you&apos;ve confirmed you understand what WhatsApp can do to it.
                 </p>
               )}

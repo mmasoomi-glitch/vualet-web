@@ -94,12 +94,22 @@ export function normalizePath(path: string): string {
  * the root layout's metadataBase — belongs to vualet.com.
  */
 export function originFor(path: string): string {
-  // An absolute URL already on the Mira host stays on the Mira host — including
+  // An absolute URL already on the Mira host stays on the Mira host - including
   // its root, which middleware serves from /mira and which a bare "/" would
   // otherwise hand back to vualet.com.
   if (typeof path === "string" && isOnOrigin(path.trim(), ORIGIN_MIRA)) return ORIGIN_MIRA;
   const p = normalizePath(path);
-  return p === "/mira" || p.startsWith("/mira/") ? ORIGIN_MIRA : ORIGIN_MAIN;
+  if (p === "/mira" || p.startsWith("/mira/")) return ORIGIN_MIRA;
+  // APEX PARKED ELSEWHERE (2026-08-28): vualet.com currently serves a different
+  // product (Primaion), so any URL this app emits on that host 404s - including
+  // the legal pages reviewers check. Until the owner points the apex at this
+  // build, EVERY route canonicalises to mira.vualet.com, which serves them all
+  // (the corporate pages render there too). This keeps canonicals, the sitemap
+  // and structured data on one truthful host with no per-consumer patching.
+  // REVERT PLAN: when vualet.com serves this build again, restore the line
+  // below to `return ORIGIN_MAIN;` and re-run scripts/seo-test.mjs - the
+  // ownership tests pin whichever rule is active.
+  return ORIGIN_MIRA;
 }
 
 /**
@@ -194,6 +204,8 @@ const EXCLUDED_PREFIXES: readonly string[] = [
   "/mira/account",
   "/mira/login",
   "/mira/start",
+  // Leftover waitlist page - the live funnel entry is /mira/start; excluded so the sitemap cannot split the funnel again.
+  "/mira/signup",
 ];
 
 /** True when a path must be kept out of the sitemap and out of the index. */
@@ -304,13 +316,6 @@ export function buildPublicRoutes(): PublicRoute[] {
       priority: 0.7,
       lastModified: CONTENT_REVISION,
       why: "Mira product family — src/app/mira/store/page.tsx",
-    },
-    {
-      path: "/mira/signup",
-      changeFrequency: "monthly",
-      priority: 0.6,
-      lastModified: CONTENT_REVISION,
-      why: "Public waitlist — src/app/mira/signup/page.tsx",
     },
     {
       path: "/mira/vpn",

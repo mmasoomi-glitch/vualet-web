@@ -35,9 +35,10 @@ export default function TermsAndConditionsPage() {
         and use of Mira and the Veridian technology that powers it, together
         with any related products, sites, and services (together, the
         &quot;Service&quot;). The Service is provided by{" "}
-        <strong>Afaq Alnaseem Trading LLC</strong>, Dubai, United Arab Emirates
-        (TRN 100475523500003) (&quot;we,&quot; &quot;us,&quot; the
-        &quot;Provider&quot;). By using the Service, or by ticking the
+        a sole proprietor trading as <strong>Vualet Trading</strong>, Dubai,
+        United Arab Emirates (&quot;we,&quot; &quot;us,&quot; the
+        &quot;Provider&quot;). Purchases are sold by Dodo Payments, the merchant
+        of record for all payment transactions. By using the Service, or by ticking the
         acceptance box when you sign up, you agree to these Terms and enter into
         a binding agreement with the Provider. If you do not agree, do not use
         the Service.

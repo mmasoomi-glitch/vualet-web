@@ -496,10 +496,13 @@ describe("the consent rule, wherever it lives", () => {
     assert.equal(whatsAppConsentComplete(EMPTY_WHATSAPP_CONSENT), false);
   });
 
-  test("only ALL three required scopes together count as consent", () => {
+  test("only ALL required scopes together count as consent", () => {
     const { EMPTY_WHATSAPP_CONSENT, whatsAppConsentComplete, REQUIRED_CONSENT_SCOPES } = loaded();
     const scopes = [...REQUIRED_CONSENT_SCOPES];
-    assert.equal(scopes.length, 3, "expected three required scopes");
+    // specs#160r2: the three boxes became ONE merged box. The combinatorial
+    // sweep below is written over `scopes.length`, so it keeps proving the same
+    // thing whatever the required set is — only the expected set is pinned.
+    assert.deepEqual(scopes, ["banRisk"], "expected exactly the one merged required scope");
     // All 2^3 combinations: exactly one of them may pass.
     let passed = 0;
     for (let mask = 0; mask < 1 << scopes.length; mask++) {

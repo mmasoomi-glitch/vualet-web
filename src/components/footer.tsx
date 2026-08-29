@@ -80,10 +80,10 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-[var(--border)] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <p className="text-xs text-[var(--muted)]">
-            © {new Date().getFullYear()} Vualet — operated by Afaq Alnaseem Trading LLC, Dubai, UAE.
+            © {new Date().getFullYear()} Vualet — from Vualet Trading (a sole proprietorship), Dubai, UAE.
           </p>
           <p className="text-xs text-[var(--muted)]">
-            TRN 100475523500003
+            Sold by Dodo Payments, our merchant of record
           </p>
         </div>
       </div>

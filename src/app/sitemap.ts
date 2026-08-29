@@ -20,10 +20,25 @@ import { buildPublicRoutes, canonicalFor } from "@/lib/seo";
  * transactional Mira route. buildPublicRoutes() throws if one ever leaks in.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
-  return buildPublicRoutes().map((route) => ({
+  const entries = buildPublicRoutes().map((route) => ({
+    // originFor() itself now answers the serving host for every route while
+    // the apex is parked on another product (see src/lib/seo.ts), so no
+    // re-homing is needed here; the dedupe below still matters because the
+    // corporate home and the Mira home collapse onto one URL.
     url: canonicalFor(route.path),
     lastModified: new Date(`${route.lastModified}T00:00:00Z`),
     changeFrequency: route.changeFrequency,
     priority: route.priority,
   }));
+  // Re-homing collapses the corporate home onto the Mira home, so the same
+  // URL can now appear twice. The first entry wins because route-table order
+  // puts the primary page first; duplicate entries split crawl budget.
+  const seen = new Set<string>();
+  return entries.filter((entry) => {
+    if (seen.has(entry.url)) {
+      return false;
+    }
+    seen.add(entry.url);
+    return true;
+  });
 }
