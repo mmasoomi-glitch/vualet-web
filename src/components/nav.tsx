@@ -122,14 +122,9 @@ export function Nav() {
               </div>
             )}
           </div>
+          {/* Customers and Docs removed: both are empty placeholder pages, excluded from sitemap; header links waste visitor clicks. Restore when pages have content. */}
           <Link href="/pricing" className="px-3 py-2 rounded-md text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
             Pricing
-          </Link>
-          <Link href="/customers" className="px-3 py-2 rounded-md text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-            Customers
-          </Link>
-          <Link href="/docs" className="px-3 py-2 rounded-md text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-            Docs
           </Link>
         </nav>
 
@@ -197,8 +192,6 @@ export function Nav() {
           <ul className="space-y-1 border-t border-[var(--border)] pt-3">
             {[
               { name: "Pricing", href: "/pricing" },
-              { name: "Customers", href: "/customers" },
-              { name: "Docs", href: "/docs" },
               { name: "Sign in", href: "/login" },
             ].map((link) => (
               <li key={link.name}>
