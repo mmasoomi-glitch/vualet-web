@@ -32,6 +32,11 @@
 /* -------------------------------------------------------------------------- */
 
 /** Vualet corporate host. Source: src/app/layout.tsx metadataBase. */
+// The blog index and every published post are real public pages, so the sitemap is
+// generated FROM the post list rather than transcribed alongside it. A post that is
+// added or removed in blog.ts cannot leave a stale or missing sitemap entry behind.
+import { allPosts } from "@/lib/blog";
+
 export const ORIGIN_MAIN = "https://vualet.com";
 
 /** Mira sub-brand host. Source: src/app/mira/layout.tsx metadataBase. */
@@ -337,6 +342,25 @@ export function buildPublicRoutes(): PublicRoute[] {
       priority: 0.7,
       lastModified: CONTENT_REVISION,
       why: "Generated from PRODUCTS — src/app/products/[slug]/page.tsx",
+    });
+  }
+
+  // The engineering blog: the index, then one entry per published post.
+  routes.push({
+    path: "/blog",
+    changeFrequency: "weekly",
+    priority: 0.6,
+    lastModified: CONTENT_REVISION,
+    why: "Engineering notes index - src/app/blog/page.tsx",
+  });
+  for (const post of allPosts()) {
+    routes.push({
+      path: `/blog/${post.slug}`,
+      changeFrequency: "yearly",
+      priority: 0.5,
+      // A post carries its own publication date, which is the honest lastModified.
+      lastModified: post.date,
+      why: "Generated from POSTS - src/app/blog/[slug]/page.tsx",
     });
   }
 

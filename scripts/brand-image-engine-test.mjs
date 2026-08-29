@@ -161,7 +161,8 @@ test("sections cover the real site surfaces and carry their routes", () => {
   assert.equal(SECTIONS.account.route, "/mira/account");
   // Honesty: /blog does not exist in src/app yet, and the data says so.
   assert.equal(SECTIONS.hero.routed, true);
-  assert.equal(SECTIONS.blogHeader.routed, false);
+  // /blog shipped; ogCard is still art for a surface with no route of its own.
+  assert.equal(SECTIONS.blogHeader.routed, true);
 });
 
 test("an unknown section is rejected rather than silently generating off-brand art", () => {

@@ -40,9 +40,9 @@ export default function JournalistsSecurityPage() {
             simplification that reduces moving parts in the critical path.
           </li>
           <li>
-            Independently owned and funded by Vualet / Satellite World
-            Electronics. No state backing, and no sponsor that answers to a
-            state. This is the company&apos;s own declaration of ownership.
+            Independently owned and funded by Vualet. No state backing, and no
+            sponsor that answers to a state. This is the company&apos;s own
+            declaration of ownership.
           </li>
           <li>
             Field-tested: twenty press accounts were provisioned and have been

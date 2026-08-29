@@ -263,10 +263,10 @@ export const SECTIONS = Object.freeze({
   },
   blogHeader: {
     route: "/blog",
-    // HONEST: there is no /blog route in src/app today. This section exists for
-    // the SEO drafts track (jury #107 constraint 5 — drafts only, never
-    // auto-published). Generating the art early is safe; publishing is not.
-    routed: false,
+    // /blog now exists: src/app/blog/page.tsx and src/app/blog/[slug]/page.tsx,
+    // both in the sitemap. This flag was false while the section was art for a
+    // route that did not exist yet; it is true because the route shipped.
+    routed: true,
     aspect: "21:9",
     intent:
       "Narrow banner. An editorial still life with one idea in it. Reads well " +

@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { Inter, IBM_Plex_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 import { SiteChrome } from "@/components/site-chrome";
+import { JsonLd, organizationSchema } from "@/components/json-ld";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -62,6 +63,10 @@ export default async function RootLayout({
       className={`${inter.variable} ${plexSans.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)]">
+        {/* Who publishes this site. Emitted once, site-wide, so a crawler or an
+            AI summariser reads the legal name from structured data rather than
+            inferring it from prose. */}
+        <JsonLd data={organizationSchema()} />
         <SiteChrome host={host}>{children}</SiteChrome>
       </body>
     </html>

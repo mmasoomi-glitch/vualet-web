@@ -255,9 +255,12 @@ test("every URL in the sitemap resolves to a page file that actually exists", ()
     // mira.vualet.com/ is served by src/app/mira/page.tsx via middleware rewrite.
     const seg =
       hostname === new URL(ORIGIN_MIRA).hostname && pathname === "/" ? "mira" : pathname.slice(1);
-    const dynamicParent = seg.startsWith("products/") && seg !== "products";
-    const file = dynamicParent
-      ? join(root, "src", "app", "products", "[slug]", "page.tsx")
+    // Routes served by a [slug] page rather than a literal directory. Anything
+    // not named here must have a real page.tsx on disk at its own path.
+    const DYNAMIC_PARENTS = ["products", "blog"];
+    const parent = DYNAMIC_PARENTS.find((d) => seg.startsWith(`${d}/`) && seg !== d);
+    const file = parent
+      ? join(root, "src", "app", parent, "[slug]", "page.tsx")
       : join(root, "src", "app", seg, "page.tsx");
     assert.ok(existsSync(file), `${u} has no backing page file (looked for ${file})`);
   }
@@ -426,7 +429,6 @@ test("buildPublicRoutes refuses to publish an excluded path", () => {
  */
 const INTERNAL_ONLY = new Set([
   // Used inside seo.ts; exported so this suite can unit-test them directly.
-  "ORIGIN_MAIN",
   "ORIGIN_MIRA",
   "normalizePath",
   "originFor",
@@ -503,14 +505,16 @@ test("DEAD-CODE GUARD: every export of seo.ts has a real call site", () => {
     );
   }
 
-  // And the four production-consumed exports are exactly what we expect.
+  // And the production-consumed exports are exactly what we expect. ORIGIN_MAIN
+  // joined this set when src/components/json-ld.tsx started building the
+  // Organization graph from it rather than hardcoding the apex URL a second time.
   const productionConsumed = exportNames.filter((n) => {
     const re = new RegExp(`\\b${n}\\b`);
     return consumers.some((c) => re.test(c.text));
   });
   assert.deepEqual(
     productionConsumed.slice().sort(),
-    ["SITEMAP_URL", "buildPublicRoutes", "canonicalFor", "robotsDisallow"].sort(),
+    ["ORIGIN_MAIN", "SITEMAP_URL", "buildPublicRoutes", "canonicalFor", "robotsDisallow"].sort(),
     "the set of seo.ts exports used by real routes changed — update this list on purpose",
   );
 });
