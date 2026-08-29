@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { allPosts } from "@/lib/blog";
 
 export const metadata: Metadata = {
@@ -11,7 +12,21 @@ export const metadata: Metadata = {
 export default function BlogIndexPage() {
   return (
     <main className="container mx-auto px-4 py-16 max-w-3xl">
-      <header>
+      <div
+        className="relative overflow-hidden rounded-lg border border-[var(--border)] aspect-[3/1] sm:aspect-[2.357/1] bg-[var(--surface-2)]"
+        aria-hidden="true"
+      >
+        <Image
+          src="/brand/blog-header.jpg"
+          alt=""
+          width={1584}
+          height={672}
+          priority
+          className="h-full w-full object-cover object-right"
+        />
+      </div>
+
+      <header className="mt-10">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--muted)]">
           Vualet engineering
         </p>
