@@ -4,6 +4,21 @@ import type { NextRequest } from "next/server";
 const ADMIN_COOKIE = "mira_admin";
 
 /**
+ * Apply Strict-Transport-Security unless the request is for mira.vualet.com.
+ * MEASURED 2026-08-29: Cloudflare fronts all three hosts but injects HSTS on
+ * mira.vualet.com ONLY - the apex and www carried none at all. Setting it
+ * unconditionally in next.config.ts would double the header on the sub-brand,
+ * which is exactly why next.config.ts leaves it out. So it is added here, and
+ * only where Cloudflare does not already supply it.
+ * No `preload`: that is a one-way commitment requiring a separate submission.
+ */
+function withHsts(res: NextResponse, host: string): NextResponse {
+  if (host.startsWith("mira.")) return res;
+  res.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  return res;
+}
+
+/**
  * Edge-runtime COARSE gate for /admin (defense in depth). It verifies the
  * signed admin session cookie's HMAC + expiry + MFA flag using Web Crypto — the
  * twin of src/lib/admin-session.ts. It does NOT (and cannot from the edge) check
@@ -68,6 +83,23 @@ async function verifyAdminCookie(value: string | undefined): Promise<boolean> {
 }
 
 export async function middleware(req: NextRequest) {
+  const host = (req.headers.get("host") || "").toLowerCase();
+
+  // Canonical host. www and the apex were both serving byte-identical 200s with
+  // no redirect and no rel=canonical anywhere, so a crawler saw two complete
+  // copies of the site and had to guess. 301, not the 307 default, because this
+  // is a permanent decision search engines should cache. Cloning nextUrl keeps
+  // the path and query; the protocol is forced to https because behind the
+  // reverse proxy nextUrl carries the INTERNAL http scheme, and redirecting to
+  // http would downgrade the visitor and cost a second hop.
+  if (host.startsWith("www.")) {
+    const url = req.nextUrl.clone();
+    url.protocol = "https:";
+    url.port = "";
+    url.host = host.slice(4);
+    return withHsts(NextResponse.redirect(url, 301), host);
+  }
+
   const { pathname } = req.nextUrl;
 
   // Server-side admin gate: unauthenticated /admin requests never render the
@@ -77,9 +109,9 @@ export async function middleware(req: NextRequest) {
     if (!authed) {
       const url = new URL("/admin-login", req.url);
       url.searchParams.set("next", pathname);
-      return NextResponse.redirect(url);
+      return withHsts(NextResponse.redirect(url), host);
     }
-    return NextResponse.next();
+    return withHsts(NextResponse.next(), host);
   }
 
   // mira.vualet.com → serve the Mira page at the subdomain root.
@@ -87,13 +119,18 @@ export async function middleware(req: NextRequest) {
   // behind a reverse proxy, req.url carries the internal host/proto, so building
   // an absolute URL turns this into a cross-origin rewrite that Next tries to
   // PROXY (https → the internal http port) and 500s. Cloning keeps it internal.
-  const host = (req.headers.get("host") || "").toLowerCase();
   if (host.startsWith("mira.") && pathname === "/") {
     const url = req.nextUrl.clone();
     url.pathname = "/mira";
-    return NextResponse.rewrite(url);
+    return withHsts(NextResponse.rewrite(url), host);
   }
-  return NextResponse.next();
+  return withHsts(NextResponse.next(), host);
 }
 
-export const config = { matcher: ["/", "/admin/:path*"] };
+export const config = {
+  // Widened from ["/", "/admin/:path*"]: a host-level redirect cannot live on a
+  // two-path matcher, it has to see every request. The exclusions keep middleware
+  // off Next's static assets and off the text/XML routes that must be served
+  // byte-exact by their own handlers.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|llms.txt|brand/).*)"],
+};
