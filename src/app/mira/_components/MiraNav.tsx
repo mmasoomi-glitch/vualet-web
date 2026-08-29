@@ -26,6 +26,10 @@ export default function MiraNav({ cta = true }: { cta?: boolean }) {
           <Link href="/mira/plans" className="mira-navlink" style={{ fontSize: 14, color: "var(--mira-graphite)", textDecoration: "none" }}>
             Plans
           </Link>
+          {/* /mira/store was an ORPHAN: in the sitemap, linked from nowhere. */}
+          <Link href="/mira/store" className="mira-navlink" style={{ fontSize: 14, color: "var(--mira-graphite)", textDecoration: "none" }}>
+            Store
+          </Link>
           <Link href="/mira/account" className="mira-navlink mira-nav-account" style={{ fontSize: 14, color: "var(--mira-graphite)", textDecoration: "none" }}>
             Account
           </Link>

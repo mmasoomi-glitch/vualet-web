@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const metadata = {
   title: "Security",
   description:
@@ -37,6 +39,22 @@ export default function SecurityPage() {
         <p>
           Please act in good faith: avoid privacy violations, data destruction,
           and any disruption to our services while you research.
+        </p>
+        {/* /security/journalists was an ORPHAN: in the sitemap and in the
+            SiteNavigationElement structured data, but linked from nowhere on
+            the site. It was advertised to search engines while no visitor
+            could reach it. Its parent page is the right place to link it. */}
+        <p>
+          If you are a journalist, a researcher, or anyone whose safety depends
+          on the answer, a separate page sets out exactly what is verified about
+          each product and what is not:{" "}
+          <Link
+            href="/security/journalists"
+            className="text-[var(--foreground)] underline hover:text-[var(--color-vualet-indigo)]"
+          >
+            Security information for journalists and researchers
+          </Link>
+          .
         </p>
       </div>
     </div>
