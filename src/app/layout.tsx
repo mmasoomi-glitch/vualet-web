@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { Inter, IBM_Plex_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 import { SiteChrome } from "@/components/site-chrome";
-import { JsonLd, organizationSchema } from "@/components/json-ld";
+import { JsonLd, organizationSchema, websiteSchema, siteNavigationSchema } from "@/components/json-ld";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -67,6 +67,12 @@ export default async function RootLayout({
             AI summariser reads the legal name from structured data rather than
             inferring it from prose. */}
         <JsonLd data={organizationSchema()} />
+        {/* The WebSite node and the navigation list are what a search engine reads
+            when deciding which pages deserve sitelinks - the secondary links shown
+            beneath a search result. Both are emitted site-wide, because sitelinks
+            are chosen for a site rather than for a single page. */}
+        <JsonLd data={websiteSchema()} />
+        <JsonLd data={siteNavigationSchema()} />
         <SiteChrome host={host}>{children}</SiteChrome>
       </body>
     </html>

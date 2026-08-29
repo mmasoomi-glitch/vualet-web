@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { allPosts, getPost, type BlogBlock } from "@/lib/blog";
-import { JsonLd, articleSchema } from "@/components/json-ld";
+import { JsonLd, articleSchema, breadcrumbSchema } from "@/components/json-ld";
 
 export async function generateStaticParams() {
   return allPosts().map((post) => ({ slug: post.slug }));
@@ -80,6 +80,13 @@ export default async function BlogPostPage({
           datePublished: post.date,
           path: `/blog/${post.slug}`,
         })}
+      />
+      <JsonLd
+        data={breadcrumbSchema([
+          { name: "Vualet", path: "/" },
+          { name: "Engineering notes", path: "/blog" },
+          { name: post.title, path: `/blog/${post.slug}` },
+        ])}
       />
 
       <Link

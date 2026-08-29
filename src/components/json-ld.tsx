@@ -53,3 +53,68 @@ export function articleSchema(input: {
     },
   };
 }
+
+/**
+ * The sitelinks searchbox / SearchAction is deliberately omitted because
+ * the site has no search endpoint. It may only be added when a real
+ * /search route exists.
+ */
+export function websiteSchema(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Vualet",
+    url: ORIGIN_MAIN,
+    publisher: {
+      "@type": "Organization",
+      name: "Vualet",
+    },
+  };
+}
+
+/**
+ * This navigation list deliberately excludes /docs and /customers because
+ * they are empty placeholder pages. Only pages with real content are listed
+ * to avoid wasting a visitor's click.
+ */
+export function siteNavigationSchema(): Record<string, unknown> {
+  const items = [
+    { name: "Products", path: "/products" },
+    { name: "Pricing", path: "/pricing" },
+    { name: "Security", path: "/security" },
+    { name: "Security for journalists", path: "/security/journalists" },
+    { name: "Engineering notes", path: "/blog" },
+    { name: "About", path: "/about" },
+    { name: "Contact", path: "/contact" },
+  ];
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: items.map((item, i) => ({
+      "@type": "SiteNavigationElement",
+      position: i + 1,
+      name: item.name,
+      url: canonicalFor(item.path),
+    })),
+  };
+}
+
+/**
+ * Breadcrumbs enable search results to show a path rather than a bare URL
+ * and also serve as a sitelinks input.
+ */
+export function breadcrumbSchema(
+  trail: { name: string; path: string }[]
+): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: trail.map((crumb, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: crumb.name,
+      item: canonicalFor(crumb.path),
+    })),
+  };
+}
