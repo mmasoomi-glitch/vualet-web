@@ -518,3 +518,13 @@ test("DEAD-CODE GUARD: every export of seo.ts has a real call site", () => {
     "the set of seo.ts exports used by real routes changed — update this list on purpose",
   );
 });
+
+// The canonical value must stay relative: resolveCanonicalUrl -> resolveAbsoluteUrlWithPathname -> resolveRelativeUrl.
+test("the canonical value in layout.tsx must stay relative", () => {
+  const src = read("src", "app", "layout.tsx");
+  const m = src.match(/alternates\s*:\s*\{[^}]*canonical\s*:\s*["']([^"']+)["']/);
+
+  assert.ok(m, "the site emitted no canonical tag at all before this was added; removing the alternates block silently returns it to that state");
+  assert.equal(m[1], "./", "the value must be the relative \"./\" - Next resolves a relative canonical against the current pathname, which is the whole reason one declaration is correct for every route");
+  assert.ok(!m[1].startsWith("http") && !m[1].startsWith("//"), "an absolute canonical makes every page declare itself a duplicate of the homepage, which is worse than having none, and nothing in the build will complain");
+});

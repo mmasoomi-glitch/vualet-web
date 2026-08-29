@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { TIERS } from "../_components/tiers";
 
+export const metadata = {
+  title: "Choose your Mira plan",
+  description:
+    "Choose the Mira plan you want before setting her up, then move on to checkout to complete the next step in signup.",
+};
+
 // Every tier — paid and free — routes to /mira/checkout, which collects the
 // customer's email before starting payment.
 //

@@ -34,6 +34,17 @@ export const metadata: Metadata = {
   description:
     "Vualet builds the operating software for modern businesses: WhatsApp AI agents, CRM automation, HR and people tools. One login. One bill.",
   metadataBase: new URL("https://vualet.com"),
+  // The site previously emitted no canonical tag at all.
+  // "./" is relative on purpose: Next resolves a relative canonical against
+  // the current pathname and then against metadataBase, so this single line
+  // produces a correct per-route absolute canonical rather than pinning every
+  // page to the homepage.
+  // It is inherited by every page that does not set its own alternates, so a
+  // page needing a different canonical simply overrides it.
+  // Resolver chain evidence: resolveCanonicalUrl -> resolveAbsoluteUrlWithPathname -> resolveRelativeUrl.
+  alternates: {
+    canonical: "./",
+  },
   openGraph: {
     title: "Vualet — Software that runs your business for you.",
     description:

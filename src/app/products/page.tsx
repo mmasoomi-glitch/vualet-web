@@ -2,7 +2,11 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { PRODUCTS } from "@/lib/products";
 
-export const metadata = { title: "Products" };
+export const metadata = {
+  title: "Products",
+  description:
+    "See Mira, WhatsApp AI Agents, CRM Automation, Employee Hub, Omnichannel Inbox, and the other Vualet tools in one view.",
+};
 
 export default function ProductsIndex() {
   const byCategory = PRODUCTS.reduce<Record<string, typeof PRODUCTS>>((acc, p) => {

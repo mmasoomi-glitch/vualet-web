@@ -2,7 +2,11 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { PRODUCTS } from "@/lib/products";
 
-export const metadata = { title: "Pricing" };
+export const metadata = {
+  title: "Pricing",
+  description:
+    "See per-product costs and the Vualet One bundle to understand how Vualet charges for each product and for the bundle based on what you use.",
+};
 
 export default function PricingPage() {
   return (

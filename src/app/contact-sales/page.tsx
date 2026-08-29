@@ -1,4 +1,8 @@
-export const metadata = { title: "Talk to sales" };
+export const metadata = {
+  title: "Talk to sales",
+  description:
+    "Tell the team what you need and ask about custom SLAs, annual commitments, single-tenant deployments, and bilingual onboarding.",
+};
 
 export default function ContactSalesPage() {
   return (
