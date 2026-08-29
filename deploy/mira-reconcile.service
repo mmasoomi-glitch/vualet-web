@@ -19,9 +19,28 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+# The sweep uses three exit codes: 0 clean, 1 could not run at all, 2 ran fine
+# and found things a person should look at ("findings need a human - nothing is
+# broken, but somebody must look"). Only 1 is a failure of this unit.
+#
+# Without this line the timer goes red every hour that the sweep finds anything,
+# which is most hours - and an operator who sees red every hour stops reading
+# red. That would bury exit 1, the code that means the repair path is actually
+# dead. Findings are read from `journalctl -u mira-reconcile`; a red unit here
+# means the sweep could not run.
+SuccessExitStatus=2
 User=root
 # Adjust to the mira-web checkout if it differs - `systemctl show mira-web -p WorkingDirectory` tells you
 WorkingDirectory=/opt/mira-web
-# The same env the web service loads, dash-prefixed so a missing file does not fail the unit - adjust to where mira-web keeps its environment
-EnvironmentFile=-/etc/mira-web.env
+# The SAME env file the web service itself loads - verified with
+# `systemctl show mira-web -p EnvironmentFiles`, which reports
+# /opt/mira-web/runtime.conf (ignore_errors=no).
+#
+# NO dash prefix, deliberately. A dash means "run anyway if this file is
+# missing", and that is what made the first install fail silently-ish: with no
+# environment the sweep started, found no DODO_API_KEY, refused to touch
+# anything and exited 1 on a schedule. For a repair path, being unable to run
+# must be LOUD - a visibly failed unit gets noticed, a quietly no-op one does
+# not. The web service is configured the same way.
+EnvironmentFile=/opt/mira-web/runtime.conf
 ExecStart=/usr/bin/npm run reconcile
