@@ -9,6 +9,17 @@ const interMira = Inter({ subsets: ["latin"], weight: ["400", "500", "600"], var
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://mira.vualet.com"),
+  // The Mira sub-brand is served from its own origin, which is why this layout
+  // sets its own metadataBase above. alternates has to be repeated HERE rather
+  // than inherited: a relative canonical inherited from the root layout resolved
+  // against the ROOT metadataBase and emitted a vualet.com canonical on
+  // mira.vualet.com pages, contradicting both the sitemap and canonicalFor().
+  // It stays relative for the same reason as the root - Next resolves a relative
+  // canonical against the current pathname.
+  // Wrong before this: /mira/plans, /mira/store, /mira/vpn.
+  alternates: {
+    canonical: "./",
+  },
   title: {
     default: "Mira — your assistant, by reflection",
     template: "%s · Mira",
