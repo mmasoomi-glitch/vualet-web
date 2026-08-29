@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Logo, Wordmark } from "./logo";
 
+// Customers, Changelog, and Docs were removed because they are empty placeholder pages
+// excluded from the sitemap. Status was removed because status.vualet.com does not resolve
+// (NXDOMAIN). Each link will be restored when the underlying destination exists.
 const columns = [
   {
     title: "Products",
@@ -23,17 +26,13 @@ const columns = [
   {
     title: "Company",
     links: [
-      { name: "Customers", href: "/customers" },
       { name: "About", href: "/about" },
       { name: "Contact", href: "/contact" },
-      { name: "Changelog", href: "/changelog" },
     ],
   },
   {
     title: "Resources",
     links: [
-      { name: "Docs", href: "/docs" },
-      { name: "Status", href: "https://status.vualet.com" },
       { name: "Security", href: "/security" },
       { name: "Privacy", href: "/legal/privacy" },
       { name: "Terms", href: "/legal/terms" },
