@@ -100,16 +100,12 @@ export function originFor(path: string): string {
   if (typeof path === "string" && isOnOrigin(path.trim(), ORIGIN_MIRA)) return ORIGIN_MIRA;
   const p = normalizePath(path);
   if (p === "/mira" || p.startsWith("/mira/")) return ORIGIN_MIRA;
-  // APEX PARKED ELSEWHERE (2026-08-28): vualet.com currently serves a different
-  // product (Primaion), so any URL this app emits on that host 404s - including
-  // the legal pages reviewers check. Until the owner points the apex at this
-  // build, EVERY route canonicalises to mira.vualet.com, which serves them all
-  // (the corporate pages render there too). This keeps canonicals, the sitemap
-  // and structured data on one truthful host with no per-consumer patching.
-  // REVERT PLAN: when vualet.com serves this build again, restore the line
-  // below to `return ORIGIN_MAIN;` and re-run scripts/seo-test.mjs - the
-  // ownership tests pin whichever rule is active.
-  return ORIGIN_MIRA;
+  // APEX RESTORED 2026-08-29: vualet.com now proxies to this application, so
+  // the two-host rule is back in force - the Mira product surface belongs to
+  // mira.vualet.com and everything else, including the /legal/* trust pages,
+  // belongs to the apex. Verified live before this revert: vualet.com/,
+  // /about, /security, /products and all three /legal/* pages return 200.
+  return ORIGIN_MAIN;
 }
 
 /**
@@ -293,6 +289,13 @@ export function buildPublicRoutes(): PublicRoute[] {
       priority: 0.3,
       lastModified: CONTENT_REVISION,
       why: "Responsible disclosure — src/app/security/page.tsx",
+    },
+    {
+      path: "/security/journalists",
+      changeFrequency: "monthly",
+      priority: 0.7,
+      lastModified: CONTENT_REVISION,
+      why: "Verified security properties and honest limits for at-risk users - src/app/security/journalists/page.tsx",
     },
 
     // ---- Mira sub-brand (mira.vualet.com) ----

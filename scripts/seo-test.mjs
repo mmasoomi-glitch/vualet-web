@@ -319,18 +319,17 @@ test("legal boilerplate is at the floor priority, below every commercial page", 
 /* 15-18. Canonicals                                                   */
 /* ------------------------------------------------------------------ */
 
-test("canonicalFor routes every path to the serving host while the apex is parked", () => {
-  // vualet.com serves a different product today, so the ownership rule is:
-  // everything canonicalises to mira.vualet.com. When the apex comes back,
-  // originFor's revert plan flips these expectations back to ORIGIN_MAIN.
-  assert.equal(canonicalFor("/"), `${ORIGIN_MIRA}/`);
-  assert.equal(canonicalFor("/pricing"), `${ORIGIN_MIRA}/pricing`);
-  assert.equal(canonicalFor("/legal/terms"), `${ORIGIN_MIRA}/legal/terms`);
+test("canonicalFor routes each path to the host that actually owns it", () => {
+  // The apex was restored on 2026-08-29, so the two-host rule is live again:
+  // the Mira product surface is mira.vualet.com, everything else is vualet.com.
+  assert.equal(canonicalFor("/"), `${ORIGIN_MAIN}/`);
+  assert.equal(canonicalFor("/pricing"), `${ORIGIN_MAIN}/pricing`);
+  assert.equal(canonicalFor("/legal/terms"), `${ORIGIN_MAIN}/legal/terms`);
   assert.equal(canonicalFor("/mira/plans"), `${ORIGIN_MIRA}/mira/plans`);
   assert.equal(originFor("/mira/store"), ORIGIN_MIRA);
-  assert.equal(originFor("/about"), ORIGIN_MIRA);
-  // "/miracle" is not a Mira PATH, but on the parked apex it still serves here.
-  assert.equal(originFor("/miracle"), ORIGIN_MIRA);
+  assert.equal(originFor("/about"), ORIGIN_MAIN);
+  // "/miracle" must NOT be treated as a Mira path.
+  assert.equal(originFor("/miracle"), ORIGIN_MAIN);
 });
 
 test("every canonical is absolute and each path canonicalises to exactly one URL", () => {
@@ -346,10 +345,9 @@ test("every canonical is absolute and each path canonicalises to exactly one URL
     seen.set(c, (seen.get(c) ?? 0) + 1);
   }
   const dupes = [...seen.entries()].filter(([, n]) => n > 1).map(([u]) => u);
-  // While the apex is parked, the corporate home and the Mira home are the
-  // SAME page on the serving host - that one collapse is deliberate and the
-  // sitemap dedupes it. Any other duplicate is still a defect.
-  assert.deepEqual(dupes, [`${ORIGIN_MIRA}/`], "only the home collapse is permitted");
+  // With the two-host rule restored the corporate home and the Mira home are
+  // separate URLs again, so no duplicate is permitted at all.
+  assert.deepEqual(dupes, [], "two routes share one canonical URL");
 });
 
 test("the Mira home canonical matches what src/app/mira/page.tsx declares", () => {
@@ -378,21 +376,21 @@ test("normalizePath strips query, hash, trailing and doubled slashes", () => {
   assert.equal(normalizePath(`${ORIGIN_MIRA}/mira/plans`), "/mira/plans");
 });
 
-test("a look-alike host can never mint a canonical carrying its own host", () => {
+test("a look-alike host is never mistaken for the Mira origin", () => {
   // "https://mira.vualet.com.example.net/x" starts with ORIGIN_MIRA as a string
   // but is a different host. The load-bearing property is that the HOSTILE HOST
   // never survives into a canonical we emit. Under the parked-apex rule it is
   // re-homed to our serving host like every other input - which is exactly the
   // property: the spoof host is discarded, never echoed.
   const hostile = `${ORIGIN_MIRA}.example.net/pricing`;
-  assert.equal(originFor(hostile), ORIGIN_MIRA, "look-alike re-homes to the serving host");
+  assert.equal(originFor(hostile), ORIGIN_MAIN, "look-alike host must not claim the Mira origin");
   // The affirmative anti-spoof property, held before and after the parked-apex
   // rule: the hostile string can never become the HOSTNAME of a canonical we
   // emit. (For garbage input the spoof text does survive as opaque PATH junk -
   // pre-existing normalizePath behaviour, never reachable from the curated
   // route table, and harmless because the host is ours.)
-  assert.equal(new URL(canonicalFor(hostile)).hostname, new URL(ORIGIN_MIRA).hostname,
-    "the spoof can never be the canonical host");
+  assert.notEqual(new URL(canonicalFor(hostile)).hostname, new URL(ORIGIN_MIRA).hostname,
+    "a look-alike must never mint a canonical on the Mira host");
   // The genuine origin, with and without a path, still resolves to Mira.
   assert.equal(originFor(`${ORIGIN_MIRA}/mira/plans`), ORIGIN_MIRA);
   assert.equal(originFor(`${ORIGIN_MIRA}/`), ORIGIN_MIRA);
