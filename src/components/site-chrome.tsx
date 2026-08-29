@@ -21,8 +21,20 @@ export function SiteChrome({ children, host = "" }: { children: React.ReactNode;
 
   return (
     <>
+      {/* Skip-to-content link for the corporate site only. The Mira sub-brand and /admin are
+          excluded because each carries its own chrome and its own skip affordance. tabIndex on
+          the target ensures focus actually lands on the main element rather than just scrolling
+          the viewport. */}
+      <a
+        href="#main-content"
+        className="absolute left-4 -top-16 z-[60] rounded-lg px-4 py-2 text-sm font-medium bg-[var(--color-vualet-indigo)] text-white transition-all focus:top-4"
+      >
+        Skip to content
+      </a>
       <Nav />
-      <main className="flex-1">{children}</main>
+      <main id="main-content" tabIndex={-1} className="flex-1">
+        {children}
+      </main>
       <Footer />
       <CsBot />
     </>

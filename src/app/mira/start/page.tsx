@@ -484,7 +484,14 @@ export default function ShapeYourMira() {
           <div>
             <h2 className="display" style={{ fontSize: 22, fontWeight: 400, margin: "0 0 6px" }}>What should I call her?</h2>
             <p style={{ color: "var(--mira-graphite)", fontSize: 14.5, margin: "0 0 18px" }}>A name makes her yours. Mira is just fine, too.</p>
+            <label
+              htmlFor="mira-name"
+              style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500, color: "var(--mira-graphite)" }}
+            >
+              What should she be called?
+            </label>
             <input
+              id="mira-name"
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -515,14 +522,22 @@ export default function ShapeYourMira() {
                 <OptionCard key={v.id} selected={vibe === v.id} onClick={() => setVibe(v.id)} title={v.label} blurb={v.blurb} />
               ))}
             </div>
+            <label
+              htmlFor="mira-vibe"
+              style={{ display: "block", marginTop: 14, marginBottom: 6, fontSize: 13, fontWeight: 500, color: "var(--mira-graphite)" }}
+            >
+              How should she sound? (optional)
+            </label>
             <textarea
+              id="mira-vibe"
               value={vibeText}
               onChange={(e) => setVibeText(e.target.value)}
               placeholder="Optional — e.g. 'talks like my older sister, never lectures, loves a good list.'"
               rows={3}
               maxLength={280}
               style={{
-                marginTop: 14,
+                // marginTop moved to the label above, which is now the first
+                // element in this group; keeping it here would double the gap.
                 width: "100%",
                 fontSize: 14.5,
                 padding: "12px 14px",

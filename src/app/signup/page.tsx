@@ -43,13 +43,20 @@ export default async function SignupPage({
             <p className="mt-3 text-sm text-red-500">Please enter a valid email.</p>
           )}
           <form action="/api/waitlist" method="post" className="mt-8 space-y-4">
-            <input
-              type="email"
-              name="email"
-              required
-              placeholder="you@company.com"
-              className="w-full px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-sm focus:outline-none focus:border-[var(--color-vualet-indigo)]"
-            />
+            {/* Placeholder kept because it shows the expected format and is no longer carrying the label's job. */}
+            <div>
+              <label htmlFor="signup-email" className="block text-sm font-medium text-[var(--muted)] mb-1.5">
+                Work email
+              </label>
+              <input
+                type="email"
+                name="email"
+                id="signup-email"
+                required
+                placeholder="you@company.com"
+                className="w-full px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-sm focus:outline-none focus:border-[var(--color-vualet-indigo)]"
+              />
+            </div>
             <label className="flex items-start gap-2 text-sm text-[var(--muted)]">
               <input
                 type="checkbox"

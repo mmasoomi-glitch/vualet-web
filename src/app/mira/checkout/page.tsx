@@ -317,7 +317,14 @@ function Checkout() {
           {!isTrial && (
             <>
               <label style={{ display: "block", fontSize: 13, color: "var(--mira-graphite)", marginBottom: 6 }}>Email</label>
+              <label
+                htmlFor="checkout-email"
+                style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500, color: "var(--mira-graphite)" }}
+              >
+                Email address
+              </label>
               <input
+                id="checkout-email"
                 style={input}
                 type="email"
                 inputMode="email"
