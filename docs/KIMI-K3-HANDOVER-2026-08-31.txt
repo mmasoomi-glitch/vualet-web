@@ -1,0 +1,756 @@
+================================================================================
+KIMI K3 HANDOVER - MIRA (BALLERINA) VIP CLASSIFICATION + PAIRING WIZARD
+Date: 2026-08-31. Prepared by the session agent as scribe; every code block below
+labeled EXISTS is a byte-faithful dump from the working tree. You (Kimi K3) are
+the AUTHOR of the components labeled TO WRITE. Your output will be applied to
+disk VERBATIM by the hands and then judged, tested and mutation-tested, so:
+
+OUTPUT CONTRACT (strict):
+- For each TO WRITE component, output ONE fenced code block preceded by a line
+  `FILE: <exact target path>`. Nothing outside those blocks except the FILE lines.
+- JavaScript: ES modules, Node 22, single quotes, 2-space indent, ASCII only,
+  no em-dashes. Never invent an API: every function you may call is either in
+  the dumps below or in the signatures section. If something is missing, write
+  `BLOCKED: <what>` instead of guessing.
+- SQL: idempotent (IF NOT EXISTS), parameterised in JS call sites, no DROP.
+- Tests: node:test + node:assert/strict only, deterministic (no Math.random,
+  no Date.now - callers pass `now`), ids generated as literals.
+================================================================================
+
+SECTION 0 - INTENTION (the owner's own words and rulings)
+
+The product: Mira, a WhatsApp companion-assistant. One Baileys session per
+customer (customer scans a QR; Mira is a linked device on THEIR account).
+The owner's order: "read other messages of the customer with his friends and
+contacts and classify them and talk to them in a special way, the VIP
+classification."
+
+Owner rulings 2026-08-31 (ledger decisions#461), binding:
+1. CONSENT: per-contact hashed counters are covered by the existing observation
+   consent - no new checkbox.
+2. COUNT: fixed top-5 VIPs; scoring weights are constants in code.
+3. NAMING: the VIP fact may store the readable contact name (protected by the
+   same per-tenant encryption as all facts).
+4. RETENTION: counters purge after 90 days of TENANT inactivity (whole-tenant,
+   not per-contact); also purge immediately on consent revocation.
+5. MANUAL ALWAYS WINS: a customer's hand-made VIP list is never modified by
+   automation.
+
+Also owner-ordered: a rebuilt pairing page as an animated 5-step wizard (spec
+in SECTION 6) because the old page's Activate button silently no-ops.
+
+================================================================================
+SECTION 1 - WHAT EXISTS: DATABASE MIGRATIONS (EXISTS, deployed or auto-applied)
+
+--- FILE (EXISTS): packages/state/migrations/020_wa_auth_state.sql ---
+```sql
+CREATE TABLE IF NOT EXISTS wa_auth_state (
+    session_id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    blob TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_wa_auth_state_tenant_id
+    ON wa_auth_state (tenant_id);
+
+COMMENT ON TABLE wa_auth_state IS
+    'Stores encrypted Baileys authentication state as a single blob per session, replacing the file-based storage system.';
+
+COMMENT ON COLUMN wa_auth_state.blob IS
+    'Encrypted-at-rest Baileys auth state. Must never be written in plaintext. Replaces a file-per-key layout in which 6,587 of 6,588 files were unencrypted.';
+```
+
+--- FILE (EXISTS): packages/state/migrations/021_backfill_observation_consent.sql ---
+```sql
+-- Make historical activation consent effective by backfilling observation_consent
+-- from granted observation rows in whatsapp_consent. The statement is idempotent:
+-- existing tenant rows are left untouched by ON CONFLICT DO NOTHING.
+INSERT INTO observation_consent (tenant_id, status)
+SELECT DISTINCT tenant_id, 'granted'
+FROM whatsapp_consent
+WHERE scope = 'observation'
+  AND status = 'granted'
+ON CONFLICT (tenant_id) DO NOTHING;
+```
+
+--- FILE (EXISTS): packages/state/migrations/022_contact_signals.sql ---
+```sql
+-- 022_contact_signals.sql
+
+CREATE TABLE IF NOT EXISTS contact_signals (
+  tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  contact_ref TEXT NOT NULL,
+  msgs_out INTEGER NOT NULL DEFAULT 0,
+  msgs_in INTEGER NOT NULL DEFAULT 0,
+  customer_initiated INTEGER NOT NULL DEFAULT 0,
+  first_seen TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (tenant_id, contact_ref)
+);
+
+CREATE INDEX IF NOT EXISTS contact_signals_tenant_id_last_seen_idx
+  ON contact_signals (tenant_id, last_seen);
+
+COMMENT ON TABLE contact_signals IS 'per-contact interaction counters for VIP classification; contact_ref is a HASHED reference, never a raw number; rows exist only for tenants with observation_consent = granted and are purged after 90 days of inactivity or on consent revocation (owner ruling 2026-08-31).';
+
+COMMENT ON COLUMN contact_signals.contact_ref IS 'it is a hash, never plaintext';
+```
+
+Other relevant tables (already in production):
+- observation_consent(tenant_id TEXT PK, status IN (asked,granted,declined,revoked), updated_at)
+- tenants(id TEXT PK, ..., auto_answer_vips_json TEXT, persona, memory_summary, ...)
+- tenant_facts: hash-chained fact ledger; appended ONLY via appendFact (below).
+
+================================================================================
+SECTION 2 - WHAT EXISTS: THE ENCRYPTED SESSION STORE (EXISTS, RUNTIME VERIFIED)
+Context only - do not modify these.
+
+--- FILE (EXISTS): apps/engine/src/wa-auth-store.mjs ---
+```js
+/**
+ * Encrypted-at-rest store for Baileys authentication state.
+ *
+ * Stores one row per session in the wa_auth_state table. This replaces the
+ * old file-per-key layout, where nearly all of the auth state files were
+ * unencrypted. loadAuthBlob is the only retrieval path and returns plaintext
+ * to the caller; nothing else in this module may log or return the decrypted
+ * payload, and plaintext/ciphertext must never appear in SQL, log lines, or
+ * error messages.
+ */
+
+import { getDb, encrypt, decrypt } from '@mira/state';
+
+export async function loadAuthBlob(tenantId, sessionId) {
+  if (typeof tenantId !== 'string' || tenantId.length === 0) {
+    throw new TypeError('tenantId must be a non-empty string');
+  }
+
+  if (typeof sessionId !== 'string' || sessionId.length === 0) {
+    throw new TypeError('sessionId must be a non-empty string');
+  }
+
+  const { rows } = await getDb().query(
+    'SELECT blob FROM wa_auth_state WHERE session_id = $1 AND tenant_id = $2',
+    [sessionId, tenantId]
+  );
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return decrypt(tenantId, rows[0].blob);
+}
+
+export async function saveAuthBlob(tenantId, sessionId, serialized) {
+  if (typeof tenantId !== 'string' || tenantId.length === 0) {
+    throw new TypeError('tenantId must be a non-empty string');
+  }
+
+  if (typeof sessionId !== 'string' || sessionId.length === 0) {
+    throw new TypeError('sessionId must be a non-empty string');
+  }
+
+  if (typeof serialized !== 'string') {
+    throw new TypeError('serialized must be a string');
+  }
+
+  // CRITICAL: serialized is encrypted before it reaches the query. The
+  // plaintext must never appear in SQL, log lines, or error messages.
+  const encrypted = await encrypt(tenantId, serialized);
+
+  await getDb().query(
+    'INSERT INTO wa_auth_state (session_id, tenant_id, blob) VALUES ($1, $2, $3) ON CONFLICT (session_id) DO UPDATE SET blob = EXCLUDED.blob, tenant_id = EXCLUDED.tenant_id, updated_at = now()',
+    [sessionId, tenantId, encrypted]
+  );
+}
+
+export async function deleteAuthBlob(tenantId, sessionId) {
+  if (typeof tenantId !== 'string' || tenantId.length === 0) {
+    throw new TypeError('tenantId must be a non-empty string');
+  }
+
+  if (typeof sessionId !== 'string' || sessionId.length === 0) {
+    throw new TypeError('sessionId must be a non-empty string');
+  }
+
+  const { rows } = await getDb().query(
+    'DELETE FROM wa_auth_state WHERE session_id = $1 AND tenant_id = $2 RETURNING session_id',
+    [sessionId, tenantId]
+  );
+
+  return rows.length;
+}
+```
+
+--- FILE (EXISTS): apps/engine/src/use-pg-auth-state.mjs ---
+```js
+/*
+ * Drop-in replacement for useMultiFileAuthState.
+ * The whole authentication state lives in one encrypted row rather than
+ * thousands of plaintext files.
+ * BufferJSON.replacer and BufferJSON.reviver must never be removed because
+ * the state contains Buffers.
+ */
+
+import { initAuthCreds, BufferJSON, proto } from '@whiskeysockets/baileys';
+import { loadAuthBlob, saveAuthBlob } from './wa-auth-store.mjs';
+
+export async function usePgAuthState(tenantId, sessionId) {
+  let creds;
+  let keys = {};
+
+  const blob = await loadAuthBlob(tenantId, sessionId);
+
+  if (typeof blob === 'string') {
+    try {
+      const parsed = JSON.parse(blob, BufferJSON.reviver);
+      if (parsed && typeof parsed === 'object' && parsed.creds && typeof parsed.creds === 'object' && !Array.isArray(parsed.creds) && Object.keys(parsed.creds).length > 0) {
+        creds = parsed.creds;
+        keys = parsed.keys && typeof parsed.keys === 'object' && !Array.isArray(parsed.keys) ? parsed.keys : {};
+      } else {
+        creds = initAuthCreds();
+        keys = {};
+      }
+    } catch (error) {
+      creds = initAuthCreds();
+      keys = {};
+    }
+  } else {
+    creds = initAuthCreds();
+    keys = {};
+  }
+
+  let writeChain = Promise.resolve();
+
+  function serializeState() {
+    return JSON.stringify({ creds, keys }, BufferJSON.replacer);
+  }
+
+  function persist() {
+    const serialized = serializeState();
+    writeChain = writeChain
+      .catch(() => {})
+      .then(() => saveAuthBlob(tenantId, sessionId, serialized));
+    return writeChain;
+  }
+
+  async function saveCreds() {
+    await persist();
+  }
+
+  const state = {
+    creds,
+    keys: {
+      get(type, ids) {
+        const result = {};
+        if (!Array.isArray(ids)) {
+          return result;
+        }
+        const typeStore = keys[type];
+        if (!typeStore || typeof typeStore !== 'object') {
+          return result;
+        }
+        for (const id of ids) {
+          if (Object.prototype.hasOwnProperty.call(typeStore, id)) {
+            const value = typeStore[id];
+            if (type === 'app-state-sync-key') {
+              result[id] = proto.Message.AppStateSyncKeyData.fromObject(value);
+            } else {
+              result[id] = value;
+            }
+          }
+        }
+        return result;
+      },
+      set(data) {
+        if (!data || typeof data !== 'object') {
+          return Promise.resolve();
+        }
+        for (const [type, entries] of Object.entries(data)) {
+          if (!entries || typeof entries !== 'object') {
+            continue;
+          }
+          if (!keys[type] || typeof keys[type] !== 'object' || Array.isArray(keys[type])) {
+            keys[type] = {};
+          }
+          for (const [id, value] of Object.entries(entries)) {
+            if (value === null || value === undefined) {
+              delete keys[type][id];
+            } else {
+              keys[type][id] = value;
+            }
+          }
+        }
+        return persist();
+      }
+    }
+  };
+
+  return { state, saveCreds };
+}
+```
+
+================================================================================
+SECTION 3 - WHAT EXISTS: THE SHARD ROUTER (EXISTS, LOCAL TESTED 7/7, mutation-proven)
+Context for future scale work - do not modify.
+
+--- FILE (EXISTS): apps/engine/src/shard-router.mjs ---
+```js
+/**
+ * Shard hashing core.
+ *
+ * Virtual nodes are used so that adding a shard moves only about
+ * 1/N of future placements rather than remapping everyone as modulo
+ * would. These functions are pure and deterministic across
+ * processes and restarts.
+ */
+import { createHash } from 'node:crypto';
+
+export function createRing(shards, opts = {}) {
+  if (!Array.isArray(shards)) {
+    throw new TypeError('shards must be an array');
+  }
+  if (shards.length === 0) {
+    throw new TypeError('shards must not be empty');
+  }
+
+  const seen = new Set();
+  for (const shard of shards) {
+    if (typeof shard !== 'string' || shard.length === 0) {
+      throw new TypeError('shards must contain only non-empty strings');
+    }
+    if (seen.has(shard)) {
+      throw new TypeError('shards must not contain duplicate ids');
+    }
+    seen.add(shard);
+  }
+
+  const replicas = opts && opts.replicas !== undefined ? opts.replicas : 128;
+  if (!Number.isInteger(replicas) || replicas < 1) {
+    throw new TypeError('replicas must be a positive integer');
+  }
+
+  const ring = [];
+  for (const shard of shards) {
+    for (let i = 0; i < replicas; i++) {
+      const digest = createHash('sha256').update(shard + '#' + i).digest('hex');
+      const position = parseInt(digest.slice(0, 8), 16) >>> 0;
+      ring.push(Object.freeze({ position, shard }));
+    }
+  }
+
+  ring.sort((a, b) => a.position - b.position);
+  Object.freeze(ring);
+
+  return Object.freeze({
+    shards: Object.freeze([...shards]),
+    replicas,
+    ring
+  });
+}
+
+export function pickShard(ring, customerId) {
+  if (
+    typeof ring !== 'object' ||
+    ring === null ||
+    !Array.isArray(ring.shards) ||
+    ring.shards.length === 0 ||
+    !Array.isArray(ring.ring) ||
+    ring.ring.length === 0 ||
+    !Number.isInteger(ring.replicas) ||
+    ring.replicas < 1
+  ) {
+    throw new TypeError('ring must be a ring object produced by createRing');
+  }
+
+  if (typeof customerId !== 'string' || customerId.length === 0) {
+    throw new TypeError('customerId must be a non-empty string');
+  }
+
+  const digest = createHash('sha256').update(customerId).digest('hex');
+  const position = parseInt(digest.slice(0, 8), 16) >>> 0;
+  const nodes = ring.ring;
+
+  let low = 0;
+  let high = nodes.length - 1;
+
+  if (position > nodes[high].position) {
+    return nodes[0].shard;
+  }
+
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2);
+    if (nodes[mid].position < position) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
+  }
+
+  return nodes[low].shard;
+}
+
+export function assign(ring, customerId, currentAssignment) {
+  // Existing placement always beats the hash: this stops a deploy or a shard
+  // addition from dropping live customer connections. Anyone 'simplifying'
+  // this into a bare pickShard call will silently disconnect every customer
+  // whose hash has drifted.
+  if (typeof currentAssignment === 'string' && currentAssignment.length > 0 && ring.shards.includes(currentAssignment)) {
+    return currentAssignment;
+  }
+  return pickShard(ring, customerId);
+}
+
+export function planForNewShard(ring, nextRing, customerIds) {
+  if (!Array.isArray(customerIds)) {
+    throw new TypeError('customerIds must be an array');
+  }
+  const moved = [];
+  const stayed = [];
+  for (let i = 0; i < customerIds.length; i += 1) {
+    const customerId = customerIds[i];
+    const from = pickShard(ring, customerId);
+    const to = pickShard(nextRing, customerId);
+    if (from === to) {
+      stayed.push(customerId);
+    } else {
+      moved.push({ customerId: customerId, from: from, to: to });
+    }
+  }
+  return { moved: moved, stayed: stayed };
+}
+
+export function ringStats(ring, customerIds) {
+  if (!Array.isArray(customerIds)) {
+    throw new TypeError('customerIds must be an array');
+  }
+  const counts = {};
+  for (let i = 0; i < ring.shards.length; i += 1) {
+    counts[ring.shards[i]] = 0;
+  }
+  for (let i = 0; i < customerIds.length; i += 1) {
+    const shard = pickShard(ring, customerIds[i]);
+    counts[shard] = (counts[shard] || 0) + 1;
+  }
+
+  let min = 0;
+  let max = 0;
+  if (ring.shards.length > 0) {
+    min = counts[ring.shards[0]];
+    max = counts[ring.shards[0]];
+    for (let i = 1; i < ring.shards.length; i += 1) {
+      const count = counts[ring.shards[i]];
+      if (count < min) {
+        min = count;
+      }
+      if (count > max) {
+        max = count;
+      }
+    }
+  }
+
+  return {
+    counts: counts,
+    min: min,
+    max: max,
+    spread: max - min,
+    total: customerIds.length
+  };
+}
+```
+
+================================================================================
+SECTION 4 - WHAT EXISTS: THE OBSERVATION COUNTER SPLICE (EXISTS, spliced, node --check clean)
+This is the live producer of contact_signals rows. Dumped region from
+apps/engine/src/wa-observe.mjs (the rest of that file distills behavior facts
+and is not to be touched).
+
+--- REGION (EXISTS): wa-observe.mjs, contactRef + bumpContactSignal + observeOutgoing ---
+```js
+// The classifier stores only this hash, never a number (owner ruling 2026-08-31).
+function contactRef(chatJid) {
+  const basis = waExternalId(chatJid) || String(chatJid);
+  return createHash('sha256').update(basis).digest('hex').slice(0, 16);
+}
+
+async function bumpContactSignal(tenantId, chatJid) {
+  await getDb().query(
+    `INSERT INTO contact_signals (tenant_id, contact_ref, msgs_out, customer_initiated)
+     VALUES ($1, $2, 1, 1)
+     ON CONFLICT (tenant_id, contact_ref) DO UPDATE SET
+       msgs_out = contact_signals.msgs_out + 1,
+       -- A message after 4+ quiet hours counts as the customer starting a conversation - the initiation signal for VIP scoring.
+       customer_initiated = contact_signals.customer_initiated + CASE WHEN contact_signals.last_seen < now() - interval '4 hours' THEN 1 ELSE 0 END,
+       last_seen = now()`,
+    [tenantId, contactRef(chatJid)]
+  );
+}
+
+export async function observeOutgoing(tenantId, chatJid, text) {
+  if (!tenantId || typeof text !== 'string' || !text) return;
+
+  try {
+    if ((await getObservationConsent(tenantId)) !== 'granted') return;
+
+    if (chatJid) bumpContactSignal(tenantId, chatJid).catch(() => {});
+
+    ensureSweepTimer();
+
+    const buf = buffers.get(tenantId) || [];
+    buf.push({ ts: deps.now(), text: text.slice(0, MAX_MSG_CHARS) });
+    if (buf.length > BUFFER_CAP) buf.splice(0, buf.length - BUFFER_CAP);
+    buffers.set(tenantId, buf);
+
+    counters.observed++;
+
+    if (buf.length >= BATCH_SIZE) {
+      await flushTenant(tenantId);
+    }
+  } catch (e) {
+    counters.errors++;
+    console.error(
+      `[wa-observe] observe failed tenant=${tenantId}: ${String(e?.message ?? e).slice(0, 120)}`
+    );
+  }
+}
+```
+
+================================================================================
+SECTION 5 - WHAT EXISTS: THE CONSUMERS YOUR OUTPUT FEEDS
+
+--- REGION (EXISTS): wa-autoanswer.mjs classifyPriority - reads the VIP list ---
+```js
+export function classifyPriority({ text, contactExternalId, vips = null, recentCount = 0 }) {
+  try {
+    // a. VIP: vips may be an array or a JSON string; parse defensively,
+    // invalid -> null. Exact match on the externalId string.
+    let list = vips;
+    if (typeof list === 'string') {
+      try {
+        list = JSON.parse(list);
+      } catch (e) {
+        list = null;
+      }
+    }
+    if (Array.isArray(list) && list.includes(contactExternalId)) {
+      return { high: true, reason: 'vip' };
+    }
+    // b. KEYWORD: the sender's own wording, latin or native script.
+    if (URGENT_KEYWORDS.test(String(text || '')) || URGENT_NATIVE.test(String(text || ''))) {
+      return { high: true, reason: 'keyword' };
+    }
+    // c. REPEATED: three or more messages from the same contact inside the
+    // caller-chosen window reads as someone trying hard to get through.
+    if (Number(recentCount) >= 3) {
+      return { high: true, reason: 'repeated' };
+    }
+    return { high: false, reason: null };
+  } catch (e) {
+    return { high: false, reason: null };
+  }
+}
+
+// Logs one auto-answered inbound message. The text is encrypted with the
+// tenant DEK before it touches the db; plaintext is never written. A logging
+// failure must never break the message path, so every error is caught and
+// reported as a boolean.```
+
+--- REGION (EXISTS): whatsapp-gateway-v2.mjs pulse sweep timer - the VIP sweep wiring ANCHOR ---
+```js
+  if (!list.length) return;
+  runPulseSweep({ sessions: list })
+    .then((r) => {
+      if (r && (r.pulsed || r.errors)) console.log(`[wa-pulse] pulsed=${r.pulsed} errors=${r.errors}`);
+    })
+    .catch((e) => console.error('[wa-pulse] sweep failed (fail-open):', e.message));
+}, 10 * 60 * 1000).unref();```
+
+--- SIGNATURE (EXISTS): appendFact from @mira/state - EXACTLY TWO ARGUMENTS ---
+```js
+export async function appendFact(tenantId, fact = {}) {
+  requireTenantId(tenantId);
+
+  const kind = fact.kind ?? 'observation';
+  if (!FACT_KINDS.includes(kind)) {
+    throw new TypeError(`[tenant-ledger] unknown kind '${kind}' (allowed: ${FACT_KINDS.join(', ')})`);
+  }
+  const source = fact.source ?? 'system';
+  if (!FACT_SOURCES.includes(source)) {
+    throw new TypeError(`[tenant-ledger] unknown source '${source}' (allowed: ${FACT_SOURCES.join(', ')})`);
+  }
+  const scope = fact.scope ?? 'general';
+  if (typeof scope !== 'string' || scope.length === 0) {
+    throw new TypeError('[tenant-ledger] scope must be a non-empty string');
+  }
+
+  const plaintext = fact.statement ?? fact.body;
+  if (typeof plaintext !== 'string' || plaintext.length === 0) {
+    throw new TypeError('[tenant-ledger] a fact needs a non-empty statement (alias: body)');
+  }
+  // ... validates, encrypts, hash-chains. kind in: observation,preference,commitment,
+  // entitlement,action,correction,retraction,system. source in: telegram,whatsapp,web,
+  // api,system,import,inference. CALL SHAPE: appendFact(tenantId, { kind, statement,
+  // source, scope, value }) - NEVER positional. A judge once demanded positional and was wrong.
+```
+
+Other in-scope signatures (all importable from '@mira/state'):
+- getDb() -> node-postgres pool: .query(text, params) -> { rows }
+- encrypt(tenantId, plaintext) -> Promise<ciphertextString>
+- decrypt(tenantId, stored) -> Promise<plaintext> (legacy plaintext passes through)
+From './vip-classifier.mjs' (YOU are writing it, SECTION 6.1):
+- pickVips(rows, now, opts) as specified.
+
+================================================================================
+SECTION 6 - TO WRITE: THE REMAINING COMPONENTS (your authoring task)
+
+6.1 FILE: apps/engine/src/vip-classifier.mjs   (pure module, NO imports)
+Header comment: deterministic, explainable VIP scoring; no model in the loop;
+identical on re-run by design (LAP applies to first parties).
+- export const WEIGHTS = Object.freeze({ frequency: 0.4, initiation: 0.3, recency: 0.2, longevity: 0.1 });
+  with comment: explainable constants by owner ruling 2026-08-31; change them only with a ledger entry.
+- helpers: getNum(val) (finite number or 0), toTimestamp(val) (new Date(val).getTime()),
+  round4(n) (Math.round(n*10000)/10000), computeRawComponents(row, nowTs, maxOut):
+    MS_PER_DAY = 86400000; msgsOut = Math.max(0, getNum(row.msgs_out));
+    frequency = msgsOut / Math.max(1, maxOut);
+    initiation = Math.max(0, getNum(row.customer_initiated)) / Math.max(1, msgsOut);
+    lastSeenTs/firstSeenTs via toTimestamp of row.last_seen/row.first_seen;
+    recency = Number.isNaN(lastSeenTs) ? 0 : Math.exp(-Math.max(0, Math.floor((nowTs-lastSeenTs)/MS_PER_DAY))/14);
+    longevity = (either ts NaN) ? 0 : Math.min(1, Math.max(0, Math.floor((lastSeenTs-firstSeenTs)/MS_PER_DAY))/90);
+- export function scoreContact(row, now, maxOut): TypeError if row not non-null object;
+  nowTs = now instanceof Date ? now.getTime() : now, TypeError unless finite number;
+  weighted sum clamped to [0,1]; never NaN.
+- export function pickVips(rows, now, opts = {}): TypeError if rows not array;
+  defaults k=5, minScore=0.15, minMessages=3; filter getNum(msgs_out) >= minMessages;
+  [] if none; maxOut over FILTERED rows; keep score >= minScore; sort score DESC then
+  contact_ref ASC via localeCompare; top k as { contact_ref, score: round4(score) }; no mutation.
+- export function explainScore(row, now, maxOut): same guards; { frequency, initiation,
+  recency, longevity, score } all round4'd, components clamped to [0,1]; MUST reuse
+  computeRawComponents - one implementation of the math.
+
+6.2 FILE: apps/engine/src/vip-sweep.mjs
+Imports EXACTLY: getDb from '@mira/state'; pickVips from './vip-classifier.mjs'.
+Header: the producer half of VIP classification; deterministic, consent-gated,
+manual-always-wins; runs beside the pulse sweep.
+THE ENVELOPE (comment it clearly): tenants.auto_answer_vips_json is written as
+{ "auto": [refs...], "manual": [...] }. Read current value first:
+  - parses to ARRAY (legacy manual list) -> preserve it as manual, add auto;
+  - parses to OBJECT with manual -> keep manual verbatim, replace only auto;
+  - empty/null/unparseable -> { auto: [...], manual: [] };
+  - if computed auto identical to stored auto -> SKIP the write.
+Downstream (classifyPriority above) parses defensively so both shapes work;
+manual entries are NEVER modified by this module.
+- export async function sweepVips({ db = getDb(), now = new Date(), k = 5 } = {}):
+  one SQL join fetching tenant ids with observation_consent.status='granted' plus
+  their current auto_answer_vips_json; per tenant: load contact_signals rows,
+  pickVips(rows, now, { k }), envelope rules, UPDATE tenants SET auto_answer_vips_json=$1
+  WHERE id=$2 when needed. Per-tenant try/catch (one failure never stops the sweep);
+  console.error '[vip-sweep]' prefix, NO contact data ever logged.
+  Return { tenants, updated, skipped, errors }.
+- export async function purgeStaleSignals({ db = getDb(), days = 90 } = {}):
+  DELETE rows only for tenants whose ENTIRE signal set is stale:
+  tenant_id IN (SELECT tenant_id FROM contact_signals GROUP BY tenant_id
+  HAVING max(last_seen) < now() - ($1 || ' days')::interval). Comment the
+  whole-tenant-only distinction (owner ruling: 90 days of tenant inactivity).
+  Return deleted count. Parameterise days.
+- export async function purgeOnRevocation(tenantId, { db = getDb() } = {}):
+  DELETE FROM contact_signals WHERE tenant_id=$1; ALSO rewrite the tenant's
+  envelope so auto=[] while manual is preserved (same envelope rules).
+  Comment: revocation purges immediately (owner ruling). Return deleted count.
+
+6.3 FILE: apps/engine/test/vip-classifier.test.mjs  (node:test, deterministic)
+Tests that catch real regressions:
+ 1 determinism: same rows+now -> identical pickVips output across two calls.
+ 2 ordering: construct rows where scores differ; assert exact order; tiebreak by
+   contact_ref for two identical rows differing only in ref.
+ 3 filters: rows below minMessages excluded; below minScore excluded; k cap.
+ 4 NaN-proofing: rows with garbage last_seen/first_seen/msgs_out yield finite
+   scores and never NaN (assert Number.isFinite).
+ 5 explainScore components sum: frequency*.4+initiation*.3+recency*.2+longevity*.1
+   ~= score within 1e-9 before rounding effects (use a row with clean values).
+ 6 input validation: pickVips throws TypeError on non-array; scoreContact throws
+   on null row and on now=undefined.
+
+6.4 FILE: apps/engine/test/vip-sweep.test.mjs  (node:test + mock db)
+Fake db: { query(text, params) } recording calls and returning canned rows.
+ 1 manual-always-wins: stored value is a legacy ARRAY ['keepme']; sweep writes
+   envelope with manual ['keepme'] intact and computed auto.
+ 2 object envelope: stored { auto:['old'], manual:['m1'] } -> manual preserved
+   verbatim, auto replaced.
+ 3 skip-identical: stored auto equals computed auto -> NO update query issued
+   (assert by inspecting recorded calls).
+ 4 per-tenant isolation: two tenants, first's contact_signals query throws ->
+   errors=1 and second tenant still processed.
+ 5 purgeOnRevocation empties auto, preserves manual, deletes signals.
+MUTATION REQUIREMENT (the hands will run it): deleting the manual-preservation
+branch must fail at least one test.
+
+6.5 FRAGMENT: gateway wiring (NOT a whole file)
+Target: apps/engine/whatsapp-gateway-v2.mjs. Using the pulse-timer ANCHOR dumped
+in SECTION 5: reproduce the anchor lines and append, INSIDE the same setInterval
+callback after the runPulseSweep(...).catch(...) statement, a fire-and-forget
+VIP sweep call:
+  sweepVips().then(r => { if (r && (r.updated || r.errors))
+    console.log('[vip-sweep] tenants=' + r.tenants + ' updated=' + r.updated +
+    ' errors=' + r.errors); }).catch(e => console.error('[vip-sweep] failed (fail-open):', e.message));
+plus, once per ~24h using a simple counter or modulo on sweep runs (comment the
+mechanism), purgeStaleSignals().catch(...) with the same fail-open logging.
+Also output the one-line import addition fragment: reproduce the line
+  import { runPulseSweep, handlePulseCommand } from './src/wa-proactive.mjs'; // fire-first pulses (requirements#97)
+followed by
+  import { sweepVips, purgeStaleSignals } from './src/vip-sweep.mjs'; // VIP producer (decisions#458/#461)
+
+6.6 FILE: pairing wizard page fragment (whole PAIRING_PAGE const replacement)
+Target: replace `const PAIRING_PAGE = (sessionId) => \`...\`;` in
+apps/engine/whatsapp-gateway-v2.mjs. Output the complete new const.
+CONTRACT (do not invent endpoints):
+- Only interpolation: ${sessionId} into `const SID = '...'` in the inline script.
+  Escape every OTHER backtick/dollar-brace for the outer template literal, or
+  avoid them (string concatenation inside the page JS).
+- const KEY = location.hash.slice(1);
+- Poll every 2500ms: fetch('/pair/'+SID+'/qr', {headers:{'x-mira-pair-key':KEY}})
+  -> { state: 'pairing'|'connected'|'expired' (unknown=pairing), qr: dataURL|null,
+       code: 8-char string|null }
+- Submit: POST '/pair/'+SID+'/link', headers Content-Type + x-mira-pair-key,
+  body JSON { code, consent: { linked_device, observation, stand_in, ban_risk } }.
+  Success JSON has success===true; failure has error.
+DESIGN (owner-ordered): a vertical rail of 5 steps, each a numbered circle +
+label + one-line detail; CURRENT step pulses (CSS keyframes), COMPLETED steps
+light up with a check glyph and 300ms transition, future steps dim. Steps:
+ 1 Scan (WhatsApp > Settings > Linked devices > Link a device)
+ 2 Connected (Mira joins your account as a linked device)
+ 3 Say hi to yourself (send any message in WhatsApp's Message-yourself chat)
+ 4 Enter the code (the 8-char code appears on THIS page; type it below)
+ 5 Activate (confirm the checkboxes and press Activate)
+State mapping: pairing->step1 active + QR shown; connected & no code->step3
+active; code present->step4 active + code LARGE monospace with copy affordance;
+success->step5 done + full-page success (check, 'Mira is live in your self-chat',
+'you can close this page'); expired-> honest expired view, everything dimmed.
+CONSENT + CODE IN THE SAME VIEW. Four checkboxes (linked_device, observation
+marked 'optional - unlocks learning', stand_in, ban_risk with the WhatsApp-terms
+risk wording). Activate button DISABLED with cursor not-allowed until code
+length is 8 AND the three required boxes ticked (observation never gates); a
+helper line says exactly what is missing. NEVER a silent no-op (the old page's
+sin - name it in a comment). Server errors render red, visible. Single
+self-contained page, inline CSS/JS, no external resources, mobile-first,
+~430px column, cream #FFF8F0, ink #2A1F2D, accent #C2451E, system fonts.
+Footer: 'Secured by Mira - your keys are encrypted at rest.'
+Title: 'Link Mira to WhatsApp'.
+
+6.7 OPTIONAL (only if capacity remains): wire purgeOnRevocation - output a
+fragment for wherever observation consent transitions to revoked/declined in
+apps/engine/src/wa-observe.mjs (handleSelfChatConsent). If you cannot see the
+exact anchor, emit `BLOCKED: need handleSelfChatConsent source` instead of guessing.
+
+================================================================================
+SECTION 7 - HOW YOUR OUTPUT IS APPLIED (so you know the bar)
+The hands apply your blocks verbatim to the stated paths, run node --check on
+every file, run both test suites plus the existing 9 suites, mutation-test the
+manual-wins branch and the resident-stability rule, and only then deploy with
+hash-preflighted single-file swaps and one engine restart. Anything that fails
+returns to you with the exact error text. Judges (gemini flash + gpt-5.1) review
+before application. Write accordingly: complete files, correct spelling, no
+placeholders except the sanctioned BLOCKED lines.
+================================================================================
+END OF HANDOVER
