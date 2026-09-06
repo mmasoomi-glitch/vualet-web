@@ -53,7 +53,7 @@ const FAMILY: Product[] = [
     blurb:
       "Ambient, on-screen awareness that preloads context so answers land faster and truer.",
     status: "Coming soon",
-    cta: "Notify me",
+    cta: "In development",
   },
   {
     id: "locksmith",
@@ -61,7 +61,7 @@ const FAMILY: Product[] = [
     blurb:
       "Your constant credentials, entered for you — safely, and only when you ask.",
     status: "Coming soon",
-    cta: "Notify me",
+    cta: "In development",
   },
 ];
 
