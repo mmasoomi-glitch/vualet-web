@@ -348,7 +348,7 @@ export default function MiraBot() {
 
   if (!open) {
     return (
-      <button className="mira-bot-fab" onClick={() => setOpen(true)} aria-label="Ask Mira">
+      <button className="mira-bot-fab" onClick={() => setOpen(true)}>
         <span className="av" aria-hidden="true">M</span>
         Ask Mira
       </button>
