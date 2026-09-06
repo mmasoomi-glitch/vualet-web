@@ -57,7 +57,6 @@ const input: React.CSSProperties = {
   border: "1px solid var(--mira-fog)",
   background: "var(--mira-cream)",
   color: "var(--mira-ink)",
-  outline: "none",
 };
 
 function Checkout() {

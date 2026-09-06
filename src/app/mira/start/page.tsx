@@ -506,7 +506,6 @@ export default function ShapeYourMira() {
                 border: "1.5px solid var(--mira-fog)",
                 background: "var(--mira-cream)",
                 color: "var(--mira-ink)",
-                outline: "none",
               }}
             />
           </div>
@@ -545,7 +544,6 @@ export default function ShapeYourMira() {
                 border: "1.5px solid var(--mira-fog)",
                 background: "var(--mira-cream)",
                 color: "var(--mira-ink)",
-                outline: "none",
                 resize: "vertical",
                 fontFamily: "inherit",
               }}
@@ -623,7 +621,6 @@ export default function ShapeYourMira() {
                   border: `1.5px solid ${phoneError ? "var(--mira-rose)" : "var(--mira-fog)"}`,
                   background: "var(--mira-cream)",
                   color: "var(--mira-ink)",
-                  outline: "none",
                 }}
               />
               {phoneError ? (
