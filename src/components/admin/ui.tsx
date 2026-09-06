@@ -66,8 +66,8 @@ export function KpiCard({
 // Record lookup, because the store's union can grow before this file does.
 const STATUS_STYLES: Record<string, string> = {
   active: "bg-[var(--color-vualet-success)]/12 text-[var(--color-vualet-success)]",
-  pending: "bg-[var(--color-vualet-indigo)]/12 text-[var(--color-vualet-indigo)]",
-  bound: "bg-[var(--color-vualet-indigo)]/12 text-[var(--color-vualet-indigo)]",
+  pending: "bg-[var(--color-vualet-indigo-ink)]/12 text-[var(--color-vualet-indigo-ink)]",
+  bound: "bg-[var(--color-vualet-indigo-ink)]/12 text-[var(--color-vualet-indigo-ink)]",
   on_hold: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
   paused: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
   cancelled: "bg-[var(--color-vualet-danger)]/12 text-[var(--color-vualet-danger)]",

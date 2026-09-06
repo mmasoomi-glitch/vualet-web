@@ -71,7 +71,7 @@ export default async function SignupPage({
                   href="/legal/terms"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline text-[var(--color-vualet-indigo)]"
+                  className="underline text-[var(--color-vualet-indigo-ink)]"
                 >
                   Terms &amp; Conditions
                 </a>
@@ -80,7 +80,7 @@ export default async function SignupPage({
             </label>
             <button
               type="submit"
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white bg-[var(--color-vualet-indigo)] hover:bg-[var(--color-vualet-indigo-hover)] transition-colors"
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-white bg-[var(--color-vualet-indigo-ink)] hover:bg-[var(--color-vualet-indigo-ink-hover)] transition-colors"
             >
               Join the waitlist
             </button>

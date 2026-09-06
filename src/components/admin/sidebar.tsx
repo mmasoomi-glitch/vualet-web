@@ -72,7 +72,7 @@ export function Sidebar() {
                   onClick={() => setOpen(false)}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     active
-                      ? "bg-[var(--color-vualet-indigo)] text-white"
+                      ? "bg-[var(--color-vualet-indigo-ink)] text-white"
                       : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
                   }`}
                 >

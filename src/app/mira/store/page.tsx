@@ -154,7 +154,7 @@ function Card({ p }: { p: Product }) {
 export default function MiraStore() {
   return (
     <div className="mx-auto max-w-7xl px-6 py-20">
-      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo)]">
+      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo-ink)]">
         The Mira family
       </p>
       <h1

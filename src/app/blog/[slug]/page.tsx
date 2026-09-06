@@ -91,7 +91,7 @@ export default async function BlogPostPage({
 
       <Link
         href="/blog"
-        className="text-sm text-[var(--muted)] hover:text-[var(--color-vualet-indigo)]"
+        className="text-sm text-[var(--muted)] hover:text-[var(--color-vualet-indigo-ink)]"
       >
         &larr; Engineering notes
       </Link>
@@ -143,7 +143,7 @@ export default async function BlogPostPage({
           If you think something here is wrong, we genuinely want to hear it.{" "}
           <a
             href="mailto:info@vualet.com"
-            className="text-[var(--color-vualet-indigo)] underline decoration-[var(--color-vualet-indigo)]"
+            className="text-[var(--color-vualet-indigo-ink)] underline decoration-[var(--color-vualet-indigo)]"
           >
             info@vualet.com
           </a>

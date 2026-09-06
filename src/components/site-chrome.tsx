@@ -27,7 +27,7 @@ export function SiteChrome({ children, host = "" }: { children: React.ReactNode;
           the viewport. */}
       <a
         href="#main-content"
-        className="absolute left-4 -top-16 z-[60] rounded-lg px-4 py-2 text-sm font-medium bg-[var(--color-vualet-indigo)] text-white transition-all focus:top-4"
+        className="absolute left-4 -top-16 z-[60] rounded-lg px-4 py-2 text-sm font-medium bg-[var(--color-vualet-indigo-ink)] text-white transition-all focus:top-4"
       >
         Skip to content
       </a>

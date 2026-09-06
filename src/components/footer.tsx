@@ -66,7 +66,7 @@ export function Footer() {
                   <li key={l.name}>
                     <Link
                       href={l.href}
-                      className="text-sm text-[var(--foreground)] hover:text-[var(--color-vualet-indigo)] transition-colors"
+                      className="text-sm text-[var(--foreground)] hover:text-[var(--color-vualet-indigo-ink)] transition-colors"
                     >
                       {l.name}
                     </Link>

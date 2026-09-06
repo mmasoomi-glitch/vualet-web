@@ -45,7 +45,7 @@ export default function PricingPage() {
               <div className="flex items-start justify-between">
                 <Logo glyph={p.glyph} size={40} title={p.name} />
                 {p.comingSoon && (
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo)] border border-[var(--color-vualet-indigo)] rounded-full px-2 py-0.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo-ink)] border border-[var(--color-vualet-indigo)] rounded-full px-2 py-0.5">
                     Soon
                   </span>
                 )}
@@ -150,7 +150,7 @@ export default function PricingPage() {
           </p>
           <Link
             href="/contact-sales"
-            className="mt-8 inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo)] hover:bg-[var(--color-vualet-indigo-hover)] transition-colors"
+            className="mt-8 inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo-ink)] hover:bg-[var(--color-vualet-indigo-ink-hover)] transition-colors"
           >
             Talk to sales
             <span aria-hidden>→</span>

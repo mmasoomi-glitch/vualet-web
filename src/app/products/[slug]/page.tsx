@@ -36,7 +36,7 @@ export default async function ProductPage({
         <div className="absolute inset-0 -z-10 [background:radial-gradient(50%_60%_at_50%_0%,rgba(91,91,246,0.12),transparent_60%)]" />
         <div className="mx-auto max-w-5xl px-6 pt-20 pb-16">
           <Logo glyph={product.glyph} size={64} title={product.name} />
-          <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo)]">
+          <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo-ink)]">
             {product.category}
           </p>
           <h1
@@ -51,7 +51,7 @@ export default async function ProductPage({
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
             <Link
               href="/signup"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo)] hover:bg-[var(--color-vualet-indigo-hover)] transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo-ink)] hover:bg-[var(--color-vualet-indigo-ink-hover)] transition-colors"
             >
               Start free
               <span aria-hidden>→</span>
@@ -125,7 +125,7 @@ export default async function ProductPage({
             </div>
             <Link
               href="/pricing"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo)] hover:bg-[var(--color-vualet-indigo-hover)] transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo-ink)] hover:bg-[var(--color-vualet-indigo-ink-hover)] transition-colors"
             >
               See all tiers
               <span aria-hidden>→</span>

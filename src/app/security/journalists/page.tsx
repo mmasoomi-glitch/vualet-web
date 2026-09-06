@@ -148,12 +148,12 @@ export default function JournalistsSecurityPage() {
           to{" "}
           <a
             href="mailto:info@vualet.com"
-            className="underline text-[var(--color-vualet-indigo)]"
+            className="underline text-[var(--color-vualet-indigo-ink)]"
           >
             info@vualet.com
           </a>{" "}
           or use our{" "}
-          <a href="/contact" className="underline text-[var(--color-vualet-indigo)]">
+          <a href="/contact" className="underline text-[var(--color-vualet-indigo-ink)]">
             contact page
           </a>
           .

@@ -48,7 +48,7 @@ export function CustomersTable({ customers }: { customers: AdminCustomer[] }) {
           <button
             key={s}
             onClick={() => setStatus(s)}
-            className={`rounded-md px-2.5 py-1.5 text-xs font-medium border transition-colors ${status === s ? "border-[var(--color-vualet-indigo)] bg-[var(--color-vualet-indigo)] text-white" : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]"}`}
+            className={`rounded-md px-2.5 py-1.5 text-xs font-medium border transition-colors ${status === s ? "border-[var(--color-vualet-indigo)] bg-[var(--color-vualet-indigo-ink)] text-white" : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]"}`}
           >
             {STATUS_LABELS[s]}
           </button>

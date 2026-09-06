@@ -39,7 +39,7 @@ export function CsBot() {
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? "Close support" : "Open support"}
         aria-expanded={open}
-        className="fixed bottom-5 right-5 z-50 grid place-items-center w-14 h-14 rounded-full text-white bg-[var(--color-vualet-indigo)] hover:bg-[var(--color-vualet-indigo-hover)] shadow-lg transition-colors"
+        className="fixed bottom-5 right-5 z-50 grid place-items-center w-14 h-14 rounded-full text-white bg-[var(--color-vualet-indigo-ink)] hover:bg-[var(--color-vualet-indigo-ink-hover)] shadow-lg transition-colors"
       >
         {open ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -65,7 +65,7 @@ export function CsBot() {
         >
           <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center gap-3">
             <div
-              className="grid place-items-center w-9 h-9 rounded-full text-xs font-bold text-white bg-[var(--color-vualet-indigo)]"
+              className="grid place-items-center w-9 h-9 rounded-full text-xs font-bold text-white bg-[var(--color-vualet-indigo-ink)]"
               style={{ fontFamily: "var(--font-display)" }}
             >
               V
@@ -82,7 +82,7 @@ export function CsBot() {
                 <span
                   className={`inline-block px-3 py-2 rounded-2xl text-sm max-w-[85%] ${
                     m.role === "user"
-                      ? "bg-[var(--color-vualet-indigo)] text-white"
+                      ? "bg-[var(--color-vualet-indigo-ink)] text-white"
                       : "bg-[var(--surface-2)] text-[var(--foreground)]"
                   }`}
                 >
@@ -104,7 +104,7 @@ export function CsBot() {
             <button
               onClick={send}
               disabled={busy}
-              className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo)] disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo-ink)] disabled:opacity-50"
             >
               Send
             </button>
