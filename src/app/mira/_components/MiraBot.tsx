@@ -349,7 +349,7 @@ export default function MiraBot() {
   if (!open) {
     return (
       <button className="mira-bot-fab" onClick={() => setOpen(true)} aria-label="Ask Mira">
-        <span className="av">M</span>
+        <span className="av" aria-hidden="true">M</span>
         Ask Mira
       </button>
     );
@@ -358,7 +358,7 @@ export default function MiraBot() {
   return (
     <div className="mira-bot-panel" role="dialog" aria-label="Chat with Mira">
       <div className="mira-bot-head">
-        <span className="av">M</span>
+        <span className="av" aria-hidden="true">M</span>
         <div style={{ flex: 1 }}>
           <strong style={{ fontWeight: 500 }}>Mira</strong>
           <div style={{ fontSize: 12, opacity: 0.85 }}>online · hold to talk</div>
