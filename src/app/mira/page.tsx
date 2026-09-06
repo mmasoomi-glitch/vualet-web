@@ -28,13 +28,13 @@ export default function MiraPage() {
           <img className="mha-hero-orb" src="/brand/motif-orb.png" alt="" aria-hidden width={620} height={620} />
           <div className="mha-wrap mha-hero-grid">
             <div>
-              <span className="mha-eyebrow mha-rise mha-d1">Perfect recall · Zero fabrication</span>
+              <span className="mha-eyebrow mha-rise mha-d1">Grounded answers · Built not to invent</span>
               <h1 className="display mha-rise mha-d2">
-                She remembers everything.<br />
-                <span className="grad">She can&rsquo;t make anything up.</span>
+                She remembers what you tell her.<br />
+                <span className="grad">She&rsquo;s built not to invent.</span>
               </h1>
               <p className="mha-lede mha-rise mha-d3">
-                Mira is the assistant with photographic memory and zero hallucination &mdash; <b>not less, none.</b> She&rsquo;d sooner tell you &ldquo;I don&rsquo;t know&rdquo; than invent an answer you&rsquo;ll regret trusting.
+                Mira answers from what you have actually given her, and <b>a grounding check runs on every reply</b> before it reaches you. She&rsquo;d sooner tell you &ldquo;I don&rsquo;t know&rdquo; than invent an answer you&rsquo;ll regret trusting.
               </p>
               <div className="mha-cta-row mha-rise mha-d4">
                 <Link className="mha-btn mha-btn-primary" href="/mira/start">Start free <span className="mha-arw">&rarr;</span></Link>
@@ -95,17 +95,17 @@ export default function MiraPage() {
             <div className="mha-two">
               <div className="mha-promise">
                 <span className="mha-num">PROMISE 01</span>
-                <h3>Photographic memory</h3>
-                <p>Everything you tell her stays exactly as you said it. Months later she gives it back word-for-word, with the day you said it &mdash; not a paraphrase, not a vibe.</p>
+                <h3>Recall you can check</h3>
+                <p>What you tell her in your group is kept as you said it, and comes back with the day you said it &mdash; not a paraphrase, not a vibe. Her recall covers that group; she has no access to anything outside it.</p>
                 <div className="mha-line"></div>
-                <span className="mha-foot"><Check size={14} /> Nothing decays, nothing drifts</span>
+                <span className="mha-foot"><Check size={14} /> Kept as you said it, with the date</span>
               </div>
               <div className="mha-promise">
                 <span className="mha-num">PROMISE 02</span>
-                <h3>Zero hallucination</h3>
-                <p>Not tuned down. Not &ldquo;reduced by 40%.&rdquo; None. When she doesn&rsquo;t know, she tells you she doesn&rsquo;t know &mdash; which is the one thing you can&rsquo;t afford to have faked.</p>
+                <h3>Built not to invent</h3>
+                <p>Every reply passes a grounding check that rewrites an unsupported answer into an honest &ldquo;I don&rsquo;t know&rdquo; before it is sent. When she doesn&rsquo;t know, she tells you &mdash; which is the one thing you can&rsquo;t afford to have faked.</p>
                 <div className="mha-line"></div>
-                <span className="mha-foot"><Check size={14} /> If it isn&rsquo;t known, it isn&rsquo;t said</span>
+                <span className="mha-foot"><Check size={14} /> When she doesn&rsquo;t have it, she says so</span>
               </div>
             </div>
           </div>

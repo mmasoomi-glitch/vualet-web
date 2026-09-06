@@ -141,16 +141,16 @@ export default function WhatsAppStandin() {
             <span className="msa-lab">free tokens, every month</span>
           </div>
           <div className="msa-stat">
-            <span className="msa-fig mha-serif">0</span>
-            <span className="msa-lab">invented facts, ever</span>
+            <span className="msa-fig mha-serif">Every</span>
+            <span className="msa-lab">reply grounding-checked</span>
           </div>
           <div className="msa-stat">
             <span className="msa-fig mha-serif">Voice</span>
             <span className="msa-lab">in many languages</span>
           </div>
           <div className="msa-stat">
-            <span className="msa-fig mha-serif">Everything</span>
-            <span className="msa-lab">she remembers, kept exact</span>
+            <span className="msa-fig mha-serif">Exact</span>
+            <span className="msa-lab">recall of your group</span>
           </div>
         </div>
       </div>
