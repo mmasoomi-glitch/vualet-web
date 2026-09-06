@@ -332,6 +332,13 @@ export function buildPublicRoutes(): PublicRoute[] {
       lastModified: CONTENT_REVISION,
       why: "Coming-soon preview with real content — src/app/mira/vpn/page.tsx",
     },
+    {
+      path: "/mira/live",
+      changeFrequency: "monthly",
+      priority: 0.5,
+      lastModified: CONTENT_REVISION,
+      why: "Live-voice preview, honest about not shipping yet — src/app/mira/live/page.tsx",
+    },
   ];
 
   // Product detail pages.
