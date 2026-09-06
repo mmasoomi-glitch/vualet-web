@@ -9,7 +9,7 @@ export function CsBot() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role: "bot", text: "Hi — I'm Vualet support. I can help with refunds, billing, cancellations, and any issue. Ask away." },
+    { role: "bot", text: "Hi — Vualet support. I can't change anything on your account myself, but I can point you to the right page for refunds, cancelling, invoices or reaching a person. What do you need?" },
   ]);
 
   async function send() {
