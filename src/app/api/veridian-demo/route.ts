@@ -241,7 +241,27 @@ async function learn(id: string, message: string, reply: string): Promise<void> 
 export async function POST(req: Request) {
   // Identify the visitor. Reuse a valid cookie; otherwise mint a fresh id and
   // set it on the way out. HttpOnly so client JS can't read it; SameSite=Lax.
-  let visitorId = readVisitorCookie(req);
+  //
+  // A Chrome Extension calling this endpoint does so from its OWN origin, which
+  // makes the request cross-site - and a SameSite=Lax cookie is not sent on a
+  // cross-site fetch. Without this header the server would see every extension
+  // message as a brand-new visitor, and the memory this assistant advertises
+  // would silently stop working there while still looking fine on the website.
+  //
+  // The id is a BEARER CAPABILITY: whoever holds it can read that visitor's
+  // memory. That is why the format check is strict - 256 bits of client
+  // randomness and nothing else - and why it is deliberately NOT derived from
+  // anything about the person or their machine. It also keys a durable record
+  // on disk, so a malformed value must never reach the filesystem.
+  const EXT_ID_RE = /^[0-9a-f]{64}$/;
+  let visitorId: string | null = null;
+
+  const extId = req.headers.get("x-mira-visitor");
+  if (extId && EXT_ID_RE.test(extId)) visitorId = extId;
+
+  // Unchanged for website visitors: with the header absent or malformed this
+  // is byte-for-byte the behaviour that shipped before.
+  if (!visitorId) visitorId = readVisitorCookie(req);
   const isNewVisitor = !visitorId;
   if (!visitorId) visitorId = mintVisitorId();
 
