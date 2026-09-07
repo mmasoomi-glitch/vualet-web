@@ -12,7 +12,7 @@
 //
 // Run:  node extension/tools/package.mjs
 
-import { readFileSync, writeFileSync, statSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, statSync, mkdirSync, unlinkSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { deflateRawSync } from "node:zlib";
 import { createHash } from "node:crypto";
@@ -436,7 +436,7 @@ ZIP.writeUInt16LE(FILES.length, EOC_START + 8);
 // Total central directory entries
 ZIP.writeUInt16LE(FILES.length, EOC_START + 10);
 // Size of central directory (bytes)
-ZIP.writeUInt32LE(CD_START, EOC_START + 12);
+ZIP.writeUInt32LE(pos - CD_START, EOC_START + 12);
 // Offset of start of central directory
 ZIP.writeUInt32LE(CD_START, EOC_START + 16);
 // Comment length
@@ -464,5 +464,63 @@ console.log(`  ZIP size: ${ZIP.length} bytes`);
 const sha256 = createHash("sha256").update(ZIP).digest("hex");
 console.log(`  SHA-256: ${sha256}`);
 console.log(`  Written to: ${ZIP_PATH}`);
+
+// ── Self-check: re-open from disk, parse EOCD, verify invariants ───────────
+{
+  const raw = readFileSync(ZIP_PATH);
+  // Locate EOCD signature PK\x05\x06 from the end (comment max 65535 bytes)
+  let eocdOff = raw.length - 22; // minimum ZIP = no CD, just EOCD(22)
+  let found = false;
+  while (eocdOff >= Math.max(0, raw.length - 65557)) {
+    if (raw.readUInt32LE(eocdOff) === 0x06054b50) { found = true; break; }
+    eocdOff--;
+  }
+  if (!found) {
+    console.error("FAIL [selfcheck] EOCD signature PK\\x05\\x06 not found in archive");
+    unlinkSync(ZIP_PATH);
+    process.exit(1);
+  }
+  // Read EOCD fields
+  const eocdDisk = raw.readUInt16LE(eocdOff + 4);
+  const eocdCDDisk = raw.readUInt16LE(eocdOff + 6);
+  const eocdEntriesThisDisk = raw.readUInt16LE(eocdOff + 8);
+  const eocdEntriesTotal = raw.readUInt16LE(eocdOff + 10);
+  const eocdCDSize = raw.readUInt32LE(eocdOff + 12);
+  const eocdCDOFF = raw.readUInt32LE(eocdOff + 16);
+  const eocdCommentLen = raw.readUInt16LE(eocdOff + 20);
+  const eocdPos = eocdOff;
+  // Invariant 1: entry count equals FILES.length
+  if (eocdEntriesTotal !== FILES.length) {
+    console.error(`FAIL [selfcheck] entries total: ${eocdEntriesTotal}, expected ${FILES.length}`);
+    unlinkSync(ZIP_PATH);
+    process.exit(1);
+  }
+  // Invariant 2: central directory at stated offset begins with PK\x01\x02
+  if (raw.readUInt32LE(eocdCDOFF) !== 0x02014b50) {
+    console.error(`FAIL [selfcheck] PK\\x01\\x02 not found at CD offset ${eocdCDOFF}`);
+    unlinkSync(ZIP_PATH);
+    process.exit(1);
+  }
+  // Invariant 3: offset + size === EOCD start position
+  if (eocdCDOFF + eocdCDSize !== eocdPos) {
+    console.error(`FAIL [selfcheck] CD offset(${eocdCDOFF}) + size(${eocdCDSize}) = ${eocdCDOFF + eocdCDSize}, expected EOCD start ${eocdPos}`);
+    unlinkSync(ZIP_PATH);
+    process.exit(1);
+  }
+  // Invariant 4: both disk-entry fields equal total
+  if (eocdEntriesThisDisk !== eocdEntriesTotal) {
+    console.error(`FAIL [selfcheck] entries on this disk(${eocdEntriesThisDisk}) !== total(${eocdEntriesTotal})`);
+    unlinkSync(ZIP_PATH);
+    process.exit(1);
+  }
+  // Invariant 5: EOCD comment length matches actual trailing bytes
+  const actualCommentLen = raw.length - eocdPos - 22;
+  if (eocdCommentLen !== actualCommentLen) {
+    console.error(`FAIL [selfcheck] EOCD comment length: ${eocdCommentLen}, actual trailing bytes: ${actualCommentLen}`);
+    unlinkSync(ZIP_PATH);
+    process.exit(1);
+  }
+  console.log(`  Self-check passed: ${FILES.length} entries, CD size=${eocdCDSize}, CD offset=${eocdCDOFF}, EOCD@${eocdPos}`);
+}
 
 process.exit(0);
