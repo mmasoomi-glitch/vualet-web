@@ -73,10 +73,10 @@ export default function MiraPage() {
                   <svg viewBox="0 0 132 132">
                     <path id="mha-sc" d="M66,66 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" fill="none" />
                     <text fontFamily="'IBM Plex Mono', ui-monospace, monospace" fontSize="8.2" letterSpacing="2.4" fill="#935312">
-                      <textPath href="#mha-sc" startOffset="0">CERTIFIED · CANNOT FABRICATE · CERTIFIED · CANNOT FABRICATE · </textPath>
+                      <textPath href="#mha-sc" startOffset="0">DESIGNED · NOT TO FABRICATE · DESIGNED · NOT TO FABRICATE · </textPath>
                     </text>
                   </svg>
-                  <div className="mha-core"><span className="mha-big">Mira</span><span className="mha-sm">no invented facts</span></div>
+                  <div className="mha-core"><span className="mha-big">Mira</span><span className="mha-sm">designed not to invent</span></div>
                 </div>
               </div>
             </div>
@@ -143,7 +143,7 @@ export default function MiraPage() {
         {/* FULL-WIDTH BRAND BAND */}
         <section className="mha-band" aria-hidden>
           <img src="/brand/banner-wide.jpg" alt="" width={1600} height={300} />
-          <div className="mha-band-cap"><span>Photographic memory &middot; zero hallucination &middot; held to the letter</span></div>
+          <div className="mha-band-cap"><span>Remembers what you shared &middot; grounded by design &middot; held to the letter</span></div>
         </section>
 
         {/* QUIET CAPABILITIES */}
@@ -204,7 +204,7 @@ export default function MiraPage() {
               <Link href="/legal/privacy">Privacy</Link>
             </nav>
           </div>
-          <p className="mha-foot-legal">Mira, a Veridian product &mdash; from Vualet Trading (a sole proprietorship). Photographic memory, zero hallucination: claims we hold ourselves to.</p>
+          <p className="mha-foot-legal">Mira, a Veridian product &mdash; from Vualet Trading (a sole proprietorship). Design intent: remembers what you shared, grounded replies, held to the letter.</p>
         </div>
       </footer>
     </div>
