@@ -25,7 +25,7 @@ export default function MiraPage() {
       <main id="mira-main">
         {/* HERO */}
         <section className="mha-hero">
-          <img className="mha-hero-orb" src="/brand/motif-orb.png" alt="" aria-hidden width={620} height={620} fetchPriority="high" />
+          <img className="mha-hero-orb" src="/brand/motif-orb.jpg" alt="" aria-hidden width={620} height={620} fetchPriority="high" />
           <div className="mha-wrap mha-hero-grid">
             <div>
               <span className="mha-eyebrow mha-rise mha-d1">Grounded answers · Built not to invent</span>
@@ -85,7 +85,7 @@ export default function MiraPage() {
 
         {/* TWO PROMISES */}
         <section className="mha-promises">
-          <img className="mha-mesh" src="/brand/texture-mesh.png" alt="" aria-hidden width={1600} height={500} />
+          <img className="mha-mesh" src="/brand/texture-mesh.jpg" alt="" aria-hidden width={1600} height={500} />
           <div className="mha-wrap">
             <div className="mha-sec-head">
               <span className="mha-eyebrow">Two promises, held literally</span>
@@ -120,7 +120,7 @@ export default function MiraPage() {
                 <h2 className="display">Anyone sounds smart until they don&rsquo;t know.</h2>
                 <p>Ask a question the assistant has no answer to. That single moment separates a tool you can trust from one you have to double-check.</p>
               </div>
-              <img className="mha-proof-fig" src="/brand/hero-memory.png" alt="Mira's memory, illustrated as a calm field of remembered detail" width={336} height={336} />
+              <img className="mha-proof-fig" src="/brand/hero-memory.jpg" alt="Mira's memory, illustrated as a calm field of remembered detail" width={336} height={336} />
             </div>
             <div className="mha-versus">
               <div className="mha-card mha-other">
@@ -142,7 +142,7 @@ export default function MiraPage() {
 
         {/* FULL-WIDTH BRAND BAND */}
         <section className="mha-band" aria-hidden>
-          <img src="/brand/banner-wide.png" alt="" width={1600} height={300} />
+          <img src="/brand/banner-wide.jpg" alt="" width={1600} height={300} />
           <div className="mha-band-cap"><span>Photographic memory &middot; zero hallucination &middot; held to the letter</span></div>
         </section>
 
@@ -152,17 +152,17 @@ export default function MiraPage() {
             <span className="mha-eyebrow">And, more quietly</span>
             <div className="mha-three">
               <div className="mha-qitem">
-                <img className="mha-qthumb" src="/brand/card-voice.png" alt="" aria-hidden width={600} height={400} />
+                <img className="mha-qthumb" src="/brand/card-voice.jpg" alt="" aria-hidden width={600} height={400} />
                 <h4>Voice notes, where you already are</h4>
                 <p>Talk to her in WhatsApp &mdash; in a group on your own account. Ramble a voice note; she keeps every word of it exact.</p>
               </div>
               <div className="mha-qitem">
-                <img className="mha-qthumb" src="/brand/card-memory.png" alt="" aria-hidden width={600} height={400} />
+                <img className="mha-qthumb" src="/brand/card-memory.jpg" alt="" aria-hidden width={600} height={400} />
                 <h4>A knowledge base you load</h4>
                 <p>Hand her your documents and notes. She holds them verbatim and never quietly rewrites what you gave her.</p>
               </div>
               <div className="mha-qitem">
-                <img className="mha-qthumb" src="/brand/proof-precision.png" alt="" aria-hidden width={600} height={400} />
+                <img className="mha-qthumb" src="/brand/proof-precision.jpg" alt="" aria-hidden width={600} height={400} />
                 <h4>She builds small things<span className="mha-beta">Beta</span></h4>
                 <p>Ask for a quick tool or a small automation and she&rsquo;ll put it together. Early, honest about its limits.</p>
               </div>
