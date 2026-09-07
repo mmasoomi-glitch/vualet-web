@@ -95,12 +95,21 @@ export default function MiraPlans() {
               <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-ink)", fontWeight: 600, margin: 0 }}>{t.name}</p>
               <p className="display" style={{ fontSize: 34, fontWeight: 400, margin: "8px 0 0", display: "flex", alignItems: "baseline", gap: 4 }}>
                 {t.price}
-                {t.per && <span style={{ fontSize: 14, color: "var(--mira-slate)" }}>{t.per}</span>}
+                {t.per ? (
+                  <>
+                    <span style={{ fontSize: 14, color: "var(--mira-slate)" }} aria-hidden="true">{t.per}</span>
+                    {t.per === "/mo" ? (
+                      <span className="mira-sr-only"> per month</span>
+                    ) : (
+                      <span className="mira-sr-only">{t.per}</span>
+                    )}
+                  </>
+                ) : null}
               </p>
               <p style={{ fontSize: 12, color: "var(--mira-slate)", margin: 0 }}>{t.sub}</p>
               <ul style={{ listStyle: "none", padding: 0, margin: "16px 0 0", fontSize: 14, color: "var(--mira-graphite)" }}>
                 {t.items.map((it) => (
-                  <li key={it} style={{ padding: "3px 0" }}>✓ {it}</li>
+                  <li key={it} style={{ padding: "3px 0" }}><span aria-hidden="true">✓ </span>{it}</li>
                 ))}
               </ul>
               <div style={{ marginTop: 18 }}>

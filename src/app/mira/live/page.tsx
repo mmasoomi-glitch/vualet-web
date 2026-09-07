@@ -32,7 +32,7 @@ export default function MiraLiveVoicePage() {
       <main id="mira-main">
         {/* HERO */}
         <section className="mha-hero">
-          <img className="mha-hero-orb" src="/brand/motif-orb.png" alt="" aria-hidden width={620} height={620} />
+          <img className="mha-hero-orb" src="/brand/motif-orb.png" alt="" aria-hidden width={620} height={620} fetchPriority="high" />
           <div className="mha-wrap mha-hero-grid">
             <div>
               <span className="mha-eyebrow mha-rise mha-d1">In preparation &middot; not available yet</span>
