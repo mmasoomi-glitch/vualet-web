@@ -2,6 +2,18 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { PRODUCTS } from "@/lib/products";
 
+const srOnly: React.CSSProperties = {
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clipPath: "inset(50%)",
+  whiteSpace: "nowrap",
+  borderWidth: 0,
+};
+
 export default function Home() {
   return (
     <>
@@ -96,7 +108,7 @@ export default function Home() {
                 </p>
                 <div className="mt-6 flex items-center justify-between">
                   <p className="text-xs text-[var(--muted)]">
-                    From <span className="font-semibold text-[var(--foreground)]">${p.startingPriceUsd}</span>/user/mo
+                    From <span className="font-semibold text-[var(--foreground)]">${p.startingPriceUsd}</span><span aria-hidden>/user/mo</span><span style={srOnly}> per user per month</span>
                   </p>
                   <span className="text-sm text-[var(--color-vualet-indigo-ink)] opacity-0 group-hover:opacity-100 transition-opacity">
                     Learn more →

@@ -113,13 +113,14 @@ export default function PricingPage() {
                   style={{ fontFamily: "var(--font-display)" }}
                 >
                   $89
-                  <span className="text-2xl font-normal text-white/60">
+                  <span className="text-2xl font-normal text-white/60" aria-hidden>
                     {" "}
                     /user/mo
                   </span>
+                  <span style={srOnly}> per user per month</span>
                 </p>
                 <p className="mt-2 text-sm text-white/60">
-                  Billed annually. $109/user/mo billed monthly.
+                  Billed annually. $109<span aria-hidden>/user/mo</span><span style={srOnly}> per user per month</span> billed monthly.
                 </p>
                 <Link
                   href="/signup?plan=one"

@@ -3,6 +3,18 @@ import { notFound } from "next/navigation";
 import { Logo } from "@/components/logo";
 import { PRODUCTS } from "@/lib/products";
 
+const srOnly: React.CSSProperties = {
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clipPath: "inset(50%)",
+  whiteSpace: "nowrap",
+  borderWidth: 0,
+};
+
 export function generateStaticParams() {
   return PRODUCTS.map((p) => ({ slug: p.slug }));
 }
@@ -112,10 +124,11 @@ export default async function ProductPage({
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 {product.slug === "mira" ? "" : "From "}${product.startingPriceUsd}
-                <span className="text-lg text-[var(--muted)] font-normal">
+                <span className="text-lg text-[var(--muted)] font-normal" aria-hidden>
                   {" "}
                   {product.slug === "mira" ? "/mo" : "/user/mo"}
                 </span>
+                <span style={srOnly}> {product.slug === "mira" ? "per month" : "per user per month"}</span>
               </p>
               <p className="mt-2 text-sm text-[var(--muted)]">
                 {product.slug === "mira"
