@@ -123,6 +123,7 @@ if (charCounter.hasAttribute("aria-live")) {
 
 function updateCounter() {
   charCounter.textContent = messageInput.value.length + " / 800";
+  sendBtn.disabled = !messageInput.value.trim().length;
 }
 
 // ─── SEND MESSAGE ────────────────────────────────────────────────────────────
