@@ -16,7 +16,9 @@ import type { Metadata } from "next";
  * here is how the vualet.com-canonical-on-mira.vualet.com defect happened.
  */
 export const metadata: Metadata = {
-  title: "Sign in · Mira",
+  // The Mira layout applies the template "%s · Mira", so this must NOT repeat
+  // the suffix or the tab reads "Sign in · Mira · Mira".
+  title: "Sign in",
   robots: { index: false, follow: true },
 };
 
