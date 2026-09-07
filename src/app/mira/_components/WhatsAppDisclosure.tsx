@@ -96,7 +96,7 @@ const CSS = `
   padding: 0; margin: 0 0 14px; }
 .wad-row { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 14px; }
 .wad-row:last-child { margin-bottom: 0; }
-.wad-row input[type="checkbox"] { flex: none; width: 20px; height: 20px; margin: 2px 0 0;
+.wad-row input[type="checkbox"] { flex: none; width: 24px; height: 24px; margin: 2px 0 0;
   accent-color: var(--mira-aether-ink, #4F46E5); cursor: pointer; }
 .wad-row input[type="checkbox"]:focus-visible { outline: 3px solid var(--mira-aether-ink, #4F46E5); outline-offset: 2px; }
 .wad-row label { cursor: pointer; color: var(--mira-ink, #1C1830); font-size: .96rem; line-height: 1.5; }
