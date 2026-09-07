@@ -55,8 +55,15 @@ const nextConfig: NextConfig = {
               "base-uri 'self'",
               "frame-ancestors 'none'",
               "form-action 'self'",
+              // Violations now reach src/app/api/csp-report/route.ts instead of
+              // only each visitor's console. BOTH directives are present on
+              // purpose: report-uri is deprecated but is still what most
+              // browsers honour, report-to is what newer ones use.
+              "report-uri /api/csp-report",
+              "report-to csp-endpoint",
             ].join("; "),
           },
+          { key: "Reporting-Endpoints", value: 'csp-endpoint="/api/csp-report"' },
         ],
       },
     ];
