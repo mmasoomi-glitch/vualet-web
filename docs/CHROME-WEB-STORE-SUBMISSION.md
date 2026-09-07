@@ -144,7 +144,7 @@ still works; the replies are simply shorter and more generic.
 | Asset | Requirement | Status |
 |---|---|---|
 | Icon 128×128 | Required | Present, generated from the real mark, RGBA verified |
-| Screenshots 1280×800 or 640×400 | At least 1, up to 5 | **Not yet produced — owner action.** Needs the panel open with a real conversation. |
+| Screenshots 1280×800 or 640×400 | At least 1, up to 5 | **Owner action.** Capture the whole Chrome window with the panel open and a real conversation, then run `node extension/tools/pad-screenshot.mjs <file>.png` — it scales to fit, centres, and pads to exactly 1280×800 in the site's paper colour, and refuses rather than guessing if it cannot hit the size exactly. |
 | Small promo tile 440×280 | Optional | Not produced |
 | Marquee 1400×560 | Optional | Not produced |
 | Privacy policy URL | Required | `https://vualet.com/legal/privacy` — live, 200 |
