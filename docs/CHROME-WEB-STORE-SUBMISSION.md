@@ -26,9 +26,10 @@ Package: `extension/dist/mira-help-0.1.0.zip` — built by `node extension/tools
 Mira Help puts a small assistant in your browser's side panel that answers questions about
 Mira and Vualet — what the products do, how they work, what they cost.
 
-It is a focused helper, not a general-purpose assistant. It answers from Vualet's own
-published knowledge and says it does not know when a question falls outside that. Ask it
-something unrelated and it will tell you so rather than guess.
+It is a focused helper, not a general-purpose assistant. The Mira service answers from
+Vualet's own published knowledge and says it does not know when a question falls outside
+that, so asking something unrelated gets you a straight "I don't know" rather than a guess.
+The extension is the panel you read it in.
 
 WHAT IT DOES
 • Answers questions about Mira and Vualet in a side panel you can open on any tab
@@ -75,7 +76,11 @@ Each is one sentence, which is the test a reviewer applies.
 
 | Host | Justification |
 |---|---|
-| `https://mira.vualet.com/*` | The only server the extension contacts: `/api/veridian-demo` returns the assistant's reply and `/api/veridian-voice` returns the spoken audio. No other origin is contacted. |
+| `https://mira.vualet.com/api/veridian-demo` | Returns the assistant's reply to a question. |
+| `https://mira.vualet.com/api/veridian-voice` | Returns the spoken audio for a reply. |
+
+Narrowed from `https://mira.vualet.com/*` after an adversarial review: the wildcard granted the whole
+origin when exactly two endpoints are used. No other origin is contacted.
 
 **Not requested, deliberately:** `tabs`, `activeTab`, `scripting`, `cookies`, `webRequest`,
 `management`, `privacy`, `notifications`, `alarms`, `contextMenus`, `downloads`, `identity`,
@@ -90,7 +95,7 @@ Each is one sentence, which is the test a reviewer applies.
 | Personally identifiable information | **Yes — email only** | Only if the user types it at the trial prompt. Nothing else in this category. |
 | Health, financial, authentication, location, personal communications | No | — |
 | Web history | **No** | The extension has no permission that could read it. |
-| User activity | **No** | No analytics, telemetry, click tracking or fingerprinting. |
+| User activity | **No** | No analytics, telemetry, click tracking or fingerprinting in the extension. Note that the server applies per-IP rate limiting, so a request's IP address and timestamp are seen server-side like any HTTP request; that is disclosed here rather than claimed away. |
 | Website content | **No** | No content script exists; the extension cannot read any page. |
 
 Required certifications, all of which the implementation supports:

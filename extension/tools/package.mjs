@@ -223,7 +223,7 @@ const VERSION = manifest.version || "0.0.0";
     process.exit(1);
   }
 
-  const expectedHostPerms = ["https://mira.vualet.com/*"];
+  const expectedHostPerms = ["https://mira.vualet.com/api/veridian-demo", "https://mira.vualet.com/api/veridian-voice"];
   const actualHostPerms = manifest.host_permissions || [];
   const hpSorted = [...actualHostPerms].sort();
   const expectedHpSorted = [...expectedHostPerms].sort();

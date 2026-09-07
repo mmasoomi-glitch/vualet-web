@@ -87,9 +87,9 @@ test('permissions is EXACTLY ["sidePanel","storage"] — no more, no fewer', () 
   }
 });
 
-test('host_permissions is EXACTLY ["https://mira.vualet.com/*"] — nothing more', () => {
+test('host_permissions is EXACTLY ["https://mira.vualet.com/api/veridian-demo", "https://mira.vualet.com/api/veridian-voice"] — nothing more', () => {
   // Policy: least privilege — only talk to one origin.
-  const expected = ["https://mira.vualet.com/*"];
+  const expected = ["https://mira.vualet.com/api/veridian-demo", "https://mira.vualet.com/api/veridian-voice"];
   const actual = manifest.host_permissions;
   strictEqual(Array.isArray(actual), true);
   strictEqual(actual.length, expected.length, `host_permissions length: expected ${expected.length}, got ${actual.length}`);
