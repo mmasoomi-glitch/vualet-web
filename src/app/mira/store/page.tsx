@@ -111,7 +111,7 @@ function Card({ p }: { p: Product }) {
         <Mark />
         <StatusPill status={p.status} />
       </div>
-      <h3 className="mt-5 text-lg font-semibold tracking-tight">{p.name}</h3>
+      <h2 className="mt-5 text-lg font-semibold tracking-tight">{p.name}</h2>
       <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">{p.blurb}</p>
       <span
         className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold"

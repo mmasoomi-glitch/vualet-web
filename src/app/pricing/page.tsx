@@ -8,6 +8,18 @@ export const metadata = {
     "See per-product costs and the Vualet One bundle to understand how Vualet charges for each product and for the bundle based on what you use.",
 };
 
+const srOnly: React.CSSProperties = {
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clipPath: "inset(50%)",
+  whiteSpace: "nowrap",
+  borderWidth: 0,
+};
+
 export default function PricingPage() {
   return (
     <>
@@ -59,16 +71,18 @@ export default function PricingPage() {
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 ${p.startingPriceUsd}
-                <span className="text-base font-normal text-[var(--muted)]">
+                <span className="text-base font-normal text-[var(--muted)]" aria-hidden>
                   {" "}
                   /user/mo
                 </span>
+                <span style={srOnly}> per user per month</span>
               </p>
               <Link
                 href={`/products/${p.slug}`}
                 className="mt-6 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-[var(--border)] hover:border-[var(--color-vualet-indigo)] transition-colors"
               >
                 Learn more
+                <span style={srOnly}> about {p.name}</span>
               </Link>
             </div>
           ))}
