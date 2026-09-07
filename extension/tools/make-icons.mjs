@@ -118,7 +118,7 @@ const COLOR_TYPES = {
 // script runs from any checkout and any working directory. extension/tools -> repo root.
 const root = fileURLToPath(new URL("../../", import.meta.url));
 // SOURCE: the real Mira mark, 512x512 8-bit RGBA, non-interlaced.
-// NOT public/brand/motif-orb.png — despite the extension, that file and eight
+// NOT public/brand/motif-orb.jpg — despite the extension, that file and eight
 // of its neighbours are actually JPEGs, so they carry no alpha channel and a
 // round toolbar icon cut from one would sit on an opaque rectangle.
 const srcPath = resolve(root, "public/mira/mira-logo-color-512.png");
