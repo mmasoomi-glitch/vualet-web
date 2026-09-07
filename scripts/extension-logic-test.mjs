@@ -252,6 +252,7 @@ if (charCounter.hasAttribute("aria-live")) {
 
 function updateCounter() {
   charCounter.textContent = messageInput.value.length + " / 800";
+  sendBtn.disabled = !messageInput.value.trim().length;
 }
 
 // sendUserMessage (line 130-208) — extracted pure logic portion
@@ -483,5 +484,42 @@ describe("Extension Logic Tests", () => {
     assert.equal(lastRow.textContent, xssPayload);
     // It should NOT be parsed as HTML — innerHTML should be empty or just the text
     assert.ok(!lastRow.innerHTML?.includes("<script>"), "script tag should not be in innerHTML");
+  });
+
+  // ── Test 8: Typing a non-empty value enables sendBtn ──────────────────────
+  it("firing 'input' with a non-empty value ENABLES sendBtn", () => {
+    sendBtn.disabled = true;
+    messageInput.value = "Hello";
+    updateCounter();
+    assert.equal(sendBtn.disabled, false, "sendBtn must be enabled after typing non-empty text");
+  });
+
+  // ── Test 9: Clearing the value disables sendBtn again ─────────────────────
+  it("firing 'input' with an empty value DISABLES sendBtn again", () => {
+    sendBtn.disabled = false;
+    messageInput.value = "";
+    updateCounter();
+    assert.equal(sendBtn.disabled, true, "sendBtn must be disabled after clearing the input");
+  });
+
+  // ── Test 10: Whitespace-only value leaves sendBtn DISABLED ────────────────
+  it("firing 'input' with whitespace-only value leaves sendBtn DISABLED", () => {
+    sendBtn.disabled = false;
+    messageInput.value = "   ";
+    updateCounter();
+    assert.equal(sendBtn.disabled, true, "whitespace-only input must leave sendBtn disabled");
+  });
+
+  // ── Test 11: Character counter still updates alongside button state ───────
+  it("the character counter updates correctly alongside sendBtn state", () => {
+    messageInput.value = "abc";
+    updateCounter();
+    assert.equal(charCounter.textContent, "3 / 800", "character counter must show correct count");
+    assert.equal(sendBtn.disabled, false, "sendBtn must be enabled");
+
+    messageInput.value = "";
+    updateCounter();
+    assert.equal(charCounter.textContent, "0 / 800", "character counter must reset to 0");
+    assert.equal(sendBtn.disabled, true, "sendBtn must be disabled when empty");
   });
 });
