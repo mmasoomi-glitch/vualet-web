@@ -1,0 +1,303 @@
+/* sidepanel.css — Chrome extension side panel stylesheet
+ *
+ * Contrast targets (WCAG AA): body text ≥ 4.5:1 on body background
+ * in both light (~13.5:1) and dark (~11.1:1) themes.
+ */
+
+/* ===== CUSTOM PROPERTIES — light (default) ===== */
+:root {
+  --bg: #ffffff;
+  --fg: #0f172a;
+  --subtle: #475569;
+  --border: #e2e8f0;
+
+  --bubble-mira: #f1f5f9;
+  --bubble-mira-fg: #0f172a;
+
+  --bubble-user: #1d4ed8;
+  --bubble-user-fg: #ffffff;
+
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --input-fg: #0f172a;
+
+  --trial-bg: #f8fafc;
+  --trial-fg: #64748b;
+  --trial-error: #dc2626;
+
+  --accent: #2563eb;
+  --accent-outline: rgba(37, 99, 235, 0.45);
+  --btn-disabled: #64748b;
+}
+
+/* ===== CUSTOM PROPERTIES — dark ===== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --fg: #e2e8f0;
+    --subtle: #94a3b8;
+    --border: #1e293b;
+
+    --bubble-mira: #1e293b;
+    --bubble-mira-fg: #e2e8f0;
+
+    --bubble-user: #1d4ed8;
+    --bubble-user-fg: #ffffff;
+
+    --input-bg: #0f172a;
+    --input-border: #334155;
+    --input-fg: #e2e8f0;
+
+    --trial-bg: #111827;
+    --trial-fg: #94a3b8;
+    --trial-error: #f87171;
+
+    --accent: #3b82f6;
+    --accent-outline: rgba(59, 130, 246, 0.45);
+    --btn-disabled: #64748b;
+  }
+}
+
+/* ===== RESET + LAYOUT ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ===== PANEL — full-height flex column ===== */
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* ===== HEADER ===== */
+.panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 12px 16px;
+  flex-shrink: 0;
+}
+
+.panel-header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+label.voice-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sr-only {
+  /* Visually hidden but remains in the accessibility tree —
+   * display:none and visibility:hidden both remove content
+   * from the accessibility tree, defeating the purpose. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ===== TRANSCRIPT — scrollable conversation ===== */
+main.transcript {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* ===== MESSAGES ===== */
+div.msg {
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  line-height: 1.45;
+}
+
+div.msg.mira {
+  background: var(--bubble-mira);
+  color: var(--bubble-mira-fg);
+  margin-right: auto;
+}
+
+div.msg.user {
+  background: var(--bubble-user);
+  color: var(--bubble-user-fg);
+  margin-left: auto;
+}
+
+/* User/Mira distinguished by alignment, bubble colour, and text shape
+ * (not colour alone) so it is readable for colour-blind users. */
+
+/* ===== INPUT AREA ===== */
+.input-area {
+  flex-shrink: 0;
+  padding: 12px 16px 16px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* ---- Trial gate ---- */
+.trial-gate {
+  background: var(--trial-bg);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 10px 14px;
+}
+
+p.trial-gate-label {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.trial-gate-input {
+  display: flex;
+  gap: 6px;
+}
+
+.trial-gate-input input {
+  flex: 1;
+  min-width: 0;
+}
+
+p.trial-gate-error {
+  font-size: 13px;
+  color: var(--trial-error);
+  margin-top: 6px;
+}
+
+/* ---- Inputs ---- */
+input, textarea {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  color: var(--input-fg);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--subtle);
+  opacity: 1;
+}
+
+/* ---- Input row ---- */
+.input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+textarea#messageInput {
+  flex: 1;
+  resize: vertical;
+  min-height: 44px;
+  max-height: 160px;
+}
+
+.input-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+p.thinking {
+  font-size: 12px;
+  color: var(--subtle);
+  padding: 4px 0 0 14px;
+  font-style: italic;
+}
+
+/* ---- Buttons ---- */
+button {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+button#sendBtn {
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #ffffff;
+}
+
+button#clearBtn {
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--subtle);
+  font-size: 12px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  background: var(--btn-disabled);
+  color: #ffffff;
+}
+
+/* Focus outlines — offset, visible in both themes */
+input:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ===== HIDDEN ===== */
+[hidden] {
+  display: none !important;
+}
+
+/* ===== REDUCED MOTION ===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
