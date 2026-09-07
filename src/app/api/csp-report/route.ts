@@ -72,16 +72,26 @@ function normalizeReports(raw: unknown): Record<string, unknown>[] {
  * Built key by key from a fixed list, never by copying the incoming object.
  * A spread here would mean any field a browser invents tomorrow lands on our
  * disk without anyone deciding it should.
+ *
+ * Browsers use TWO field vocabularies and both must be read, or one of them
+ * stores a row of empty strings — which is exactly what production did for
+ * thirteen reports before this was found. Legacy report-uri is kebab-case;
+ * the Reporting API is camelCase. Note the capitalisation: "blockedURL" and
+ * "documentURL" have URL fully capitalised, and there is no "violatedDirective"
+ * in the Reporting API at all — only "effectiveDirective".
  */
 function buildRecord(report: Record<string, unknown>): string {
   return JSON.stringify({
-    blockedUri: truncate(report["blocked-uri"]),
-    violatedDirective: truncate(report["violated-directive"] || report["effective-directive"]),
-    documentUri: truncate(report["document-uri"]),
+    // "sample" (the camelCase twin of "script-sample") is excluded on purpose:
+    // it can carry page content, exactly as script-sample can. Do not "complete"
+    // the camelCase vocabulary by adding it.
+    blockedUri: truncate(report["blocked-uri"] ?? report["blockedURL"]),
+    violatedDirective: truncate(report["violated-directive"] ?? report["effective-directive"] ?? report["effectiveDirective"]),
+    documentUri: truncate(report["document-uri"] ?? report["documentURL"]),
     disposition: truncate(report.disposition),
-    statusCode: truncate(report["status-code"]),
-    lineNumber: truncate(report["line-number"]),
-    sourceFile: truncate(report["source-file"]),
+    statusCode: truncate(report["status-code"] ?? report["statusCode"]),
+    lineNumber: truncate(report["line-number"] ?? report["lineNumber"]),
+    sourceFile: truncate(report["source-file"] ?? report["sourceFile"]),
     receivedAt: new Date().toISOString(),
   });
 }

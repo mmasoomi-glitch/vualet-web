@@ -46,15 +46,21 @@ test("legacy shape - extracts correct fields", async () => {
   equal(typeof record.receivedAt, "string");
 });
 
-test("array shape - normalizes Reporting API format", async () => {
+test("array shape - normalizes Reporting API format (camelCase body)", async () => {
+  // The REAL Reporting API vocabulary. The previous version of this test paired
+  // the array envelope with kebab-case keys - a combination no browser sends -
+  // so it passed while production stored thirteen rows of empty strings.
   resetFile();
   const body = [
     {
       body: {
-        "blocked-uri": "https://bad.com/img.png",
-        "effective-directive": "img-src",
-        "document-uri": "https://example.com/gallery",
-        "disposition": "report",
+        blockedURL: "https://bad.com/img.png",
+        effectiveDirective: "img-src",
+        documentURL: "https://example.com/gallery",
+        disposition: "report",
+        statusCode: 404,
+        lineNumber: 17,
+        sourceFile: "https://example.com/gallery.js",
       },
     },
   ];
@@ -64,6 +70,12 @@ test("array shape - normalizes Reporting API format", async () => {
   const record = JSON.parse(lines[0]);
   strictEqual(record.blockedUri, "https://bad.com/img.png");
   strictEqual(record.violatedDirective, "img-src");
+  strictEqual(record.documentUri, "https://example.com/gallery");
+  strictEqual(record.disposition, "report");
+  strictEqual(record.statusCode, "404");
+  strictEqual(record.lineNumber, "17");
+  strictEqual(record.sourceFile, "https://example.com/gallery.js");
+  equal(typeof record.receivedAt, "string");
 });
 
 test("413 when body exceeds 65536 characters", async () => {
@@ -117,4 +129,51 @@ test("success case - returns 204 and writes one line per report", async () => {
   const lines = readFileSync(REPORT_FILE, "utf8").trim().split("\n");
   equal(lines.length, 2);
   resetFile();
+});
+
+test("Reporting API numeric fields - lineNumber 42 arrives as a NUMBER and stores as \"42\"", async () => {
+  // statusCode and lineNumber are numbers in a real Reporting API body. A
+  // truncate() that returned "" for non-strings would silently reproduce the
+  // original bug for exactly these two fields and nothing else.
+  resetFile();
+  const body = [
+    {
+      body: {
+        blockedURL: "https://bad.com/x.js",
+        effectiveDirective: "script-src",
+        documentURL: "https://example.com/page",
+        disposition: "report",
+        lineNumber: 42,
+        statusCode: 200,
+      },
+    },
+  ];
+  const res = await POST(jsonRequest(body));
+  equal(res.status, 204);
+  const lines = readFileSync(REPORT_FILE, "utf8").trim().split("\n");
+  const record = JSON.parse(lines[0]);
+  strictEqual(record.lineNumber, "42");
+  strictEqual(record.statusCode, "200");
+});
+
+test("neither \"sample\" nor \"script-sample\" ever reaches disk", async () => {
+  // "sample" is the camelCase twin of "script-sample". Both can carry page
+  // content. Asserted against the RAW line so a value smuggled in under some
+  // other key still trips it.
+  resetFile();
+  const body = [
+    {
+      body: {
+        blockedURL: "https://evil.com/x.js",
+        disposition: "enforce",
+        sample: "doNotStoreThisSample",
+        "script-sample": "doNotStoreThisScriptSample",
+      },
+    },
+  ];
+  const res = await POST(jsonRequest(body));
+  equal(res.status, 204);
+  const raw = readFileSync(REPORT_FILE, "utf8");
+  equal(raw.includes("doNotStoreThisSample"), false);
+  equal(raw.includes("doNotStoreThisScriptSample"), false);
 });
