@@ -125,7 +125,16 @@ export default function WhatsAppDisclosure({ value, onChange, className }: Props
         {/* treat absent optional key as false */}
         <input type="checkbox" id={id} checked={consent[key] ?? false} onChange={() => toggle(key)} />
         <label htmlFor={id}>
-          {optional && <span className="wad-opt">Optional</span>}
+          {/* The badge and the sentence used to run together in the accessible
+              name - it announced as "OPTIONALI choose to add..." on the live
+              payment page. The hidden full stop gives a screen reader a
+              sentence break without changing what anyone sees. */}
+          {optional && (
+            <>
+              <span className="wad-opt">Optional</span>
+              <span className="mira-sr-only">. </span>
+            </>
+          )}
           {text}
         </label>
       </div>

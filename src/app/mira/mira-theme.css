@@ -69,6 +69,13 @@
 }
 .btn-mira-soft:hover { background: var(--mira-rose-light); }
 
+/* Visible to a screen reader, invisible to everyone else. Used where a badge or
+   an icon carries meaning the accessible name would otherwise lose or mangle.
+   NEVER display:none or visibility:hidden here - both remove the element from
+   the accessibility tree, which defeats the whole purpose. */
+.mira-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; border: 0; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+
 /* WCAG 2.4.7 / 2.4.13 — branded focus indicator for keyboard users. */
 .mira-root .mira-navlink:focus-visible,
 .btn-mira:focus-visible,
