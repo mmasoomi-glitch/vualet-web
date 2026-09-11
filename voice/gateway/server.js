@@ -168,9 +168,12 @@ wss.on("connection", (rawSocket) => {
           pcmSize += frame.byteLength;
         }
 
-        // Binary PCM → speaking = true
-        const effects = session.onUserAudio(true, Date.now());
-        handleEffects(effects);
+        // A binary frame means "here are some audio bytes" — NOT "the user is
+        // speaking". The client does its own voice-activity detection and
+        // reports it in `vad` messages, which are the single authority. Driving
+        // the state machine from here would assert speech during silence (the
+        // client streams PCM continuously) AND would mix Date.now() epoch
+        // milliseconds into a clock the client keeps in performance.now().
         return;
       }
 
@@ -202,8 +205,15 @@ wss.on("connection", (rawSocket) => {
       }
 
       if (type === "vad") {
+        // No Date.now() fallback: the client's clock is performance.now(), and
+        // substituting epoch milliseconds would poison every duration the state
+        // machine computes. A malformed frame is dropped instead.
+        if (!Number.isFinite(msg.atMs)) {
+          console.log("[ws] vad message missing or invalid atMs — ignoring");
+          return;
+        }
         const speaking = !!msg.speaking;
-        const atMs = typeof msg.atMs === "number" ? msg.atMs : Date.now();
+        const atMs = msg.atMs;
         const effects = session.onUserAudio(speaking, atMs);
         handleEffects(effects);
         return;

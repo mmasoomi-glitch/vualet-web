@@ -27,7 +27,10 @@ export function rmsEnergy(samples: Float32Array): number {
   return samples.length > 0 ? sum / samples.length : 0;
 }
 
-/** Downsample to 16 kHz using linear interpolation. */
+/** Downsample to 16 kHz by nearest-sample decimation.
+ *  The index MUST be floored: browsers commonly run at 44100 Hz, giving a
+ *  fractional ratio (44100/16000 = 2.75625). A fractional index into a
+ *  Float32Array is `undefined`, which `?? 0` would turn into pure silence. */
 export function downsampleTo16k(
   data: Float32Array,
   inputRate: number,
@@ -37,7 +40,7 @@ export function downsampleTo16k(
   const outLen = Math.floor(data.length / ratio);
   const out = new Float32Array(outLen);
   for (let i = 0; i < outLen; i++) {
-    out[i] = data[i * ratio] ?? 0;
+    out[i] = data[Math.floor(i * ratio)] ?? 0;
   }
   return out;
 }

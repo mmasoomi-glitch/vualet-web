@@ -36,14 +36,17 @@ function rmsEnergy(samples) {
   return samples.length > 0 ? sum / samples.length : 0;
 }
 
-/** Downsample to 16 kHz using linear interpolation. */
+/** Downsample to 16 kHz by nearest-sample decimation.
+ *  The index MUST be floored: browsers commonly run at 44100 Hz, giving a
+ *  fractional ratio (44100/16000 = 2.75625). A fractional index into a
+ *  Float32Array is `undefined`, which `?? 0` would turn into pure silence. */
 function downsampleTo16k(data, inputRate) {
   if (inputRate === 16000) return data;
   const ratio = inputRate / 16000;
   const outLen = Math.floor(data.length / ratio);
   const out = new Float32Array(outLen);
   for (let i = 0; i < outLen; i++) {
-    out[i] = data[i * ratio] ?? 0;
+    out[i] = data[Math.floor(i * ratio)] ?? 0;
   }
   return out;
 }
@@ -186,6 +189,40 @@ test("downsampleTo16k — handles non-divisible lengths", () => {
   assert.equal(result.length, 75);
   for (let i = 0; i < result.length; i++) {
     assert.equal(result[i], 0.5);
+  }
+});
+
+test("downsampleTo16k — 44100 Hz does not produce silence (regression)", () => {
+  const samples = new Float32Array(4410).fill(0.5);
+  const result = downsampleTo16k(samples, 44100);
+  for (let i = 0; i < result.length; i++) {
+    assert.equal(result[i], 0.5, `44100 Hz: index ${i} expected 0.5 but got ${result[i]}`);
+  }
+});
+
+test("downsampleTo16k — 44100 Hz output length is floor(inputLength / ratio)", () => {
+  const samples = new Float32Array(4410).fill(0.5);
+  const result = downsampleTo16k(samples, 44100);
+  const expected = Math.floor(4410 / (44100 / 16000));
+  assert.equal(result.length, expected, `expected length ${expected} but got ${result.length}`);
+});
+
+test("downsampleTo16k — 44100 Hz ramp stays monotonically non-decreasing", () => {
+  const samples = new Float32Array(4410);
+  for (let i = 0; i < samples.length; i++) {
+    samples[i] = i / samples.length;
+  }
+  const result = downsampleTo16k(samples, 44100);
+  for (let i = 1; i < result.length; i++) {
+    assert.ok(result[i] >= result[i - 1], `index ${i}: ${result[i]} < ${result[i - 1]}`);
+  }
+});
+
+test("downsampleTo16k — 22050 Hz (another fractional ratio) does not produce silence", () => {
+  const samples = new Float32Array(2205).fill(0.5);
+  const result = downsampleTo16k(samples, 22050);
+  for (let i = 0; i < result.length; i++) {
+    assert.ok(result[i] !== 0, `22050 Hz: index ${i} is 0`);
   }
 });
 
