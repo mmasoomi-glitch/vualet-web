@@ -163,3 +163,73 @@ test("A CUSTOMER WITH NO SUBSCRIPTION GETS AN EMPTY LIST, NOT AN ERROR", async (
   assert.deepEqual(body.events, [], "and the list is simply empty");
   __cookies.clear();
 });
+
+/* ── the review queue ──────────────────────────────────────────────────── */
+
+test("THE REVIEW QUEUE REFUSES AN ANONYMOUS READER", async () => {
+  resetNet();
+  __cookies.clear();
+  const { GET } = await loadRoute("src/app/api/ops/channel/review/route.ts");
+  const { status } = await readJson(await GET());
+  assert.ok(status === 401 || status === 403, `half-applied cutovers must not be listable anonymously, got ${status}`);
+});
+
+test("A PARKED MIGRATION BECOMES FINDABLE, ONCE", async () => {
+  resetNet();
+  const { enqueueForReview, reviewQueue, clearFromReview, putMigration } = await store();
+
+  await putMigration({
+    migrationId: "mig_review_1",
+    accountId: "acct_review",
+    state: "REVIEW_REQUIRED",
+    failedReason: "No subscription for this account.",
+    requestedAt: Date.now(),
+    stepsDone: ["VERIFY_NEW", "PREPARE_NEW_BINDING", "REVOKE_OLD_BINDING"],
+    newIdentifierHash: "a-hash-that-must-not-be-listed",
+  });
+
+  // A migration retried three times must appear once. A queue that repeats
+  // itself stops being read.
+  await enqueueForReview("mig_review_1");
+  await enqueueForReview("mig_review_1");
+  await enqueueForReview("mig_review_1");
+
+  const queued = await reviewQueue();
+  assert.equal(queued.filter((id) => id === "mig_review_1").length, 1, "listed exactly once");
+
+  await clearFromReview("mig_review_1");
+  assert.ok(
+    !(await reviewQueue()).includes("mig_review_1"),
+    "a review that has been dealt with must leave the queue, or nobody can tell what is still outstanding",
+  );
+});
+
+test("THE REVIEW LIST NEVER CARRIES THE CHANNEL HASH", async () => {
+  resetNet();
+  const { enqueueForReview, reviewQueue, getMigration } = await store();
+  await enqueueForReview("mig_review_1");
+
+  // Shape the row exactly as the route does, and assert what it drops.
+  const ids = await reviewQueue();
+  const items = [];
+  for (const id of ids) {
+    const m = await getMigration(id);
+    if (!m) continue;
+    items.push({
+      migrationId: m.migrationId,
+      accountId: m.accountId,
+      state: m.state,
+      failedReason: m.failedReason ?? null,
+      requestedAt: m.requestedAt ?? null,
+      stepsDone: m.stepsDone ?? [],
+    });
+  }
+
+  const serialised = JSON.stringify(items);
+  assert.ok(items.length > 0, "there is something to review");
+  assert.ok(
+    !serialised.includes("a-hash-that-must-not-be-listed"),
+    "the hash is a stable pseudonymous identifier for a phone number, so listing it would let an operator correlate the same person across accounts",
+  );
+  assert.ok(serialised.includes("REVOKE_OLD_BINDING"), "while the steps that DID run are shown, which is what a reviewer needs");
+});

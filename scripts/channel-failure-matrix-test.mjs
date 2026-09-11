@@ -243,6 +243,53 @@ test("MATRIX 13: the new number already belongs to somebody else", async () => {
   __cookies.clear();
 });
 
+test("MATRIX 12b: a revoked number cannot bind a stale token either", async () => {
+  resetNet();
+  const { createBinding, transitionBinding, BINDING_STATES } = await store();
+  const { mintConnectToken } = await import("../src/lib/connect-token.ts");
+  const { putConnect } = await base();
+  const now = Date.now();
+
+  const jid = "12025581212@s.whatsapp.net";
+  const b = await createBinding({ accountId: "acct_mx12b", channelType: "whatsapp", rawIdentifier: jid, nowMs: now });
+  await transitionBinding(b.bindingId, BINDING_STATES.ACTIVE, { nowMs: now });
+
+  // A pairing token minted BEFORE the number was taken away, still sitting in
+  // a browser tab.
+  const stale = mintConnectToken();
+  await putConnect({
+    token: stale,
+    plan: "companion",
+    status: "pending",
+    channel: "whatsapp",
+    customerId: "acct_mx12b",
+    createdAt: new Date(now).toISOString(),
+  });
+
+  await transitionBinding(b.bindingId, BINDING_STATES.SUPERSEDED, {
+    nowMs: now + 1,
+    reasonCode: "USER_CHANGED_NUMBER",
+  });
+
+  const { POST } = await loadRoute("src/app/api/pair/bind/route.ts");
+  const { status, body } = await readJson(
+    await POST(
+      new Request("https://mira.vualet.com/api/pair/bind", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-mira-bind-secret": "test-bind-secret" },
+        body: JSON.stringify({ token: stale, whatsappId: jid }),
+      }),
+    ),
+  );
+
+  assert.equal(
+    status,
+    409,
+    "a token minted before the change must not hand the old number access afterwards — the KV layer cannot enumerate outstanding tokens to revoke them, so the check has to live at the door",
+  );
+  assert.equal(body.error, "revoked", "and it is refused as revoked");
+});
+
 /* ── 14-18: blocked on prerequisite ────────────────────────────────────── */
 
 test("MATRIX 14-18: recorded as BLOCKED, not silently skipped", async () => {
