@@ -111,6 +111,27 @@ test("THE SUBSCRIPTION IS NOT RESTARTED, EXTENDED OR ENDED", async () => {
   assert.equal(after.customerId, before.customerId, "and it is still the same customer");
 });
 
+test("A CUTOVER IS NOT HELD UP BY THE WARNING EMAIL", async () => {
+  resetNet();
+  // This account carries no email, so there is no out-of-band channel and the
+  // notice cannot be sent. The harness also blocks every outbound call, so any
+  // attempt to reach SMTP would fail loudly.
+  const { migration, now, oldBinding, accountId } = await scenario("acct_mig9");
+  const { commitMigration } = await exec();
+  const { getBinding } = await store();
+  const { getSubscription } = await base();
+
+  const result = await commitMigration(migration.migrationId, NEW, now + 1000);
+
+  assert.equal(
+    result.ok,
+    true,
+    "the warning is best-effort and runs after the cutover has already committed, so a customer's number change must not fail because SMTP was down",
+  );
+  assert.equal((await getBinding(oldBinding.bindingId)).state, "SUPERSEDED", "the old number still stopped");
+  assert.ok((await getSubscription(accountId)).whatsappIdHash, "and authority still moved");
+});
+
 /* ── idempotency and resumability ──────────────────────────────────────── */
 
 test("COMMITTING TWICE DOES NOT REVOKE TWICE OR MINT A SECOND BINDING", async () => {
