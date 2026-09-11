@@ -74,6 +74,18 @@ log "npm ci"
 log "npm run build"
 ( cd "${BUILD_DIR}" && npm run build )
 
+# ── the standalone entrypoint. NOT IN GIT — the build generates it ─────────
+# `output: "standalone"` in next.config.ts emits .next/standalone/server.js, and
+# the systemd unit runs `node server.js` from the release ROOT. Git has no
+# server.js at all, so a release built straight from a checkout has no
+# entrypoint and the service dies with MODULE_NOT_FOUND on boot. That is exactly
+# how the 485f474 deploy failed. Copy it up, then refuse to continue without it.
+log "installing standalone entrypoint"
+[[ -f "${BUILD_DIR}/.next/standalone/server.js" ]] || die ".next/standalone/server.js missing after build — is output:'standalone' still set in next.config.ts?"
+cp -a "${BUILD_DIR}/.next/standalone/server.js" "${BUILD_DIR}/server.js"
+[[ -f "${BUILD_DIR}/server.js" ]] || die "failed to install server.js into the release root"
+log "  ok  server.js in release root ($(wc -c < "${BUILD_DIR}/server.js") bytes)"
+
 # ── carry live state forward. FROM THE LIVE DIRECTORY, never from git ───────
 log "carrying runtime.conf and data/ forward from ${APP_DIR}"
 cp -a "${APP_DIR}/runtime.conf" "${BUILD_DIR}/runtime.conf"
@@ -82,6 +94,15 @@ cp -a "${APP_DIR}/data" "${BUILD_DIR}/data"
 [[ -f "${BUILD_DIR}/runtime.conf" ]] || die "runtime.conf did not copy — aborting before the swap"
 [[ -d "${BUILD_DIR}/data" ]]         || die "data/ did not copy — aborting before the swap"
 log "  ok  state carried forward"
+
+# ── LAST GATE BEFORE THE SWAP. Everything the running service needs must be
+# present NOW, while production is still untouched. Failing here costs nothing;
+# failing after the swap costs an outage and a rollback.
+log "pre-swap release verification"
+for required in server.js package.json node_modules .next runtime.conf data; do
+  [[ -e "${BUILD_DIR}/${required}" ]] || die "release is missing ${required} — refusing to swap"
+  log "  ok  ${required}"
+done
 
 # ── swap. The only step that touches the live site. Keep it short ───────────
 OLD_SHA="$(head -n 1 "${APP_DIR}/DEPLOYED_COMMIT" 2>/dev/null | tr -d '[:space:]' || true)"
