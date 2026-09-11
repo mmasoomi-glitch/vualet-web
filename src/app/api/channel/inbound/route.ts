@@ -8,6 +8,7 @@ import {
   type BindingRecord,
 } from "@/lib/channel-binding-store";
 import { recordChannelEvent } from "@/lib/channel-event-log";
+import { noteInboundCall } from "@/lib/channel-readiness";
 import { CHANNEL_EVENTS } from "@/lib/channel-events.mjs";
 
 /**
@@ -99,6 +100,12 @@ export async function POST(req: Request) {
   }
 
   const nowMs = Date.now();
+
+  // Recorded AFTER auth, so an unauthenticated prod would not make the loop
+  // look integrated, and BEFORE the lookup, so a broken store still shows that
+  // the engine is calling in — the two failures are different investigations.
+  void noteInboundCall(nowMs);
+
   let binding: BindingRecord | null = null;
   try {
     binding = await findBindingByChannel(channelType, identifier);
