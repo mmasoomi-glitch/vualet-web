@@ -57,11 +57,26 @@ export function resolveServices(env) {
   return services;
 }
 
+/**
+ * Which providers the assistant route can actually reach.
+ *
+ * The route's own resolver falls back to OpenRouter when MIRA_LLM_BASE_URL is
+ * absent, so OpenRouter IS the primary on a deployment with no self-hosted pod.
+ * Mapping `primary` to the self-hosted URL alone would mark such a deployment
+ * permanently degraded and show every visitor a backup-system notice while the
+ * assistant was working perfectly.
+ *
+ * `secondary` therefore means a DISTINCT second provider exists to fail over
+ * to, which is only true when both are configured. With one LLM configured,
+ * failover goes to the knowledge base, because there is nowhere else to go.
+ */
 export function resolveProviders(env) {
   const e = env && typeof env === 'object' ? env : {};
+  const selfHosted = trimmed(e.MIRA_LLM_BASE_URL).length > 0;
+  const openRouter = trimmed(e.OPENROUTER_API_KEY).length > 0;
   return {
-    primary: trimmed(e.MIRA_LLM_BASE_URL).length > 0,
-    secondary: trimmed(e.OPENROUTER_API_KEY).length > 0,
+    primary: selfHosted || openRouter,
+    secondary: selfHosted && openRouter,
     // The grounded knowledge base is compiled in and cannot be unconfigured.
     kb: true,
   };

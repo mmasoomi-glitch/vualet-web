@@ -14,6 +14,7 @@ import {
   getRuntime,
   resetRuntime,
 } from "../ops/reliability/runtime.mjs";
+import { chooseProvider } from "../ops/reliability/router.mjs";
 
 /* ── resolveServices ───────────────────────────────────────────────────── */
 
@@ -68,8 +69,42 @@ test("the knowledge base can never be unconfigured", () => {
   assert.deepEqual(
     resolveProviders({ MIRA_LLM_BASE_URL: "http://pod", OPENROUTER_API_KEY: "sk-x" }),
     { primary: true, secondary: true, kb: true },
-    "both configured providers are reported",
+    "with a pod AND a paid key there is a real provider and a real fallback",
   );
+});
+
+test("A HOSTED-ONLY DEPLOYMENT IS NOT PERMANENTLY DEGRADED", () => {
+  // This is production today: no self-hosted pod, an OpenRouter key. The
+  // assistant route falls back to OpenRouter as its PRIMARY in that case.
+  const providers = resolveProviders({ OPENROUTER_API_KEY: "sk-live" });
+  assert.equal(
+    providers.primary,
+    true,
+    "OpenRouter is the primary when no pod is configured; calling it secondary would show every visitor a backup-system notice while the assistant worked perfectly",
+  );
+  assert.equal(
+    providers.secondary,
+    false,
+    "with one LLM configured there is no distinct provider to fail over to",
+  );
+
+  const route = chooseProvider({ state: "HEALTHY", providers });
+  assert.equal(route.target, "primary", "a healthy hosted-only deployment serves from primary");
+  assert.equal(route.degraded, false, "and is NOT degraded");
+  assert.equal(route.userNotice, null, "so a visitor is told nothing at all");
+});
+
+test("with one provider, failover goes to the knowledge base", () => {
+  const providers = resolveProviders({ OPENROUTER_API_KEY: "sk-live" });
+  const route = chooseProvider({ state: "OFFLINE", providers });
+  assert.equal(route.target, "kb", "there is nowhere else to go");
+  assert.ok(route.userNotice, "and the visitor is told general knowledge is briefly gone");
+});
+
+test("nothing configured is genuinely KB-only", () => {
+  const providers = resolveProviders({});
+  assert.equal(providers.primary, false, "no LLM at all means no primary");
+  assert.equal(chooseProvider({ state: "HEALTHY", providers }).target, "kb", "only the KB remains");
   assert.equal(resolveProviders({ MIRA_LLM_BASE_URL: "  " }).primary, false, "blank is not configured");
 });
 
