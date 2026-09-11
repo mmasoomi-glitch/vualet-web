@@ -396,7 +396,9 @@ export async function getMigration(migrationId: string): Promise<Json | null> {
   return kvGet<Json>(kMigration(migrationId));
 }
 
-export async function putMigration(record: { migrationId: string }): Promise<void> {
+export async function putMigration(
+  record: { migrationId: string } & Record<string, unknown>,
+): Promise<void> {
   await kvSet(kMigration(record.migrationId), record);
 }
 

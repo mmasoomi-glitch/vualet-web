@@ -151,6 +151,9 @@ export async function POST(req: Request) {
       // anything else is refused at the bind step, so a migration cannot be
       // quietly redirected onto a third number between request and commit.
       expectedChannelIdHash: newIdentifierHash,
+      // The scan IS the verification, so the bind step needs to know which
+      // migration it completes.
+      migrationId: migration.migrationId,
       createdAt: new Date().toISOString(),
     });
 

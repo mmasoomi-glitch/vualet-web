@@ -258,6 +258,12 @@ export type ConnectRecord = {
    */
   reconnectOfBindingId?: string;
   expectedChannelIdHash?: string;
+  /**
+   * SET ONLY BY THE NUMBER-CHANGE PATH. Present when this pairing session
+   * exists to prove control of a NEW number, so the bind step knows the scan
+   * is the verification a migration was waiting on and can commit the cutover.
+   */
+  migrationId?: string;
   // PROOF OF THE GATE-C1 DISCLOSURE (specs#160): which boxes this customer
   // ticked, when, and against which revision of the disclosure copy. Written by
   // every path that binds a WhatsApp number (/api/begin and /api/checkout) so

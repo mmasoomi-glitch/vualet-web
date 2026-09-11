@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { safeEqual, verifyConnectToken } from "@/lib/connect-token";
 import { claimConnectWhatsapp } from "@/lib/whatsapp-claim";
+import { getMigration, putMigration } from "@/lib/channel-binding-store";
+import { commitMigration } from "@/lib/number-migration";
+import { MIGRATION_STATES } from "@/lib/number-migration-core.mjs";
 
 /**
  * POST /api/pair/bind — THE ENGINE'S CALLBACK, AND THE ONLY PLACE A WHATSAPP
@@ -135,6 +138,58 @@ export async function POST(req: Request) {
   console.log(
     `[pair-bind] bound first_bind=${claim.firstBind} tenant_id=${rec.tenantId ?? "none"} plan=${rec.plan} status=${rec.status}`,
   );
+
+  // ── NUMBER CHANGE: the scan that just succeeded IS the verification ──────
+  //
+  // The whole block is inside this guard so the ordinary pairing path is
+  // completely unaffected: a record with no migrationId never enters here.
+  //
+  // Nothing in here may fail the bind. The customer's scan genuinely
+  // succeeded, and turning that into an error because OUR bookkeeping broke
+  // would punish them for our bug — so the whole thing is wrapped and
+  // swallowed, and a half-applied cutover goes to a human instead.
+  if (rec.migrationId) {
+    try {
+      // getMigration returns an opaque record; the shape is asserted here
+      // rather than loosening putMigration, which should keep demanding an id.
+      type MigrationRecord = { migrationId: string } & Record<string, unknown>;
+      let migration = (await getMigration(rec.migrationId)) as MigrationRecord | null;
+      if (!migration) {
+        console.warn(`[pair-bind] migration ${rec.migrationId} is missing; pairing stands, cutover skipped.`);
+      } else {
+        if (migration.state === MIGRATION_STATES.VERIFICATION_REQUIRED) {
+          // Control of the new number is exactly what a successful scan proves,
+          // so this is the moment verification is satisfied.
+          migration = { ...migration, state: MIGRATION_STATES.VERIFIED, verifiedAt: Date.now() };
+          await putMigration(migration);
+        }
+
+        // Deliberately OUTSIDE the branch above. A migration already VERIFIED
+        // by an earlier attempt that then crashed must still be able to finish
+        // here, which is the whole point of a resumable cutover.
+        const committed = await commitMigration(rec.migrationId, whatsappId, Date.now());
+        if (committed.ok) {
+          console.log(`[pair-bind] migration ${rec.migrationId} committed.`);
+        } else {
+          // Not a silent retry: the cutover may be half-applied, with the old
+          // number already superseded, and that is a state a human should see
+          // rather than a loop should keep poking.
+          await putMigration({
+            ...migration,
+            state: MIGRATION_STATES.REVIEW_REQUIRED,
+            failedReason: committed.reason,
+          });
+          console.error(
+            `[pair-bind] migration ${rec.migrationId} could not commit (${committed.reason}); sent to review.`,
+          );
+        }
+      }
+    } catch (err) {
+      // No JID is ever logged here or above: it is a phone number wearing a
+      // suffix, and this route is the one place it exists in memory.
+      console.error(`[pair-bind] migration bookkeeping failed for ${rec.migrationId}:`, err);
+    }
+  }
 
   // The persona is returned because that is the point of the whole token: it
   // carries what the customer shaped on the web across to the assistant that
