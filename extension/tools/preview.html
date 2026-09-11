@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mira Help — Developer Preview</title>
+
+  <!--
+    ============================================================
+    extension/tools/preview.html — Developer Harness
+    ============================================================
+
+    PURPOSE:
+      This file lets you render the sidepanel DOM in an ordinary
+      browser tab so the layout, styling, keyboard behaviour,
+      storage persistence and error-handling paths are all
+      verifiable without installing the extension in Chrome.
+
+    WHAT IT IS:
+      A developer-only HTML file. It is NOT part of the extension.
+      It must never be referenced by manifest.json, background.js,
+      sidepanel.html or any file shipped in the submission zip.
+
+    WHAT IT IS NOT:
+      This is NOT a polyfill or a full chrome-extension API shim.
+      It only implements the tiny subset of chrome.storage.local
+      that sidepanel.js calls, backed by window.localStorage. Any
+      divergence from the real Chrome behaviour is a limitation of
+      this harness, not of the extension.
+
+    CORS LIMITATION:
+      sidepanel.js fetches from https://mira.vualet.com/api/…
+      When this page is NOT served from that origin (the normal case
+      for local development), those requests are cross-origin and
+      blocked by the browser's CORS policy. We do NOT stub fetch
+      to fake responses because a fabricated assistant reply would
+      prove nothing about the real product.
+
+      What this harness DOES verify (when opened in a browser):
+        - Rendering: the exact DOM of sidepanel.html appears
+        - Layout: CSS is exercised, bubbles align, dark mode works
+        - Keyboard: Enter sends, Shift+Enter inserts newline
+        - Storage: visitorId and transcript survive reloads
+        - Error handling: the network-failure branch runs and
+          displays "I could not reach Mira…"
+
+      What it CANNOT verify:
+        - Live assistant replies (the CORS block exercises the
+          error path, which IS worth seeing but is not the happy path)
+        - Voice playback from the server (also CORS-blocked)
+        - Trial-gate email submission (also CORS-blocked)
+
+    To open:   python3 -m http.server 8888 --directory extension
+               then visit http://localhost:8888/tools/preview.html
+  -->
+
+  <style>
+    /* Harness-only banner — visible, distinct, outside panel markup */
+    body > .preview-banner {
+      margin: 0;
+      padding: 10px 16px;
+      background: #fff3cd;
+      border-bottom: 2px solid #ffc107;
+      font-size: 13px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: #664d03;
+      line-height: 1.5;
+    }
+    body > .preview-banner b {
+      font-weight: 700;
+    }
+    body > .preview-banner code {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+  </style>
+
+  <!-- Load the REAL stylesheet (sidepanel.css) so layout is exercised -->
+  <link rel="stylesheet" href="../sidepanel.css">
+</head>
+<body>
+
+  <!--
+    DEVELOPER BANNER — sits OUTSIDE the .panel div so it can never be
+    mistaken for part of the product or appear in screenshots of the
+    actual extension. It survives being copied into an email because
+    it describes the harness, not the product.
+  -->
+  <div class="preview-banner">
+    <b>DEV HARNESS</b> &mdash; this is a developer preview, not the installed extension.
+    <code>chrome.storage.local</code> is emulated with <code>localStorage</code>.
+    API calls to <code>mira.vualet.com</code> are CORS-blocked by the browser
+    (expected — no proxy, no fetch stub); the harness verifies <b>rendering,
+    layout, keyboard behaviour, storage persistence</b> and
+    <b>error handling</b>, but not live replies. A real install is still
+    required before submission.
+  </div>
+
+  <!--
+    Exact copy of extension/sidepanel.html body markup — every id and
+    class duplicated so the harness DOM is identical to the product DOM.
+  -->
+  <div class="panel">
+    <header class="panel-header">
+      <h1>Mira Help</h1>
+      <div class="header-controls">
+        <label class="voice-toggle" for="voiceCheckbox">
+          <input type="checkbox" id="voiceCheckbox" checked>
+          <span class="voice-toggle-label">Voice</span>
+        </label>
+        <button type="button" id="clearBtn">Clear conversation</button>
+      </div>
+    </header>
+
+    <main class="transcript" id="transcript" role="region" aria-label="Conversation" aria-live="polite"></main>
+
+    <div class="input-area">
+      <div class="trial-gate" id="trialGate" hidden>
+        <p class="trial-gate-label">Your email is optional — leave it blank and you can keep asking questions. No card is required.</p>
+        <div class="trial-gate-input">
+          <label for="emailInput" class="sr-only">Email address</label>
+          <input type="email" id="emailInput" placeholder="you@example.com">
+          <button type="button" id="emailSubmitBtn">Send</button>
+        </div>
+        <p class="trial-gate-error" id="trialGateError" hidden></p>
+      </div>
+
+      <div class="input-row">
+        <label for="messageInput" class="sr-only">Ask about Mira or Vualet</label>
+        <textarea
+          id="messageInput"
+          rows="2"
+          placeholder="Ask about Mira or Vualet…"
+          maxlength="800"
+        ></textarea>
+        <div class="input-actions">
+          <!-- Not a live region: announcing a number on every keystroke makes the
+               panel unusable with a screen reader. sidepanel.js also forces
+               aria-live="off" on it at startup. -->
+          <span class="char-counter" id="charCounter">0 / 800</span>
+          <button type="button" id="sendBtn" disabled>Send</button>
+        </div>
+      </div>
+
+      <p class="thinking" id="thinking" hidden>Mira is thinking…</p>
+    </div>
+  </div>
+
+  <!--
+    Chrome-extension API shim — tiny, targeted, documented.
+    This is NOT a polyfill. It only covers what sidepanel.js uses.
+  -->
+  <script>
+    (function () {
+      // sidepanel.js calls ONLY:
+      //   chrome.storage.local.get(key)   → returns Promise<{key: value}>
+      //   chrome.storage.local.set(obj)   → returns Promise<void>
+      // No callbacks are passed; sidepanel.js uses the promise style.
+      // We namespace all localStorage keys under one prefix so they
+      // don't collide with other dev tools on localhost.
+
+      var PREFIX = "mira_sidepanel_harness:";
+
+      function lsKey(raw) {
+        return PREFIX + raw;
+      }
+
+      function getItem(key) {
+        try {
+          var v = localStorage.getItem(lsKey(key));
+          return v === null ? undefined : JSON.parse(v);
+        } catch (_) {
+          return undefined;
+        }
+      }
+
+      function setItem(key, val) {
+        try {
+          localStorage.setItem(lsKey(key), JSON.stringify(val));
+        } catch (_) { /* quota or other failure — non-fatal */ }
+      }
+
+      // chrome.runtime.id — sidepanel.js never reads it, but some
+      // extension code paths might. Keep it harmless.
+      window.chrome = {
+        runtime: { id: "preview" },
+
+        storage: {
+          local: {
+            // Promise-style: chrome.storage.local.get("key")
+            get: function (keys) {
+              // sidepanel.js passes a single string key; if an object
+              // is passed (e.g. set), forward through.
+              if (typeof keys === "string") {
+                var result = {};
+                result[keys] = getItem(keys);
+                return Promise.resolve(result);
+              }
+              // Fallback for object keys
+              if (typeof keys === "object" && keys !== null) {
+                var result2 = {};
+                for (var k in keys) {
+                  result2[k] = getItem(k);
+                }
+                return Promise.resolve(result2);
+              }
+              return Promise.resolve({});
+            },
+
+            // Promise-style: chrome.storage.local.set({ key: val })
+            set: function (obj) {
+              if (typeof obj === "object" && obj !== null) {
+                for (var k in obj) {
+                  if (Object.hasOwn(obj, k)) {
+                    setItem(k, obj[k]);
+                  }
+                }
+              }
+              return Promise.resolve();
+            }
+          }
+        }
+      };
+    })();
+  </script>
+
+  <!--
+    Load the REAL sidepanel.js as a module. With the shim in place
+    on window.chrome, the script will execute and render.
+  -->
+  <script type="module" src="../sidepanel.js"></script>
+
+</body>
+</html>

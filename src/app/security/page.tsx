@@ -9,7 +9,7 @@ export const metadata = {
 export default function SecurityPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-24">
-      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo)]">
+      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo-ink)]">
         Security
       </p>
       <h1
@@ -28,7 +28,7 @@ export default function SecurityPage() {
           Email{" "}
           <a
             href="mailto:security@vualet.com"
-            className="text-[var(--foreground)] underline hover:text-[var(--color-vualet-indigo)]"
+            className="text-[var(--foreground)] underline hover:text-[var(--color-vualet-indigo-ink)]"
           >
             security@vualet.com
           </a>{" "}
@@ -50,7 +50,7 @@ export default function SecurityPage() {
           each product and what is not:{" "}
           <Link
             href="/security/journalists"
-            className="text-[var(--foreground)] underline hover:text-[var(--color-vualet-indigo)]"
+            className="text-[var(--foreground)] underline hover:text-[var(--color-vualet-indigo-ink)]"
           >
             Security information for journalists and researchers
           </Link>

@@ -3,6 +3,18 @@ import { notFound } from "next/navigation";
 import { Logo } from "@/components/logo";
 import { PRODUCTS } from "@/lib/products";
 
+const srOnly: React.CSSProperties = {
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clipPath: "inset(50%)",
+  whiteSpace: "nowrap",
+  borderWidth: 0,
+};
+
 export function generateStaticParams() {
   return PRODUCTS.map((p) => ({ slug: p.slug }));
 }
@@ -36,7 +48,7 @@ export default async function ProductPage({
         <div className="absolute inset-0 -z-10 [background:radial-gradient(50%_60%_at_50%_0%,rgba(91,91,246,0.12),transparent_60%)]" />
         <div className="mx-auto max-w-5xl px-6 pt-20 pb-16">
           <Logo glyph={product.glyph} size={64} title={product.name} />
-          <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo)]">
+          <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo-ink)]">
             {product.category}
           </p>
           <h1
@@ -51,7 +63,7 @@ export default async function ProductPage({
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
             <Link
               href="/signup"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo)] hover:bg-[var(--color-vualet-indigo-hover)] transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo-ink)] hover:bg-[var(--color-vualet-indigo-ink-hover)] transition-colors"
             >
               Start free
               <span aria-hidden>→</span>
@@ -112,10 +124,11 @@ export default async function ProductPage({
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 {product.slug === "mira" ? "" : "From "}${product.startingPriceUsd}
-                <span className="text-lg text-[var(--muted)] font-normal">
+                <span className="text-lg text-[var(--muted)] font-normal" aria-hidden>
                   {" "}
                   {product.slug === "mira" ? "/mo" : "/user/mo"}
                 </span>
+                <span style={srOnly}> {product.slug === "mira" ? "per month" : "per user per month"}</span>
               </p>
               <p className="mt-2 text-sm text-[var(--muted)]">
                 {product.slug === "mira"
@@ -125,7 +138,7 @@ export default async function ProductPage({
             </div>
             <Link
               href="/pricing"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo)] hover:bg-[var(--color-vualet-indigo-hover)] transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo-ink)] hover:bg-[var(--color-vualet-indigo-ink-hover)] transition-colors"
             >
               See all tiers
               <span aria-hidden>→</span>

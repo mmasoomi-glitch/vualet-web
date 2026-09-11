@@ -5,6 +5,7 @@ const STEPS = ["Sign up", "Choose plan", "Payment"];
 export function Stepper({ current }: { current: number }) {
   return (
     <ol
+      aria-label="Checkout progress"
       style={{
         listStyle: "none",
         display: "flex",
@@ -21,9 +22,10 @@ export function Stepper({ current }: { current: number }) {
         const done = n < current;
         const active = n === current;
         return (
-          <li key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <li key={label} aria-current={active ? "step" : undefined} style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
               <span
+                aria-hidden="true"
                 style={{
                   display: "grid",
                   placeItems: "center",
@@ -48,6 +50,12 @@ export function Stepper({ current }: { current: number }) {
                 }}
               >
                 {label}
+              </span>
+              {/* The tick and the number are decoration; this is the part a
+                  screen reader can actually use. Without it the stepper
+                  announced as "tick, Sign up, tick, Choose plan, 3, Payment". */}
+              <span className="mira-sr-only">
+                {done ? "Completed" : active ? "Current step" : "Not started"}
               </span>
             </span>
             {i < STEPS.length - 1 && (

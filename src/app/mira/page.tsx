@@ -25,16 +25,16 @@ export default function MiraPage() {
       <main id="mira-main">
         {/* HERO */}
         <section className="mha-hero">
-          <img className="mha-hero-orb" src="/brand/motif-orb.png" alt="" aria-hidden width={620} height={620} />
+          <img className="mha-hero-orb" src="/brand/motif-orb.jpg" alt="" aria-hidden width={620} height={620} fetchPriority="high" />
           <div className="mha-wrap mha-hero-grid">
             <div>
-              <span className="mha-eyebrow mha-rise mha-d1">Perfect recall · Zero fabrication</span>
+              <span className="mha-eyebrow mha-rise mha-d1">Grounded answers · Built not to invent</span>
               <h1 className="display mha-rise mha-d2">
-                She remembers everything.<br />
-                <span className="grad">She can&rsquo;t make anything up.</span>
+                She remembers what you tell her.<br />
+                <span className="grad">She&rsquo;s built not to invent.</span>
               </h1>
               <p className="mha-lede mha-rise mha-d3">
-                Mira is the assistant with photographic memory and zero hallucination &mdash; <b>not less, none.</b> She&rsquo;d sooner tell you &ldquo;I don&rsquo;t know&rdquo; than invent an answer you&rsquo;ll regret trusting.
+                Mira answers from what you have actually given her, and <b>a grounding check runs on every reply</b> before it reaches you. She&rsquo;d sooner tell you &ldquo;I don&rsquo;t know&rdquo; than invent an answer you&rsquo;ll regret trusting.
               </p>
               <div className="mha-cta-row mha-rise mha-d4">
                 <Link className="mha-btn mha-btn-primary" href="/mira/start">Start free <span className="mha-arw">&rarr;</span></Link>
@@ -73,10 +73,10 @@ export default function MiraPage() {
                   <svg viewBox="0 0 132 132">
                     <path id="mha-sc" d="M66,66 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" fill="none" />
                     <text fontFamily="'IBM Plex Mono', ui-monospace, monospace" fontSize="8.2" letterSpacing="2.4" fill="#935312">
-                      <textPath href="#mha-sc" startOffset="0">CERTIFIED · CANNOT FABRICATE · CERTIFIED · CANNOT FABRICATE · </textPath>
+                      <textPath href="#mha-sc" startOffset="0">DESIGNED · NOT TO FABRICATE · DESIGNED · NOT TO FABRICATE · </textPath>
                     </text>
                   </svg>
-                  <div className="mha-core"><span className="mha-big">Mira</span><span className="mha-sm">no invented facts</span></div>
+                  <div className="mha-core"><span className="mha-big">Mira</span><span className="mha-sm">designed not to invent</span></div>
                 </div>
               </div>
             </div>
@@ -85,7 +85,7 @@ export default function MiraPage() {
 
         {/* TWO PROMISES */}
         <section className="mha-promises">
-          <img className="mha-mesh" src="/brand/texture-mesh.png" alt="" aria-hidden width={1600} height={500} />
+          <img className="mha-mesh" src="/brand/texture-mesh.jpg" alt="" aria-hidden width={1600} height={500} />
           <div className="mha-wrap">
             <div className="mha-sec-head">
               <span className="mha-eyebrow">Two promises, held literally</span>
@@ -95,17 +95,17 @@ export default function MiraPage() {
             <div className="mha-two">
               <div className="mha-promise">
                 <span className="mha-num">PROMISE 01</span>
-                <h3>Photographic memory</h3>
-                <p>Everything you tell her stays exactly as you said it. Months later she gives it back word-for-word, with the day you said it &mdash; not a paraphrase, not a vibe.</p>
+                <h3>Recall you can check</h3>
+                <p>What you tell her in your group is kept as you said it, and comes back with the day you said it &mdash; not a paraphrase, not a vibe. Her recall covers that group; she has no access to anything outside it.</p>
                 <div className="mha-line"></div>
-                <span className="mha-foot"><Check size={14} /> Nothing decays, nothing drifts</span>
+                <span className="mha-foot"><Check size={14} /> Kept as you said it, with the date</span>
               </div>
               <div className="mha-promise">
                 <span className="mha-num">PROMISE 02</span>
-                <h3>Zero hallucination</h3>
-                <p>Not tuned down. Not &ldquo;reduced by 40%.&rdquo; None. When she doesn&rsquo;t know, she tells you she doesn&rsquo;t know &mdash; which is the one thing you can&rsquo;t afford to have faked.</p>
+                <h3>Built not to invent</h3>
+                <p>Every reply passes a grounding check that rewrites an unsupported answer into an honest &ldquo;I don&rsquo;t know&rdquo; before it is sent. When she doesn&rsquo;t know, she tells you &mdash; which is the one thing you can&rsquo;t afford to have faked.</p>
                 <div className="mha-line"></div>
-                <span className="mha-foot"><Check size={14} /> If it isn&rsquo;t known, it isn&rsquo;t said</span>
+                <span className="mha-foot"><Check size={14} /> When she doesn&rsquo;t have it, she says so</span>
               </div>
             </div>
           </div>
@@ -120,7 +120,7 @@ export default function MiraPage() {
                 <h2 className="display">Anyone sounds smart until they don&rsquo;t know.</h2>
                 <p>Ask a question the assistant has no answer to. That single moment separates a tool you can trust from one you have to double-check.</p>
               </div>
-              <img className="mha-proof-fig" src="/brand/hero-memory.png" alt="Mira's memory, illustrated as a calm field of remembered detail" width={336} height={336} />
+              <img className="mha-proof-fig" src="/brand/hero-memory.jpg" alt="Mira's memory, illustrated as a calm field of remembered detail" width={336} height={336} />
             </div>
             <div className="mha-versus">
               <div className="mha-card mha-other">
@@ -142,8 +142,8 @@ export default function MiraPage() {
 
         {/* FULL-WIDTH BRAND BAND */}
         <section className="mha-band" aria-hidden>
-          <img src="/brand/banner-wide.png" alt="" width={1600} height={300} />
-          <div className="mha-band-cap"><span>Photographic memory &middot; zero hallucination &middot; held to the letter</span></div>
+          <img src="/brand/banner-wide.jpg" alt="" width={1600} height={300} />
+          <div className="mha-band-cap"><span>Remembers what you shared &middot; grounded by design &middot; held to the letter</span></div>
         </section>
 
         {/* QUIET CAPABILITIES */}
@@ -152,17 +152,17 @@ export default function MiraPage() {
             <span className="mha-eyebrow">And, more quietly</span>
             <div className="mha-three">
               <div className="mha-qitem">
-                <img className="mha-qthumb" src="/brand/card-voice.png" alt="" aria-hidden width={600} height={400} />
+                <img className="mha-qthumb" src="/brand/card-voice.jpg" alt="" aria-hidden width={600} height={400} />
                 <h4>Voice notes, where you already are</h4>
                 <p>Talk to her in WhatsApp &mdash; in a group on your own account. Ramble a voice note; she keeps every word of it exact.</p>
               </div>
               <div className="mha-qitem">
-                <img className="mha-qthumb" src="/brand/card-memory.png" alt="" aria-hidden width={600} height={400} />
+                <img className="mha-qthumb" src="/brand/card-memory.jpg" alt="" aria-hidden width={600} height={400} />
                 <h4>A knowledge base you load</h4>
                 <p>Hand her your documents and notes. She holds them verbatim and never quietly rewrites what you gave her.</p>
               </div>
               <div className="mha-qitem">
-                <img className="mha-qthumb" src="/brand/proof-precision.png" alt="" aria-hidden width={600} height={400} />
+                <img className="mha-qthumb" src="/brand/proof-precision.jpg" alt="" aria-hidden width={600} height={400} />
                 <h4>She builds small things<span className="mha-beta">Beta</span></h4>
                 <p>Ask for a quick tool or a small automation and she&rsquo;ll put it together. Early, honest about its limits.</p>
               </div>
@@ -204,7 +204,7 @@ export default function MiraPage() {
               <Link href="/legal/privacy">Privacy</Link>
             </nav>
           </div>
-          <p className="mha-foot-legal">Mira, a Veridian product &mdash; from Vualet Trading (a sole proprietorship). Photographic memory, zero hallucination: claims we hold ourselves to.</p>
+          <p className="mha-foot-legal">Mira, a Veridian product &mdash; from Vualet Trading (a sole proprietorship). Design intent: remembers what you shared, grounded replies, held to the letter.</p>
         </div>
       </footer>
     </div>

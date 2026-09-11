@@ -83,7 +83,7 @@ export default function ContactSalesPage() {
         </div>
         <button
           type="submit"
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-medium text-white bg-[var(--color-vualet-indigo)] hover:bg-[var(--color-vualet-indigo-hover)] transition-colors"
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-medium text-white bg-[var(--color-vualet-indigo-ink)] hover:bg-[var(--color-vualet-indigo-ink-hover)] transition-colors"
         >
           Send →
         </button>

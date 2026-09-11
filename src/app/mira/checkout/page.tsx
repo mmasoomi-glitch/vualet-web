@@ -57,7 +57,6 @@ const input: React.CSSProperties = {
   border: "1px solid var(--mira-fog)",
   background: "var(--mira-cream)",
   color: "var(--mira-ink)",
-  outline: "none",
 };
 
 function Checkout() {
@@ -280,12 +279,24 @@ function Checkout() {
           </p>
           <p className="display" style={{ fontSize: 30, fontWeight: 400, margin: "8px 0 0", display: "flex", alignItems: "baseline", gap: 6 }}>
             {plan.name}
-            <span style={{ fontSize: 16, color: "var(--mira-slate)" }}>{plan.price}{plan.per}</span>
+            <span style={{ fontSize: 16, color: "var(--mira-slate)" }}>
+              {plan.price}
+              {plan.per ? (
+                <>
+                  <span aria-hidden="true">{plan.per}</span>
+                  {plan.per === "/mo" ? (
+                    <span className="mira-sr-only"> per month</span>
+                  ) : (
+                    <span className="mira-sr-only">{plan.per}</span>
+                  )}
+                </>
+              ) : null}
+            </span>
           </p>
           <p style={{ fontSize: 13, color: "var(--mira-slate)", margin: "2px 0 0" }}>{plan.sub}</p>
           <ul style={{ listStyle: "none", padding: 0, margin: "16px 0 0", fontSize: 14, color: "var(--mira-graphite)" }}>
             {plan.items.map((it) => (
-              <li key={it} style={{ padding: "3px 0" }}>✓ {it}</li>
+              <li key={it} style={{ padding: "3px 0" }}><span aria-hidden="true">✓ </span>{it}</li>
             ))}
           </ul>
           <div style={{ borderTop: "1px solid var(--mira-fog)", margin: "16px 0 0", paddingTop: 14, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -316,7 +327,6 @@ function Checkout() {
               here would be silently discarded — so it is not asked for. */}
           {!isTrial && (
             <>
-              <label style={{ display: "block", fontSize: 13, color: "var(--mira-graphite)", marginBottom: 6 }}>Email</label>
               <label
                 htmlFor="checkout-email"
                 style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500, color: "var(--mira-graphite)" }}
@@ -344,13 +354,14 @@ function Checkout() {
 
           {!isTrial && (
             <div style={{ marginTop: 18 }}>
-              <label style={{ display: "block", fontSize: 13, color: "var(--mira-graphite)", marginBottom: 6 }}>
+              <label htmlFor="checkout-promo" style={{ display: "block", fontSize: 13, color: "var(--mira-graphite)", marginBottom: 6 }}>
                 Promotion or discount code
               </label>
               {!applied ? (
                 <>
                   <div style={{ display: "flex", gap: 8 }}>
                     <input
+                      id="checkout-promo"
                       style={{ ...input, flex: 1 }}
                       type="text"
                       inputMode="text"
@@ -366,7 +377,6 @@ function Checkout() {
                         }
                       }}
                       disabled={promoPending}
-                      aria-label="Promotion or discount code"
                     />
                     <button
                       type="button"

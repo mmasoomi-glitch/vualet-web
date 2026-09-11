@@ -6,7 +6,7 @@ export const metadata = {
 export default function ChangelogPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-24 text-center">
-      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo)]">
+      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo-ink)]">
         Changelog
       </p>
       <h1

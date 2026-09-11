@@ -7,7 +7,7 @@ export const metadata = {
 export default function AboutPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-24">
-      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo)]">
+      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo-ink)]">
         About Vualet
       </p>
       <h1

@@ -21,7 +21,6 @@ const field: React.CSSProperties = {
   background: "var(--mira-cream)",
   color: "var(--mira-ink)",
   fontSize: 15,
-  outline: "none",
   fontFamily: "inherit",
 };
 

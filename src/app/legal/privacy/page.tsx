@@ -171,7 +171,49 @@ export default function PrivacyPolicyPage() {
         limit some functionality.
       </p>
 
-      <h2>11. Changes to this policy</h2>
+      <h2>11. Mira Help browser extension</h2>
+      <p>
+        The Mira Help browser extension is a Chrome side panel that answers
+        questions about Mira and Vualet and can speak its answers aloud.
+        When you open the extension, a small panel slides in from the side
+        of your browser window.
+      </p>
+      <p>
+        <strong>What it sends us.</strong> The extension sends you the messages
+        you type so Mira can answer them. If you choose to enter your email
+        address at the trial prompt, we also receive that address. We do not
+        receive it unless you type it in.
+      </p>
+      <p>
+        <strong>The visitor id.</strong> The extension generates a random
+        identifier in your browser and stores it locally. It sends this id
+        with each message so Mira can remember what you told her earlier in
+        the conversation. The id is random, is not derived from you or your
+        device, and is not used to identify you anywhere else. Clearing the
+        conversation in the extension generates a new id, which forgets you
+        on our side too.
+      </p>
+      <p>
+        <strong>Voice.</strong> When you ask Mira to speak her answer, the
+        reply text is sent to our voice service to produce audio, which is
+        played in your browser and not stored. When that service is
+        unavailable, your browser&rsquo;s own speech synthesis is used instead
+        and no text leaves your browser for that purpose.
+      </p>
+      <p>
+        <strong>What it does not do.</strong> The extension has no access to
+        the pages you visit, your browsing history, your tabs, your bookmarks,
+        or your cookies. It injects nothing into any website. It contains no
+        analytics, tracking, or advertising. It communicates with exactly one
+        origin: <code>mira.vualet.com</code>.
+      </p>
+      <p>
+        <strong>Local storage.</strong> The conversation transcript and your
+        voice on/off preference are stored in your browser&rsquo;s extension
+        storage on your own machine. Clearing the conversation deletes them.
+      </p>
+
+      <h2>12. Changes to this policy</h2>
       <p>
         We may update this Privacy Policy from time to time. We will update
         the &quot;Last updated&quot; date above and, for material changes,
@@ -179,7 +221,7 @@ export default function PrivacyPolicyPage() {
         before the changes take effect.
       </p>
 
-      <h2>12. Contact us</h2>
+      <h2>13. Contact us</h2>
       <p>
         For any questions about this Privacy Policy or how we handle your
         data, contact <strong>Vualet Trading</strong> at{" "}

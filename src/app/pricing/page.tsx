@@ -8,6 +8,18 @@ export const metadata = {
     "See per-product costs and the Vualet One bundle to understand how Vualet charges for each product and for the bundle based on what you use.",
 };
 
+const srOnly: React.CSSProperties = {
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clipPath: "inset(50%)",
+  whiteSpace: "nowrap",
+  borderWidth: 0,
+};
+
 export default function PricingPage() {
   return (
     <>
@@ -45,7 +57,7 @@ export default function PricingPage() {
               <div className="flex items-start justify-between">
                 <Logo glyph={p.glyph} size={40} title={p.name} />
                 {p.comingSoon && (
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo)] border border-[var(--color-vualet-indigo)] rounded-full px-2 py-0.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo-ink)] border border-[var(--color-vualet-indigo)] rounded-full px-2 py-0.5">
                     Soon
                   </span>
                 )}
@@ -59,16 +71,18 @@ export default function PricingPage() {
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 ${p.startingPriceUsd}
-                <span className="text-base font-normal text-[var(--muted)]">
+                <span className="text-base font-normal text-[var(--muted)]" aria-hidden>
                   {" "}
                   /user/mo
                 </span>
+                <span style={srOnly}> per user per month</span>
               </p>
               <Link
                 href={`/products/${p.slug}`}
                 className="mt-6 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-[var(--border)] hover:border-[var(--color-vualet-indigo)] transition-colors"
               >
                 Learn more
+                <span style={srOnly}> about {p.name}</span>
               </Link>
             </div>
           ))}
@@ -99,13 +113,14 @@ export default function PricingPage() {
                   style={{ fontFamily: "var(--font-display)" }}
                 >
                   $89
-                  <span className="text-2xl font-normal text-white/60">
+                  <span className="text-2xl font-normal text-white/60" aria-hidden>
                     {" "}
                     /user/mo
                   </span>
+                  <span style={srOnly}> per user per month</span>
                 </p>
                 <p className="mt-2 text-sm text-white/60">
-                  Billed annually. $109/user/mo billed monthly.
+                  Billed annually. $109<span aria-hidden>/user/mo</span><span style={srOnly}> per user per month</span> billed monthly.
                 </p>
                 <Link
                   href="/signup?plan=one"
@@ -150,7 +165,7 @@ export default function PricingPage() {
           </p>
           <Link
             href="/contact-sales"
-            className="mt-8 inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo)] hover:bg-[var(--color-vualet-indigo-hover)] transition-colors"
+            className="mt-8 inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo-ink)] hover:bg-[var(--color-vualet-indigo-ink-hover)] transition-colors"
           >
             Talk to sales
             <span aria-hidden>→</span>

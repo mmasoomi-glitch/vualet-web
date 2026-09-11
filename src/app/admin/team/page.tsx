@@ -171,7 +171,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
                 onClick={() => toggle(r)}
                 className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
                   roles.includes(r)
-                    ? "border-[var(--color-vualet-indigo)] bg-[var(--color-vualet-indigo)] text-white"
+                    ? "border-[var(--color-vualet-indigo)] bg-[var(--color-vualet-indigo-ink)] text-white"
                     : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]"
                 }`}
                 title={ROLE_LABELS[r]}
@@ -198,7 +198,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
         <button
           type="submit"
           disabled={busy || !email || roles.length === 0}
-          className="rounded-lg bg-[var(--color-vualet-indigo)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-vualet-indigo-hover)] transition-colors disabled:opacity-60"
+          className="rounded-lg bg-[var(--color-vualet-indigo-ink)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-vualet-indigo-ink-hover)] transition-colors disabled:opacity-60"
         >
           {busy ? "Inviting…" : "Send invite"}
         </button>

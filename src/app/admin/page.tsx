@@ -75,7 +75,7 @@ export default async function AdminOverviewPage() {
         </p>
         <Link
           href="/admin/health"
-          className="text-xs text-[var(--color-vualet-indigo)] hover:underline"
+          className="text-xs text-[var(--color-vualet-indigo-ink)] hover:underline"
         >
           Details
         </Link>

@@ -10,6 +10,48 @@ production logs, Postgres, Resend and the canonical ledger. No code was changed.
 
 ---
 
+## RE-VERIFICATION 2026-09-11 — TWO OF THE FOUR BLOCKERS BELOW ARE ALREADY FIXED
+
+**Do not work from the blocker sections below without re-running the checks.** They were
+accurate on 2026-08-27 and are now stale, exactly as this project's handover warns: *"ledger
+rows go stale — verify a blocker still exists by running something before you work on it."*
+Each line below was measured on 2026-09-11, not inferred.
+
+| Blocker | Doc says | Measured 2026-09-11 |
+|---|---|---|
+| 1 — Dodo webhook | Investigated, sound | unchanged |
+| 2 — Admin mock data | "UI REWIRE **PENDING**" | **DONE** |
+| 3 — Billing portal | Done | unchanged |
+| 4 — Multilingual crisis | "**THE SAFETY GAP REMAINS OPEN**" | **DONE** |
+
+**Blocker 4 — crisis detection now fires 12 of 12, with zero false positives.** The section
+below records it firing on 1 of 8 phrasings, English only. Run against the live `crisisCheck`
+in `/opt/mira/apps/engine/src/safety.mjs` on host `mira`, every one of these now fires:
+English (two forms), Arabic, Urdu native, Persian **both spaced and joined**, Hindi **both
+anusvara `हूं` and chandrabindu `हूँ`**, Roman Urdu (two forms), Arabizi, Tagalog. The two
+spelling-variant pairs are named explicitly because they are precisely what broke the earlier
+attempt and got it reverted. Three near-miss safe phrases correctly stay silent, including
+*"this app is killing me lol"*.
+
+The fix that landed uses three separate patterns — `CRISIS_EN` (preserved byte-for-byte),
+`CRISIS_NATIVE` (no ASCII `\b`, which cannot match Arabic or Devanagari at all) and
+`CRISIS_ROMAN`. The English-only reply and hotline text remain deliberately untranslated:
+that is owner work, because a wrong emergency number could get someone killed.
+
+**Blocker 2 — the admin console reads live data.** All five admin pages resolve through
+`src/lib/admin-data.ts`, which derives from `listSubscriptions()` in `src/lib/store.ts`,
+which SCANs `mira:sub:*` in Upstash. It also declares every metric it cannot truthfully
+source — MRR, credits used, today's spend and revenue — as *unavailable with a stated
+reason*, rather than inventing a number.
+
+**What is still genuinely missing — confirmed, not assumed:** self-serve **plan
+change/upgrade**. `src/app/api/subscription/` contains only `cancel` and `refund-request`,
+and `src/app/api/portal/route.ts` states self-serve billing management is unreachable since
+the processor changed. Changing a customer's plan remains a support action. That is the one
+item on this page that a build should start from.
+
+---
+
 ## 1. What exists — real vs stub
 
 | Area | State | Evidence |

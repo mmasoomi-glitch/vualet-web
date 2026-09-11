@@ -8,6 +8,14 @@
 @theme {
   --color-vualet-indigo: #6366F1;         /* Mira aether — presence */
   --color-vualet-indigo-hover: #5254E8;
+  /* CONTRAST VARIANTS (WCAG 2.2 AA 1.4.3). The house indigo #6366F1 is kept above,
+     unchanged, for brand and decorative use and for the focus ring, where the bar is
+     3:1 and it passes. It does NOT pass 4.5:1 for normal-size text: white on it is
+     4.47, and it is 4.47 on white and 3.75 on the frost surface #EFEBE2. So text and
+     button fills use these darker variants instead - perceptibly the same indigo,
+     5.98 for white-on-ink and 5.03 on frost. Measured on the live site, not assumed. */
+  --color-vualet-indigo-ink: #4F52D6;
+  --color-vualet-indigo-ink-hover: #4245BC;
   --color-vualet-indigo-soft: #C7B8F0;    /* Mira lavender */
   --color-vualet-ink: #1C1830;            /* Mira ink (indigo-plum) */
   --color-vualet-ink-2: #2A2540;

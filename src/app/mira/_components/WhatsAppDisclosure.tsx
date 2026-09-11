@@ -96,7 +96,7 @@ const CSS = `
   padding: 0; margin: 0 0 14px; }
 .wad-row { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 14px; }
 .wad-row:last-child { margin-bottom: 0; }
-.wad-row input[type="checkbox"] { flex: none; width: 20px; height: 20px; margin: 2px 0 0;
+.wad-row input[type="checkbox"] { flex: none; width: 24px; height: 24px; margin: 2px 0 0;
   accent-color: var(--mira-aether-ink, #4F46E5); cursor: pointer; }
 .wad-row input[type="checkbox"]:focus-visible { outline: 3px solid var(--mira-aether-ink, #4F46E5); outline-offset: 2px; }
 .wad-row label { cursor: pointer; color: var(--mira-ink, #1C1830); font-size: .96rem; line-height: 1.5; }
@@ -125,7 +125,16 @@ export default function WhatsAppDisclosure({ value, onChange, className }: Props
         {/* treat absent optional key as false */}
         <input type="checkbox" id={id} checked={consent[key] ?? false} onChange={() => toggle(key)} />
         <label htmlFor={id}>
-          {optional && <span className="wad-opt">Optional</span>}
+          {/* The badge and the sentence used to run together in the accessible
+              name - it announced as "OPTIONALI choose to add..." on the live
+              payment page. The hidden full stop gives a screen reader a
+              sentence break without changing what anyone sees. */}
+          {optional && (
+            <>
+              <span className="wad-opt">Optional</span>
+              <span className="mira-sr-only">. </span>
+            </>
+          )}
           {text}
         </label>
       </div>

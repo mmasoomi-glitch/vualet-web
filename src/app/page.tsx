@@ -2,6 +2,18 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { PRODUCTS } from "@/lib/products";
 
+const srOnly: React.CSSProperties = {
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clipPath: "inset(50%)",
+  whiteSpace: "nowrap",
+  borderWidth: 0,
+};
+
 export default function Home() {
   return (
     <>
@@ -18,7 +30,7 @@ export default function Home() {
               style={{ fontFamily: "var(--font-display)" }}
             >
               Software that runs<br />
-              your business <span className="text-[var(--color-vualet-indigo)]">for you.</span>
+              your business <span className="text-[var(--color-vualet-indigo-ink)]">for you.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg md:text-xl text-[var(--muted)] leading-relaxed">
               Vualet is a Dubai product family building software that runs your
@@ -29,7 +41,7 @@ export default function Home() {
             <div className="mt-10 flex flex-col sm:flex-row gap-3">
               <Link
                 href="/signup"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo)] hover:bg-[var(--color-vualet-indigo-hover)] transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-white bg-[var(--color-vualet-indigo-ink)] hover:bg-[var(--color-vualet-indigo-ink-hover)] transition-colors"
               >
                 Start free
                 <span aria-hidden>→</span>
@@ -52,7 +64,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-6 py-20">
           <div className="flex items-end justify-between gap-6 flex-wrap">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo)]">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo-ink)]">
                 One platform, many tools
               </p>
               <h2
@@ -64,7 +76,7 @@ export default function Home() {
             </div>
             <Link
               href="/products"
-              className="text-sm font-medium text-[var(--color-vualet-indigo)] hover:underline"
+              className="text-sm font-medium text-[var(--color-vualet-indigo-ink)] hover:underline"
             >
               All products →
             </Link>
@@ -80,7 +92,7 @@ export default function Home() {
                 <div className="flex items-start justify-between">
                   <Logo glyph={p.glyph} size={44} title={p.name} />
                   {p.comingSoon && (
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo)] border border-[var(--color-vualet-indigo)] rounded-full px-2 py-0.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo-ink)] border border-[var(--color-vualet-indigo)] rounded-full px-2 py-0.5">
                       Soon
                     </span>
                   )}
@@ -96,9 +108,9 @@ export default function Home() {
                 </p>
                 <div className="mt-6 flex items-center justify-between">
                   <p className="text-xs text-[var(--muted)]">
-                    From <span className="font-semibold text-[var(--foreground)]">${p.startingPriceUsd}</span>/user/mo
+                    From <span className="font-semibold text-[var(--foreground)]">${p.startingPriceUsd}</span><span aria-hidden>/user/mo</span><span style={srOnly}> per user per month</span>
                   </p>
-                  <span className="text-sm text-[var(--color-vualet-indigo)] opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-sm text-[var(--color-vualet-indigo-ink)] opacity-0 group-hover:opacity-100 transition-opacity">
                     Learn more →
                   </span>
                 </div>

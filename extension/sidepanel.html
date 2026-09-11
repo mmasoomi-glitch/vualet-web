@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mira Help</title>
+  <link rel="stylesheet" href="./sidepanel.css">
+</head>
+<body>
+  <div class="panel">
+    <header class="panel-header">
+      <h1>Mira Help</h1>
+      <div class="header-controls">
+        <label class="voice-toggle" for="voiceCheckbox">
+          <input type="checkbox" id="voiceCheckbox" checked>
+          <span class="voice-toggle-label">Voice</span>
+        </label>
+        <button type="button" id="clearBtn">Clear conversation</button>
+      </div>
+    </header>
+
+    <main class="transcript" id="transcript" role="region" aria-label="Conversation" aria-live="polite"></main>
+
+    <div class="input-area">
+      <div class="trial-gate" id="trialGate" hidden>
+        <p class="trial-gate-label">Your email is optional — leave it blank and you can keep asking questions. No card is required.</p>
+        <div class="trial-gate-input">
+          <label for="emailInput" class="sr-only">Email address</label>
+          <input type="email" id="emailInput" placeholder="you@example.com">
+          <button type="button" id="emailSubmitBtn">Send</button>
+        </div>
+        <p class="trial-gate-error" id="trialGateError" hidden></p>
+      </div>
+
+      <div class="input-row">
+        <label for="messageInput" class="sr-only">Ask about Mira or Vualet</label>
+        <textarea
+          id="messageInput"
+          rows="2"
+          placeholder="Ask about Mira or Vualet…"
+          maxlength="800"
+        ></textarea>
+        <div class="input-actions">
+          <!-- Not a live region: announcing a number on every keystroke makes the
+               panel unusable with a screen reader. sidepanel.js also forces
+               aria-live="off" on it at startup. -->
+          <span class="char-counter" id="charCounter">0 / 800</span>
+          <button type="button" id="sendBtn" disabled>Send</button>
+        </div>
+      </div>
+
+      <p class="thinking" id="thinking" hidden>Mira is thinking…</p>
+    </div>
+  </div>
+
+  <script type="module" src="./sidepanel.js"></script>
+</body>
+</html>

@@ -39,7 +39,7 @@ function CodeEntryFields(props: {
       <button
         type="submit"
         disabled={props.busy || props.code.length !== 6}
-        className="w-full rounded-lg bg-[var(--color-vualet-indigo)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-vualet-indigo-hover)] transition-colors disabled:opacity-60"
+        className="w-full rounded-lg bg-[var(--color-vualet-indigo-ink)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-vualet-indigo-ink-hover)] transition-colors disabled:opacity-60"
       >
         {props.busy ? "Verifying…" : props.submitLabel}
       </button>
@@ -174,7 +174,7 @@ function AdminLogin() {
             <button
               type="submit"
               disabled={busy || !email || !pw}
-              className="w-full rounded-lg bg-[var(--color-vualet-indigo)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-vualet-indigo-hover)] transition-colors disabled:opacity-60"
+              className="w-full rounded-lg bg-[var(--color-vualet-indigo-ink)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-vualet-indigo-ink-hover)] transition-colors disabled:opacity-60"
             >
               {busy ? "Checking…" : "Continue"}
             </button>
@@ -194,7 +194,7 @@ function AdminLogin() {
               <p className="mt-1 font-mono text-sm break-all select-all">{enroll.secret}</p>
               <a
                 href={enroll.otpauth}
-                className="mt-2 inline-block text-xs text-[var(--color-vualet-indigo)] hover:underline break-all"
+                className="mt-2 inline-block text-xs text-[var(--color-vualet-indigo-ink)] hover:underline break-all"
               >
                 Open in authenticator app →
               </a>

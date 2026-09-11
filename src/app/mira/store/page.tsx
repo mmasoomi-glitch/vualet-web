@@ -53,7 +53,7 @@ const FAMILY: Product[] = [
     blurb:
       "Ambient, on-screen awareness that preloads context so answers land faster and truer.",
     status: "Coming soon",
-    cta: "Notify me",
+    cta: "In development",
   },
   {
     id: "locksmith",
@@ -61,7 +61,7 @@ const FAMILY: Product[] = [
     blurb:
       "Your constant credentials, entered for you — safely, and only when you ask.",
     status: "Coming soon",
-    cta: "Notify me",
+    cta: "In development",
   },
 ];
 
@@ -111,7 +111,7 @@ function Card({ p }: { p: Product }) {
         <Mark />
         <StatusPill status={p.status} />
       </div>
-      <h3 className="mt-5 text-lg font-semibold tracking-tight">{p.name}</h3>
+      <h2 className="mt-5 text-lg font-semibold tracking-tight">{p.name}</h2>
       <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">{p.blurb}</p>
       <span
         className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold"
@@ -154,7 +154,7 @@ function Card({ p }: { p: Product }) {
 export default function MiraStore() {
   return (
     <div className="mx-auto max-w-7xl px-6 py-20">
-      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo)]">
+      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo-ink)]">
         The Mira family
       </p>
       <h1

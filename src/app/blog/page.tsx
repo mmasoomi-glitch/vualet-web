@@ -62,7 +62,7 @@ export default function BlogIndexPage() {
             >
               <Link
                 href={`/blog/${post.slug}`}
-                className="transition-colors hover:text-[var(--color-vualet-indigo)]"
+                className="transition-colors hover:text-[var(--color-vualet-indigo-ink)]"
               >
                 {post.title}
               </Link>

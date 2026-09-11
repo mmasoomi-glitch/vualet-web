@@ -46,7 +46,10 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy-Report-Only",
             value: [
               "default-src 'self'",
-              "script-src 'self'",
+              // The Cloudflare Web Analytics beacon is injected on every page and is the
+              // one non-inline violation being logged. Allowlisted so the sink stays
+              // readable and the inline-script violations stay visible.
+              "script-src 'self' https://static.cloudflareinsights.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "font-src 'self' data:",
@@ -55,8 +58,37 @@ const nextConfig: NextConfig = {
               "base-uri 'self'",
               "frame-ancestors 'none'",
               "form-action 'self'",
+              // Violations now reach src/app/api/csp-report/route.ts instead of
+              // only each visitor's console. BOTH directives are present on
+              // purpose: report-uri is deprecated but is still what most
+              // browsers honour, report-to is what newer ones use.
+              "report-uri /api/csp-report",
+              "report-to csp-endpoint",
             ].join("; "),
           },
+          // ENFORCED policy, deliberately only four directives. These four generate
+          // ZERO violations on any page today (measured live), they are what actually
+          // stops clickjacking and form hijacking, and they cost nothing.
+          //
+          // DO NOT ADD default-src HERE, and do not "complete" this list with
+          // script-src or style-src. This header is enforced independently of the
+          // report-only one above, so a default-src would apply to scripts and styles
+          // by fallback and start BLOCKING them - and the pages carry inline scripts
+          // with no nonce, so the first thing to break would be hydration on the
+          // checkout. The full policy stays report-only until a per-request nonce
+          // exists, which was considered and deliberately rejected: it would force
+          // dynamic rendering across a mostly-static marketing site to defend against
+          // an injection vector this site does not have.
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "object-src 'none'",
+              "base-uri 'self'",
+              "frame-ancestors 'none'",
+              "form-action 'self'",
+            ].join("; "),
+          },
+          { key: "Reporting-Endpoints", value: 'csp-endpoint="/api/csp-report"' },
         ],
       },
     ];

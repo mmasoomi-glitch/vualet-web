@@ -323,6 +323,25 @@ export default function MiraAccount() {
           </section>
         )}
 
+        {/* WhatsApp connection.
+            WHY THIS EXISTS: a paying customer whose WhatsApp link dropped had no
+            self-serve way back to a QR code. The only visible route was the signup
+            wizard, which opens with persona setup and reads like paying again — so
+            customers assumed they were stuck and simply went quiet. Re-pairing has
+            never cost anything; there was just no button. This is the button. */}
+        <section style={{ ...card, padding: 24 }}>
+          <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-ink)", fontWeight: 600, margin: 0 }}>WhatsApp</p>
+          <p className="display" style={{ fontSize: 22, fontWeight: 400, margin: "6px 0 4px" }}>Mira gone quiet?</p>
+          <p style={{ fontSize: 14.5, color: "var(--mira-graphite)", margin: 0, lineHeight: 1.6 }}>
+            The link between Mira and WhatsApp can drop, and while it is down she stops
+            receiving your messages. Reconnecting takes about a minute and is free —
+            it does not create a new subscription and does not charge you anything.
+          </p>
+          <div style={{ marginTop: 16 }}>
+            <Link className="btn-mira-soft" href="/mira/reconnect" style={{ padding: "10px 18px", fontSize: 14 }}>Reconnect WhatsApp</Link>
+          </div>
+        </section>
+
         {/* Persona (cosmetic, device-local) */}
         <section style={{ ...card, padding: 24 }}>
           <p style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--mira-rose-ink)", fontWeight: 600, margin: 0 }}>Your Mira</p>

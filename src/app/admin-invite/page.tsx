@@ -104,7 +104,7 @@ function AdminInvite() {
               <button
                 type="submit"
                 disabled={busy || pw.length < 10 || !pw2}
-                className="w-full rounded-lg bg-[var(--color-vualet-indigo)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-vualet-indigo-hover)] transition-colors disabled:opacity-60"
+                className="w-full rounded-lg bg-[var(--color-vualet-indigo-ink)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-vualet-indigo-ink-hover)] transition-colors disabled:opacity-60"
               >
                 {busy ? "Saving…" : "Set password"}
               </button>

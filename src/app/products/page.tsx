@@ -29,9 +29,9 @@ export default function ProductsIndex() {
       <div className="mt-16 space-y-16">
         {Object.entries(byCategory).map(([cat, items]) => (
           <div key={cat}>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo)]">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo-ink)]">
               {cat}
-            </p>
+            </h2>
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {items.map((p) => (
                 <Link
@@ -43,7 +43,7 @@ export default function ProductsIndex() {
                   <h3 className="mt-5 text-lg font-semibold tracking-tight">
                     {p.name}
                     {p.comingSoon && (
-                      <span className="ml-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo)] border border-[var(--color-vualet-indigo)] rounded-full px-2 py-0.5 align-middle">
+                      <span className="ml-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-vualet-indigo-ink)] border border-[var(--color-vualet-indigo)] rounded-full px-2 py-0.5 align-middle">
                         Soon
                       </span>
                     )}

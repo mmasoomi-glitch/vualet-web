@@ -147,7 +147,6 @@ export default function Connect() {
           border: `1px solid ${showResult && !parsed.ok ? "var(--mira-rose-deep)" : "var(--mira-fog)"}`,
           background: "var(--mira-cream)",
           color: "var(--mira-ink)",
-          outline: "none",
           boxSizing: "border-box",
         }}
       />
