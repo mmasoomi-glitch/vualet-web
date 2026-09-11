@@ -396,6 +396,38 @@ export async function getMigration(migrationId: string): Promise<Json | null> {
   return kvGet<Json>(kMigration(migrationId));
 }
 
+/* ── the support review queue ──────────────────────────────────────────── */
+
+/**
+ * A migration that could not complete is parked for a human, and the store has
+ * no scan — so "which migrations need review" is an explicit index maintained
+ * on write, or it is not a question anybody can ask.
+ */
+const kReviewQueue = () => 'mira:mig:review';
+
+export async function enqueueForReview(migrationId: string): Promise<void> {
+  if (!migrationId) return;
+  const list = (await kvGet<string[]>(kReviewQueue())) || [];
+  // A migration retried three times must appear once, not three times, or the
+  // queue turns into a noise generator and stops being read.
+  if (list.includes(migrationId)) return;
+  await kvSet(kReviewQueue(), [...list, migrationId].slice(-MAX_HISTORY));
+}
+
+export async function reviewQueue(): Promise<string[]> {
+  return (await kvGet<string[]>(kReviewQueue())) || [];
+}
+
+/**
+ * A review that has been dealt with must leave the queue, or an operator
+ * cannot tell what is still outstanding from what was handled last week.
+ */
+export async function clearFromReview(migrationId: string): Promise<void> {
+  if (!migrationId) return;
+  const list = (await kvGet<string[]>(kReviewQueue())) || [];
+  await kvSet(kReviewQueue(), list.filter((id) => id !== migrationId));
+}
+
 export async function putMigration(
   record: { migrationId: string } & Record<string, unknown>,
 ): Promise<void> {

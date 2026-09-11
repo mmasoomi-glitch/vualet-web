@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { safeEqual, verifyConnectToken } from "@/lib/connect-token";
 import { claimConnectWhatsapp } from "@/lib/whatsapp-claim";
-import { getMigration, putMigration, findBindingByChannel } from "@/lib/channel-binding-store";
+import {
+  getMigration,
+  putMigration,
+  findBindingByChannel,
+  enqueueForReview,
+} from "@/lib/channel-binding-store";
 import { BINDING_STATES } from "@/lib/channel-binding-core.mjs";
 import { commitMigration } from "@/lib/number-migration";
 import { MIGRATION_STATES } from "@/lib/number-migration-core.mjs";
@@ -214,6 +219,9 @@ export async function POST(req: Request) {
             state: MIGRATION_STATES.REVIEW_REQUIRED,
             failedReason: committed.reason,
           });
+          // Parked records are unfindable without an index: the store has no
+          // scan, so a migration nobody can list is a migration nobody reviews.
+          await enqueueForReview(rec.migrationId);
           console.error(
             `[pair-bind] migration ${rec.migrationId} could not commit (${committed.reason}); sent to review.`,
           );
