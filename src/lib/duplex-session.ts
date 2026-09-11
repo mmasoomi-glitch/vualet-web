@@ -50,16 +50,14 @@ export class DuplexSession {
   private _silenceMs: number;
   private _minSpeechMs: number;
 
-  // ── user-audio bookkeeping ──────────────────────────────────────────────
-  private _energyActive = false;          // does current true streak span atMs?
-  private _energyMs = 0;                  // ms of true in the current streak
-  private _speechDurationMs = 0;          // total speech duration when silence ends
-  private _hasMinSpeech = false;          // did speech cross minSpeechMs threshold?
-  private _silenceCounterMs = 0;          // consecutive false-ms (listening only)
+  // ── user-audio bookkeeping (timestamp-based) ────────────────────────────
+  private _speechStartMs: number | null = null;
+  private _silenceStartMs: number | null = null;
+  private _speechDurationMs: number = 0;
+  private _hasMinSpeech: boolean = false;
 
-  // ── barge-in bookkeeping ────────────────────────────────────────────────
-  private _bargeCounterMs = 0;            // consecutive true-ms while speaking
-  private _generationActive = false;      // tokens until endTurn (or barge-in) are valid
+  // ── barge-in bookkeeping (timestamp-based) ──────────────────────────────
+  private _bargeStartMs: number | null = null;
 
   // ── constructed once, driven by events ──────────────────────────────────
 
@@ -78,137 +76,151 @@ export class DuplexSession {
   onUserAudio(energyAboveThreshold: boolean, atMs: number): Effect[] {
     const effects: Effect[] = [];
 
+    // Rule 1: From idle, a first frame with energy true → listening, emits startListening.
     if (this._state === "idle") {
       if (!energyAboveThreshold) return effects; // spurious noise — stay idle
       this._state = "listening";
-      this._energyActive = true;
-      this._energyMs = 1; // atMs is passed in; each frame is 1 ms
+      this._speechStartMs = atMs;
+      this._silenceStartMs = null;
+      this._speechDurationMs = 0;
+      this._hasMinSpeech = false;
       effects.push({ type: "startListening" });
       return effects;
     }
 
+    // Rule 2 & 3: Listening state logic.
     if (this._state === "listening") {
       if (energyAboveThreshold) {
-        this._energyActive = true;
-        this._energyMs++;
-        // Track total speech duration — only mark threshold crossed
-        if (!this._hasMinSpeech && this._energyMs >= this._minSpeechMs) {
-          this._hasMinSpeech = true;
+        // Speech is active.
+        // If we were in a silence gap, a new speech burst starts.
+        if (this._silenceStartMs !== null) {
+          this._silenceStartMs = null;
+        }
+        // Start a new speech run only if one isn't already open.
+        if (this._speechStartMs === null) {
+          this._speechStartMs = atMs;
+          this._speechDurationMs = 0;
+          this._hasMinSpeech = false;
         }
         return effects;
       }
 
-      // energy went false
-      if (this._energyActive) {
-        // Speech just stopped. Check if we had enough.
-        this._energyActive = false;
-        if (this._energyMs < this._minSpeechMs) {
-          // Rule 2 — spurious blip, return to idle
+      // Energy went false.
+      if (this._speechStartMs !== null) {
+        // A speech burst just ended. Calculate its duration.
+        const duration = Math.max(0, atMs - this._speechStartMs);
+        this._speechDurationMs = duration;
+
+        if (duration < this._minSpeechMs) {
+          // Rule 2: Spurious blip. Return to idle.
           this._state = "idle";
-          this._silenceCounterMs = 0;
+          this._speechStartMs = null;
+          this._silenceStartMs = null;
+          this._speechDurationMs = 0;
           this._hasMinSpeech = false;
-          this._energyMs = 0;
           return effects;
         }
-        // Speech >= minSpeechMs — lock in the actual speech duration
-        this._speechDurationMs = this._energyMs;
+
+        // Speech was long enough. Mark it as valid and start silence timer.
+        this._hasMinSpeech = true;
+        this._silenceStartMs = atMs;
+        // Close the speech run so subsequent silent frames don't reset silenceStartMs.
+        this._speechStartMs = null;
       }
 
-      // Accumulate silence once speech crossed minSpeechMs
-      if (this._hasMinSpeech && !this._energyActive) {
-        this._silenceCounterMs++;
-        if (this._silenceCounterMs >= this._silenceMs) {
-          // Rule 3 — silence closed the turn with actual speech duration
+      // If we have valid speech, check for silence closure.
+      if (this._hasMinSpeech && this._silenceStartMs !== null) {
+        const silenceDuration = Math.max(0, atMs - this._silenceStartMs);
+        if (silenceDuration >= this._silenceMs) {
+          // Rule 3: Silence closed the turn.
           effects.push({ type: "endTurn", transcriptMs: this._speechDurationMs });
           this._state = "thinking";
+          this._speechStartMs = null;
+          this._silenceStartMs = null;
+          this._speechDurationMs = 0;
+          this._hasMinSpeech = false;
         }
-        // If silence not yet long enough, stay in listening (user may resume)
-        return effects;
       }
       return effects;
     }
 
-    // ── speaking state: check for barge-in ────────────────────────────────
+    // Rule 5: Speaking state: check for barge-in.
     if (this._state === "speaking") {
       if (energyAboveThreshold) {
-        this._bargeCounterMs++;
-        if (this._bargeCounterMs >= this._bargeInMs) {
-          // Rule 1 + Rule 5 — barge-in detected, transition to listening
-          effects.push(
-            { type: "cancelGeneration", reason: "barge-in" },
-            { type: "stopPlayback" },
-            { type: "startListening" }
-          );
-          this._state = "listening";
-          this._generationActive = false;
-          this._bargeCounterMs = 0;
-          this._energyActive = true;
-          this._energyMs = 1;
-          this._silenceCounterMs = 0;
-          this._hasMinSpeech = false;
-          this._speechDurationMs = 0;
-          return effects;
+        // Barge-in energy detected.
+        if (this._bargeStartMs === null) {
+          this._bargeStartMs = atMs;
+        } else {
+          const bargeDuration = Math.max(0, atMs - this._bargeStartMs);
+          if (bargeDuration >= this._bargeInMs) {
+            // Rule 5: Barge-in threshold reached.
+            effects.push(
+              { type: "cancelGeneration", reason: "barge-in" },
+              { type: "stopPlayback" },
+              { type: "startListening" }
+            );
+            this._state = "listening";
+            this._bargeStartMs = null;
+            this._speechStartMs = atMs;
+            this._silenceStartMs = null;
+            this._speechDurationMs = 0;
+            this._hasMinSpeech = false;
+            return effects;
+          }
         }
       } else {
-        // Brief pause while speaking — reset barge-in counter (must be continuous)
-        if (this._bargeCounterMs > 0) {
-          this._bargeCounterMs = 0;
-        }
+        // Energy dropped during potential barge-in. Reset barge timer.
+        this._bargeStartMs = null;
       }
       return effects;
     }
 
-    // thinking: user audio is a no-op
+    // Thinking: user audio is a no-op.
     return effects;
   }
 
   onAssistantToken(text: string, atMs: number): Effect[] {
     const effects: Effect[] = [];
 
+    // Rule 4: First token while thinking → speaking, emits emitToken.
     if (this._state === "thinking") {
-      // Rule 4 — first token moves us to speaking and emits the token
       this._state = "speaking";
-      this._generationActive = true;
-      this._bargeCounterMs = 0;
+      this._bargeStartMs = null;
       effects.push({ type: "emitToken", text });
       return effects;
     }
 
+    // Rule 4: Subsequent tokens while speaking.
     if (this._state === "speaking") {
-      // Subsequent tokens while speaking — just emit, keep state
-      if (this._generationActive) {
-        effects.push({ type: "emitToken", text });
-      }
+      effects.push({ type: "emitToken", text });
       return effects;
     }
 
-    // Rule 6 — late tokens after barge-in (state is "listening") are dropped
-    // Any out-of-order / nonsensical sequence is a no-op (Rule 8)
+    // Rule 6: After barge-in (state is "listening") or idle, late tokens are discarded.
     return effects;
   }
 
   onAssistantDone(atMs: number): Effect[] {
     const effects: Effect[] = [];
 
+    // Rule 7: Natural end of assistant turn.
     if (this._state === "speaking") {
-      // Rule 7 — natural end of assistant turn
       this._state = "idle";
-      this._generationActive = false;
-      this._bargeCounterMs = 0;
+      this._bargeStartMs = null;
       return effects;
     }
 
-    // Rule 7 — no-op if not speaking (Rule 8 — degrade gracefully)
+    // Rule 7: No-op if not speaking.
     return effects;
   }
 
   reset(): void {
-    // Rule 8 — back to idle, clearing all buffers
+    // Rule 8: Back to idle, clearing all buffers.
     this._state = "idle";
-    this._energyActive = false;
-    this._energyMs = 0;
-    this._silenceCounterMs = 0;
-    this._bargeCounterMs = 0;
-    this._generationActive = false;
+    this._speechStartMs = null;
+    this._silenceStartMs = null;
+    this._speechDurationMs = 0;
+    this._hasMinSpeech = false;
+    this._bargeStartMs = null;
   }
 }

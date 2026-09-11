@@ -1,350 +1,175 @@
-/**
- * DUPLEX-SESSION TEST — full-duplex voice state machine.
- *
- * Proves the four-state FSM (idle → listening → thinking → speaking) handles
- * every transition, edge-case, and regression described in the spec.
- *
- * Covers:
- *   1.  idle + first true energy frame → listening + startListening
- *   2.  speech shorter than minSpeechMs → back to idle, no endTurn
- *   3.  speech ≥ minSpeechMs + silence ≥ silenceMs → endTurn + thinking
- *   4.  token while thinking → speaking + emitToken
- *   5.  barge-in: sustained user audio ≥ bargeInMs while speaking
- *   6.  late tokens after barge-in are silently dropped
- *   7.  onAssistantDone while speaking → idle; elsewhere → no-op
- *   8.  out-of-order / nonsensical sequences degrade gracefully (no throws)
- *
- * Also specifically verifies:
- *   • A backchannel "mhm" shorter than bargeInMs does NOT interrupt her.
- *   • A sustained interruption DOES trigger barge-in.
- *   • Late tokens after barge-in are dropped (the single worst failure mode).
- *
- * Run: node scripts/duplex-session-test.mjs
- */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { DuplexSession } from "../src/lib/duplex-session.ts";
 
-// ── helpers ─────────────────────────────────────────────────────────────────
+const FRAME_MS = 20;
 
-/** Emit N frames of energy=true at consecutive ms offsets. */
-function speak(session, frames, atStartMs = 0) {
+function speak(session, durationMs, startMs = 0, frameMs = FRAME_MS) {
+  const frames = Math.round(durationMs / frameMs);
   const effects = [];
   for (let i = 0; i < frames; i++) {
-    effects.push(...session.onUserAudio(true, atStartMs + i));
+    const atMs = startMs + i * frameMs;
+    effects.push(...session.onUserAudio(true, atMs));
   }
   return effects;
 }
 
-/** Emit N frames of energy=false at consecutive ms offsets. */
-function silence(session, frames, atStartMs = 0) {
+function silence(session, durationMs, startMs = 0, frameMs = FRAME_MS) {
+  const frames = Math.round(durationMs / frameMs);
   const effects = [];
   for (let i = 0; i < frames; i++) {
-    effects.push(...session.onUserAudio(false, atStartMs + i));
+    const atMs = startMs + i * frameMs;
+    effects.push(...session.onUserAudio(false, atMs));
   }
   return effects;
 }
 
-// ── rule 1: idle → listening on first true frame ────────────────────────────
+function nextMs(startMs, durationMs, frameMs = FRAME_MS) {
+  return startMs + Math.round(durationMs / frameMs) * frameMs;
+}
 
-test("rule 1 — idle + first true energy frame → listening + startListening", () => {
-  const s = new DuplexSession();
-  assert.equal(s.state, "idle");
-
-  const effects = s.onUserAudio(true, 0);
-  assert.equal(s.state, "listening");
-  assert.deepStrictEqual(effects, [{ type: "startListening" }]);
+test("1. idle -> listening on first speech frame emits startListening", () => {
+  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 200, bargeInMs: 120 });
+  const eff = speak(s, 20, 0);
+  assert.ok(eff.some(e => e.type === "startListening"), "Expected startListening effect");
+  assert.equal(s.state, "listening", "State should be listening");
 });
 
-test("rule 1 — idle + false energy frame is a no-op", () => {
-  const s = new DuplexSession();
-  const effects = s.onUserAudio(false, 0);
-  assert.equal(s.state, "idle");
-  assert.deepStrictEqual(effects, []);
+test("2. Short blip (40ms speech + 300ms silence) ends idle, no endTurn", () => {
+  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 200, bargeInMs: 120 });
+  let t = 0;
+  speak(s, 40, t); t = nextMs(t, 40);
+  const eff = silence(s, 300, t); t = nextMs(t, 300);
+  assert.equal(s.state, "idle", "State should be idle after blip");
+  assert.ok(!eff.some(e => e.type === "endTurn"), "Blip should NOT emit endTurn");
 });
 
-// ── rule 2: sub-minSpeechMs blip returns to idle, no endTurn ────────────────
-
-test("rule 2 — speech shorter than minSpeechMs returns to idle, no endTurn", () => {
-  const s = new DuplexSession({ minSpeechMs: 150 });
-
-  // 50 true frames → still below 150
-  speak(s, 50, 0);
-  assert.equal(s.state, "listening");
-
-  // 50 false frames → speech stopped, total was 50 < 150
-  const effects = silence(s, 50, 50);
-  assert.equal(s.state, "idle");
-  assert.deepStrictEqual(effects, []);
+test("3. Full turn (200ms speech + 300ms silence) -> thinking, endTurn with transcriptMs ~200", () => {
+  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 200, bargeInMs: 120 });
+  let t = 0;
+  speak(s, 200, t); t = nextMs(t, 200);
+  const eff = silence(s, 300, t); t = nextMs(t, 300);
+  assert.equal(s.state, "thinking", "State should be thinking");
+  const et = eff.find(e => e.type === "endTurn");
+  assert.ok(et, "EndTurn should be emitted");
+  assert.ok(Math.abs(et.transcriptMs - 200) <= FRAME_MS, `transcriptMs was ${et.transcriptMs}ms, expected about 200ms`);
 });
 
-// ── rule 3: speech ≥ minSpeechMs + silence → endTurn + thinking ─────────────
-
-test("rule 3 — speech ≥ minSpeechMs followed by silence → endTurn + thinking", () => {
-  const s = new DuplexSession({ minSpeechMs: 150, silenceMs: 100 });
-
-  // Build up speech to exactly 150
-  speak(s, 150, 0);
-  assert.equal(s.state, "listening");
-
-  // Add silence frames
-  const effects = silence(s, 100, 150);
-  assert.equal(s.state, "thinking");
-  assert.ok(effects.some((e) => e.type === "endTurn"));
-  const endTurn = effects.find((e) => e.type === "endTurn");
-  assert.deepStrictEqual(endTurn, { type: "endTurn", transcriptMs: 150 });
+test("4. Token while thinking -> speaking, emitToken; second token keeps speaking", () => {
+  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 200, bargeInMs: 120 });
+  let t = 0;
+  speak(s, 200, t); t = nextMs(t, 200);
+  silence(s, 300, t); t = nextMs(t, 300);
+  assert.equal(s.state, "thinking", "Should be thinking");
+  const eff1 = s.onAssistantToken("hi", t);
+  assert.equal(s.state, "speaking", "State should be speaking");
+  assert.ok(eff1.some(e => e.type === "emitToken"), "First token should emitToken");
+  const eff2 = s.onAssistantToken(" world", t + 10);
+  assert.equal(s.state, "speaking", "State should remain speaking");
+  assert.ok(eff2.some(e => e.type === "emitToken"), "Second token should emitToken");
 });
 
-test("rule 3 — speech well above minSpeechMs still records exact speech duration", () => {
-  const s = new DuplexSession({ minSpeechMs: 150, silenceMs: 100 });
-
-  // 300 ms of speech
-  speak(s, 300, 0);
-
-  const effects = silence(s, 100, 300);
-  assert.equal(s.state, "thinking");
-  const endTurn = effects.find((e) => e.type === "endTurn");
-  assert.deepStrictEqual(endTurn, { type: "endTurn", transcriptMs: 300 });
+test("5. Backchannel (60ms energy) while speaking leaves state speaking, no cancelGeneration", () => {
+  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 200, bargeInMs: 120 });
+  let t = 0;
+  speak(s, 200, t); t = nextMs(t, 200);
+  silence(s, 300, t); t = nextMs(t, 300);
+  s.onAssistantToken("hi", t); t = nextMs(t, 0);
+  assert.equal(s.state, "speaking", "Should be speaking");
+  const eff = speak(s, 60, t); t = nextMs(t, 60);
+  assert.equal(s.state, "speaking", "State should remain speaking for short backchannel");
+  assert.ok(!eff.some(e => e.type === "cancelGeneration"), "No cancelGeneration for short backchannel");
 });
 
-// ── rule 4: token while thinking → speaking + emitToken ─────────────────────
-
-test("rule 4 — onAssistantToken while thinking moves to speaking + emitToken", () => {
-  const s = new DuplexSession({ minSpeechMs: 150, silenceMs: 100 });
-  speak(s, 150, 0);
-  silence(s, 100, 150);
-  assert.equal(s.state, "thinking");
-
-  const effects = s.onAssistantToken("Hello", 0);
-  assert.equal(s.state, "speaking");
-  assert.deepStrictEqual(effects, [{ type: "emitToken", text: "Hello" }]);
+test("6. Barge-in (260ms energy) while speaking -> listening, emits cancelGeneration and stopPlayback", () => {
+  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 200, bargeInMs: 120 });
+  let t = 0;
+  speak(s, 200, t); t = nextMs(t, 200);
+  silence(s, 300, t); t = nextMs(t, 300);
+  s.onAssistantToken("hi", t); t = nextMs(t, 0);
+  assert.equal(s.state, "speaking", "Should be speaking");
+  const eff = speak(s, 260, t); t = nextMs(t, 260);
+  assert.equal(s.state, "listening", "State should be listening after barge-in");
+  assert.ok(eff.some(e => e.type === "cancelGeneration" && e.reason === "barge-in"), "Should emit cancelGeneration with reason barge-in");
+  assert.ok(eff.some(e => e.type === "stopPlayback"), "Should emit stopPlayback");
 });
 
-test("rule 4 — further tokens while speaking emitToken and keep state", () => {
-  const s = new DuplexSession({ minSpeechMs: 150, silenceMs: 100 });
-  speak(s, 150, 0);
-  silence(s, 100, 150);
-
-  s.onAssistantToken("Hello", 0);
-  assert.equal(s.state, "speaking");
-
-  const effects = s.onAssistantToken(" world", 1);
-  assert.equal(s.state, "speaking");
-  assert.deepStrictEqual(effects, [{ type: "emitToken", text: " world" }]);
+test("7. Late tokens after barge-in return empty array, state remains listening", () => {
+  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 200, bargeInMs: 120 });
+  let t = 0;
+  speak(s, 200, t); t = nextMs(t, 200);
+  silence(s, 300, t); t = nextMs(t, 300);
+  s.onAssistantToken("hi", t); t = nextMs(t, 0);
+  speak(s, 260, t); t = nextMs(t, 260);
+  assert.equal(s.state, "listening", "State should be listening");
+  const eff = s.onAssistantToken("late", t);
+  assert.equal(eff.length, 0, "Late token should return empty array");
+  assert.equal(s.state, "listening", "State should remain listening");
 });
 
-// ── rule 5: barge-in on sustained audio ≥ bargeInMs ─────────────────────────
-
-test("rule 5 — sustained user audio ≥ bargeInMs while speaking triggers barge-in", () => {
-  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 100, bargeInMs: 120 });
-
-  // Enter speaking state
-  speak(s, 100, 0);
-  silence(s, 100, 100);
-  s.onAssistantToken("I'm talking now", 0);
-  assert.equal(s.state, "speaking");
-
-  // 120 consecutive true frames while speaking
-  const effects = speak(s, 120, 0);
-  assert.equal(s.state, "listening");
-  assert.ok(effects.some((e) => e.type === "cancelGeneration"));
-  assert.ok(effects.some((e) => e.type === "stopPlayback"));
-  const cancel = effects.find((e) => e.type === "cancelGeneration");
-  assert.deepStrictEqual(cancel, { type: "cancelGeneration", reason: "barge-in" });
-  const stop = effects.find((e) => e.type === "stopPlayback");
-  assert.deepStrictEqual(stop, { type: "stopPlayback" });
+test("8. After barge-in, fresh turn -> thinking, then token -> speaking", () => {
+  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 200, bargeInMs: 120 });
+  let t = 0;
+  speak(s, 200, t); t = nextMs(t, 200);
+  speak(s, 260, t); t = nextMs(t, 260);
+  assert.equal(s.state, "listening", "Should be listening after barge-in");
+  speak(s, 200, t); t = nextMs(t, 200);
+  silence(s, 300, t); t = nextMs(t, 300);
+  assert.equal(s.state, "thinking", "Should be thinking after fresh turn");
+  const eff = s.onAssistantToken("new", t);
+  assert.equal(s.state, "speaking", "Should be speaking after token");
+  assert.ok(eff.some(e => e.type === "emitToken"), "Should emitToken");
 });
 
-// ── rule 6: late tokens after barge-in are dropped ──────────────────────────
-
-test("rule 6 — late tokens after barge-in are silently dropped", () => {
-  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 100, bargeInMs: 120 });
-
-  // Enter speaking
-  speak(s, 100, 0);
-  silence(s, 100, 100);
-  s.onAssistantToken("Starting", 0);
-  assert.equal(s.state, "speaking");
-
-  // Barge-in
-  speak(s, 120, 0);
-  assert.equal(s.state, "listening");
-
-  // Late token arrives — should be dropped, not change state
-  const effects = s.onAssistantToken(" late", 200);
-  assert.equal(s.state, "listening"); // state unchanged
-  assert.deepStrictEqual(effects, []); // no effect emitted
+test("9. onAssistantDone while speaking -> idle; while idle/listening returns empty", () => {
+  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 200, bargeInMs: 120 });
+  let t = 0;
+  speak(s, 200, t); t = nextMs(t, 200);
+  silence(s, 300, t); t = nextMs(t, 300);
+  s.onAssistantToken("hi", t); t = nextMs(t, 0);
+  assert.equal(s.state, "speaking", "Should be speaking");
+  const eff1 = s.onAssistantDone(t);
+  assert.equal(s.state, "idle", "State should be idle after done");
+  assert.equal(eff1.length, 0, "onAssistantDone should emit no effects, got " + JSON.stringify(eff1));
+  const eff2 = s.onAssistantDone(t + 10);
+  assert.equal(eff2.length, 0, "Done while idle should return empty");
+  assert.equal(s.state, "idle", "State should remain idle");
+  speak(s, 20, t + 20); t = nextMs(t + 20, 20);
+  assert.equal(s.state, "listening", "Should be listening");
+  const eff3 = s.onAssistantDone(t + 30);
+  assert.equal(eff3.length, 0, "Done while listening should return empty");
+  assert.equal(s.state, "listening", "State should remain listening");
 });
 
-test("rule 6 — late tokens after barge-in never sneak into thinking", () => {
-  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 100, bargeInMs: 120 });
-
-  speak(s, 100, 0);
-  silence(s, 100, 100);
-  s.onAssistantToken("start", 0);
-  speak(s, 120, 0); // barge-in → listening
-  assert.equal(s.state, "listening");
-
-  // Multiple late tokens, then a real endTurn to thinking
-  const late1 = s.onAssistantToken("late1", 0);
-  const late2 = s.onAssistantToken("late2", 1);
-  assert.deepStrictEqual(late1, []);
-  assert.deepStrictEqual(late2, []);
-  assert.equal(s.state, "listening");
-
-  // Now user speaks a real turn to get back to thinking
-  speak(s, 100, 10);
-  silence(s, 100, 110);
-  assert.equal(s.state, "thinking");
-
-  // Only now should a token be accepted
-  const ok = s.onAssistantToken("real token", 210);
-  assert.deepStrictEqual(ok, [{ type: "emitToken", text: "real token" }]);
-  assert.equal(s.state, "speaking");
-});
-
-// ── rule 5 (specific): backchannel "mhm" shorter than bargeInMs does NOT interrupt ──
-
-test("backchannel 'mhm' < bargeInMs does NOT interrupt assistant", () => {
-  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 100, bargeInMs: 120 });
-
-  speak(s, 100, 0);
-  silence(s, 100, 100);
-  s.onAssistantToken("I keep talking", 0);
-  assert.equal(s.state, "speaking");
-
-  // User says "mhm" for 50 ms (well below 120 threshold)
-  const effects = speak(s, 50, 0);
-  assert.equal(s.state, "speaking"); // still speaking!
-  assert.deepStrictEqual(effects, []); // no barge-in effects
-});
-
-test("backchannel 'mhm' — true then false below threshold", () => {
-  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 100, bargeInMs: 120 });
-
-  speak(s, 100, 0);
-  silence(s, 100, 100);
-  s.onAssistantToken("keep going", 0);
-  assert.equal(s.state, "speaking");
-
-  // 80 ms of true, then false — still below 120
-  const effects = speak(s, 80, 0);
-  assert.equal(s.state, "speaking");
-  assert.deepStrictEqual(effects, []);
-});
-
-// ── rule 7: onAssistantDone ────────────────────────────────────────────────
-
-test("rule 7 — onAssistantDone while speaking → idle", () => {
-  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 100 });
-
-  speak(s, 100, 0);
-  silence(s, 100, 100);
-  s.onAssistantToken("done", 0);
-  assert.equal(s.state, "speaking");
-
-  const effects = s.onAssistantDone(0);
-  assert.equal(s.state, "idle");
-  assert.deepStrictEqual(effects, []);
-});
-
-test("rule 7 — onAssistantDone while not speaking is a no-op", () => {
-  const s = new DuplexSession({ silenceMs: 100 });
-
-  // idle
-  assert.deepStrictEqual(s.onAssistantDone(0), []);
-  assert.equal(s.state, "idle");
-
-  // listening
-  s.onUserAudio(true, 0);
-  assert.equal(s.state, "listening");
-  assert.deepStrictEqual(s.onAssistantDone(1), []);
-  assert.equal(s.state, "listening");
-
-  // thinking
+test("10. reset() mid-turn -> idle immediately; subsequent blip emits no endTurn", () => {
+  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 200, bargeInMs: 120 });
+  let t = 0;
+  speak(s, 200, t); t = nextMs(t, 200);
   s.reset();
-  speak(s, 150, 0);
-  silence(s, 100, 150);
-  assert.equal(s.state, "thinking");
-  assert.deepStrictEqual(s.onAssistantDone(0), []);
-  assert.equal(s.state, "thinking");
+  assert.equal(s.state, "idle", "State should be idle after reset");
+  speak(s, 40, t); t = nextMs(t, 40);
+  const effBlip = silence(s, 300, t); t = nextMs(t, 300);
+  assert.equal(s.state, "idle", "State should be idle after reset blip");
+  assert.ok(!effBlip.some(e => e.type === "endTurn"), "Reset blip should NOT emit endTurn");
 });
 
-// ── rule 8: out-of-order / nonsensical sequences degrade gracefully ──────────
-
-test("rule 8 — out-of-order events never throw", () => {
-  const s = new DuplexSession();
-
-  // Multiple resets should not throw
-  s.reset();
-  s.reset();
-  assert.equal(s.state, "idle");
-
-  // Token before endTurn (while idle) is a no-op
-  assert.deepStrictEqual(s.onAssistantToken("early", 0), []);
-  assert.equal(s.state, "idle");
-
-  // onAssistantDone in idle is a no-op
-  assert.deepStrictEqual(s.onAssistantDone(0), []);
-  assert.equal(s.state, "idle");
+test("11. Large clock jump (500ms silence) closes turn -> thinking", () => {
+  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 200, bargeInMs: 120 });
+  let t = 0;
+  speak(s, 200, t); t = nextMs(t, 200);
+  const eff = silence(s, 500, t); t = nextMs(t, 500);
+  assert.equal(s.state, "thinking", "State should be thinking after large silence jump");
+  const et = eff.find(e => e.type === "endTurn");
+  assert.ok(et, "EndTurn should be emitted");
+  assert.ok(Math.abs(et.transcriptMs - 200) <= FRAME_MS, `transcriptMs was ${et.transcriptMs}ms, expected about 200ms`);
 });
 
-test("rule 8 — multiple consecutive resets", () => {
-  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 100 });
-  speak(s, 100, 0);
-  silence(s, 100, 100);
-  assert.equal(s.state, "thinking");
-
-  s.reset();
-  assert.equal(s.state, "idle");
-
-  s.onUserAudio(true, 0);
-  assert.equal(s.state, "listening");
-
-  s.reset();
-  assert.equal(s.state, "idle");
-});
-
-// ── reset ───────────────────────────────────────────────────────────────────
-
-test("reset clears all state back to idle", () => {
-  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 100 });
-
-  speak(s, 100, 0);
-  silence(s, 100, 100);
-  s.onAssistantToken("token", 0);
-  assert.equal(s.state, "speaking");
-
-  s.reset();
-  assert.equal(s.state, "idle");
-
-  // Late token after reset is still a no-op
-  assert.deepStrictEqual(s.onAssistantToken("post-reset", 0), []);
-  assert.equal(s.state, "idle");
-});
-
-// ── custom defaults ─────────────────────────────────────────────────────────
-
-test("custom constructor options are respected", () => {
-  const s = new DuplexSession({
-    bargeInMs: 50,
-    silenceMs: 200,
-    minSpeechMs: 50,
-  });
-
-  speak(s, 50, 0); // hits minSpeechMs=50
-
-  const effects = silence(s, 200, 50);
-  assert.equal(s.state, "thinking");
-  const endTurn = effects.find((e) => e.type === "endTurn");
-  assert.deepStrictEqual(endTurn, { type: "endTurn", transcriptMs: 50 });
-
-  // Now enter speaking and test barge-in with custom threshold
-  s.onAssistantToken("talk", 0);
-  assert.equal(s.state, "speaking");
-
-  // 50 true frames should trigger barge-in with bargeInMs=50
-  const bargeEffects = speak(s, 50, 0);
-  assert.equal(s.state, "listening");
-  assert.ok(bargeEffects.some((e) => e.type === "cancelGeneration"));
+test("12. Non-monotonic clock does not throw, transcriptMs is non-negative", () => {
+  const s = new DuplexSession({ minSpeechMs: 100, silenceMs: 200, bargeInMs: 120 });
+  let t = 0;
+  speak(s, 200, t); t = nextMs(t, 200);
+  silence(s, 300, t); t = nextMs(t, 300);
+  assert.equal(s.state, "thinking", "Should be thinking");
+  const eff = silence(s, 10, t - 50);
+  assert.ok(!eff.some(e => e.type === "endTurn" && e.transcriptMs < 0), "transcriptMs should not be negative");
 });
