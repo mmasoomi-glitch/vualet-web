@@ -166,39 +166,43 @@ export function pollIntervalMs(state) {
   }
 }
 
-export function shouldAlert(transition, tracker, nowMs) {
+export function shouldAlert(transition, tracker, nowMs, serviceName) {
   if (!transition || !transition.changed) return null;
 
   const { to, from } = transition;
   const inc = (tracker && tracker.incidentId) || 'N/A';
   const err = (tracker && tracker.lastError) || 'N/A';
   const fails = tracker ? tracker.consecutiveFailures : 0;
+  // The title is the line a human reads first, at 3am, on a phone. Hardcoding
+  // "Assistant" sent an operator after the wrong system the first time the
+  // WhatsApp gateway went down in production.
+  const who = typeof serviceName === 'string' && serviceName.length > 0 ? serviceName : 'Assistant';
 
   if (to === STATES.OFFLINE) {
     return {
       severity: 'critical',
-      title: 'Assistant OFFLINE',
+      title: `${who} OFFLINE`,
       detail: `State changed to OFFLINE. Incident: ${inc}. Last error: ${err}. Consecutive failures: ${fails}.`,
     };
   }
   if (to === STATES.FAILOVER_ACTIVE) {
     return {
       severity: 'high',
-      title: 'Failover activated',
+      title: `${who} failover activated`,
       detail: `State changed to FAILOVER_ACTIVE. Incident: ${inc}. Last error: ${err}. Consecutive failures: ${fails}.`,
     };
   }
   if (to === STATES.DEGRADED) {
     return {
       severity: 'warning',
-      title: 'Assistant degraded',
+      title: `${who} degraded`,
       detail: `State changed to DEGRADED. Incident: ${inc}. Last error: ${err}. Consecutive failures: ${fails}.`,
     };
   }
   if (to === STATES.HEALTHY && from !== STATES.HEALTHY) {
     return {
       severity: 'info',
-      title: 'Assistant restored',
+      title: `${who} restored`,
       detail: `State changed to HEALTHY from ${from}. Incident: ${inc}. Consecutive successes: ${tracker ? tracker.consecutiveSuccesses : 0}.`,
     };
   }

@@ -406,7 +406,10 @@ test("reaching FAILOVER_ACTIVE alerts a developer", async () => {
   assert.equal(alerts.length, 2, "DEGRADED alerts once, then FAILOVER_ACTIVE alerts again");
   assert.equal(alerts[0].severity, "warning", "the first degrade is a warning");
   assert.equal(alerts[1].severity, "high", "failover is high, reserving critical for OFFLINE");
-  assert.ok(alerts[1].title.length > 0, "an alert without a title is useless at 3am");
+  assert.ok(
+    alerts[1].title.includes("svc1"),
+    "THE TITLE MUST NAME THE SERVICE. A hardcoded 'Assistant' sent an operator after the wrong system the first time the WhatsApp gateway went down in production",
+  );
 });
 
 /* ── snapshot ──────────────────────────────────────────────────────────── */
