@@ -51,8 +51,17 @@ const RATE_WINDOW_MS = 60_000; // per minute per IP
 // calling the LLM, so public traffic can never drain the key. In-memory counter
 // keyed to the UTC date (resets naturally at midnight and on redeploy).
 const GLOBAL_DAILY_CAP = Number(process.env.VERIDIAN_DAILY_CAP || 2000);
+const LLM_TIMEOUT = Number(process.env.MIRA_LLM_TIMEOUT || 20_000);
+const LLM_API_KEY = process.env.OPENROUTER_API_KEY || "";
 
 const DEFAULT_MODEL = "openai/gpt-4o-mini";
+
+// MIRA_LLM_BASE_URL — optional OpenAI-compatible endpoint (e.g. self-hosted vLLM).
+// When unset the route falls back to the existing OpenRouter path.
+const MIRA_LLM_BASE_URL = process.env.MIRA_LLM_BASE_URL || "";
+const MIRA_LLM_MODEL = process.env.MIRA_LLM_MODEL || DEFAULT_MODEL;
+const MIRA_LLM_API_KEY = process.env.MIRA_LLM_API_KEY || "";
+
 const COOKIE_NAME = "vd_visitor";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // ~1 year
 
@@ -62,6 +71,26 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // ~1 year
 const FREE_TRIAL_MSGS = Number(process.env.FREE_TRIAL_MSGS || 20);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMAIL_MAX_LEN = 254;
+
+/** Determine whether the UI should show the email gate at this turn.
+ *
+ *  - `false` when `hasEmail` — never nag someone who already gave one;
+ *  - `false` when `threshold <= 0` — the OFF SWITCH;
+ *  - `false` when `turnNumber <= threshold` — not yet past the warmup;
+ *  - otherwise `true` only on turns `threshold + 1, threshold + 1 + everyN, …`
+ *    (e.g. 21, 31, 41 … with threshold=20, everyN=10).
+ */
+export function shouldAskForEmail(
+  turnNumber: number,
+  hasEmail: boolean,
+  everyN: number,
+  threshold: number,
+): boolean {
+  if (hasEmail) return false;
+  if (threshold <= 0) return false;
+  if (turnNumber <= threshold) return false;
+  return (turnNumber - threshold - 1) % everyN === 0;
+}
 
 // Durable, append-only capture of trial emails — same pattern as the waitlist
 // route (outside the deploy tree in prod via VERIDIAN_TRIAL_FILE so swap-deploys
@@ -154,7 +183,7 @@ RULES:
 9. Be warm, concise, and genuinely smart — a little delightful is good. This is a real relationship, not a form.`;
 
 /** Extra directive injected when the visitor crosses the soft free-trial line. */
-const TRIAL_GATE_DIRECTIVE = `IMPORTANT — RIGHT NOW: you've been chatting with this visitor for a good while and have really enjoyed it. Before you carry on, warmly tell them how much you've loved talking with them and, so you can keep going together, ask them to drop their email — and reassure them there's no credit card, ever, and no spam. Keep it short, warm, and genuine (one or two sentences). You can still briefly acknowledge what they just said, but the email ask is the point. An email field will appear for them right below — you don't need to explain how it works.`;
+const TRIAL_GATE_DIRECTIVE = `IMPORTANT — RIGHT NOW: the visitor just asked something. ANSWER THEIR QUESTION FULLY AND FIRST — that is the point. After you've given a complete, helpful answer, add one short, warm sentence asking them to drop their email so you can keep going together. Reassure them: no credit card, ever, no spam. The email ask is a postscript, not the main event. An email field will appear for them right below if they haven't given one yet — you don't need to explain how it works.`;
 
 function buildSystemPrompt(mem: VisitorMemory, trialGate: boolean): string {
   return `${BASE_RULES}
@@ -165,6 +194,49 @@ KNOWLEDGE:
 ${kbAsContext()}`;
 }
 
+/** Resolve the LLM provider configuration from env-like input.
+
+ * When `MIRA_LLM_BASE_URL` is absent the result falls back to OpenRouter
+ * with the default model so existing deployments are unaffected.
+ *
+ * Exported for tests — accepts an arbitrary object so no `process.env`
+ * dependency is needed. */
+export function resolveLlmProvider(env: Record<string, string | undefined> = {}): {
+  baseUrl: string;
+  model: string;
+  headers: Record<string, string>;
+} {
+  const baseUrl = env.MIRA_LLM_BASE_URL ?? "";
+  const model = env.MIRA_LLM_MODEL ?? DEFAULT_MODEL;
+  const apiKey = env.MIRA_LLM_API_KEY ?? "";
+
+  if (!baseUrl) {
+    const key = env.OPENROUTER_API_KEY ?? "";
+    return {
+      baseUrl: "https://openrouter.ai/api/v1/chat/completions",
+      model: model || DEFAULT_MODEL,
+      headers: {
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://mira.vualet.com",
+        "X-Title": "Mira",
+        ...(key ? { Authorization: `Bearer ${key}` } : {}),
+      },
+    };
+  }
+
+  const normalizedBase = baseUrl.replace(/\/+$/, "");
+  const fullUrl = normalizedBase + "/chat/completions";
+
+  return {
+    baseUrl: fullUrl,
+    model,
+    headers: {
+      "Content-Type": "application/json",
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+    },
+  };
+}
+
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 async function askOpenRouter(
@@ -172,9 +244,17 @@ async function askOpenRouter(
   mem: VisitorMemory,
   trialGate: boolean,
 ): Promise<string | null> {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) return null;
-  const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
+  const provider = resolveLlmProvider(process.env);
+
+  // For OpenRouter (the default when no custom baseUrl is set), require
+  // OPENROUTER_API_KEY.  For a custom provider the API key is optional
+  // (our vLLM pod runs without one).
+  if (!provider.baseUrl.includes("openrouter.ai")) {
+    // Custom provider — proceed regardless of API key presence.
+  } else if (!LLM_API_KEY) {
+    return null;
+  }
+  const model = provider.model;
 
   // Replay recent turns as real conversation so recall feels natural AND is
   // grounded in what actually happened. Capped to the last few for token safety.
@@ -191,14 +271,11 @@ async function askOpenRouter(
   ];
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20_000);
+  const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT);
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const res = await fetch(provider.baseUrl, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
+      headers: provider.headers,
       // Explicitly NO tools / functions — the model has no way to act.
       body: JSON.stringify({
         model,
@@ -326,7 +403,12 @@ export async function POST(req: Request) {
   // asks for one to keep going (handled via the injected directive below) and the
   // UI reveals an inline email field. Purely soft — never blocks the reply.
   const turnNumber = (mem.count ?? 0) + 1;
-  const trialGate = turnNumber > FREE_TRIAL_MSGS && !mem.email;
+  const trialGate = shouldAskForEmail(
+    turnNumber,
+    !!mem.email,
+    Number(process.env.FREE_TRIAL_ASK_EVERY || 10),
+    FREE_TRIAL_MSGS,
+  );
 
   // Primary path: grounded LLM answer WITH memory — but only if the global daily
   // cap has room. Over the cap (or on any failure/missing key) we fall back to a
@@ -348,11 +430,11 @@ export async function POST(req: Request) {
   }
 
   // If we're at the free-trial line but the LLM path didn't run (over the daily
-  // cap or no key), the grounded fallback won't have asked for an email — so add
-  // a deterministic, warm ask here. This guarantees the gate surfaces regardless.
+  // cap or no key), append a warm email ask to the grounded answer rather than
+  // replacing it — the answer must stay front-and-centre.
   if (trialGate && !fromLLM) {
     const who = mem.name ? `, ${mem.name}` : "";
-    reply = `I've loved chatting with you${who}. If you drop your email just below, we can keep going — no card, ever, and no spam.`;
+    reply = reply + ` I've loved chatting with you${who}. If you drop your email just below, we can keep going — no card, ever, and no spam.`;
   }
 
   // Learn from this exchange for next time — regardless of which path produced

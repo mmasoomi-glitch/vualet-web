@@ -119,6 +119,7 @@ export default function MiraBot() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recStartXRef = useRef(0);
   const cancelRef = useRef(false);
+  const trialDismissedRef = useRef(false);
 
   useEffect(() => {
     voiceOnRef.current = voiceOn;
@@ -196,7 +197,7 @@ export default function MiraBot() {
         const reply: string = d?.reply ?? "Sorry, I lost that for a second — try again?";
         const herId = nextId();
         setMsgs((m) => [...m, { id: herId, role: "her", text: reply }]);
-        if (d?.trialGate) setTrialOpen(true);
+        if (d?.trialGate && !trialDismissedRef.current) setTrialOpen(true);
         void speakHer(reply, herId);
       } catch {
         setMsgs((m) => [...m, { id: nextId(), role: "her", text: "I couldn't reach the line just now — please try again." }]);
@@ -204,7 +205,7 @@ export default function MiraBot() {
         setBusy(false);
       }
     },
-    [busy, speakHer],
+    [busy, speakHer, trialDismissedRef],
   );
 
   /* press-and-talk */
@@ -332,6 +333,7 @@ export default function MiraBot() {
       });
       const d = await r.json().catch(() => ({}));
       if (d?.ok) {
+        trialDismissedRef.current = true;
         setTrialOpen(false);
         setEmail("");
         const herId = nextId();
@@ -409,6 +411,17 @@ export default function MiraBot() {
               />
               <button type="submit" disabled={emailBusy} aria-label="Continue">
                 {emailBusy ? "…" : "→"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  trialDismissedRef.current = true;
+                  setTrialOpen(false);
+                }}
+                aria-label="Not now, close email prompt"
+                style={{ background: "transparent", border: "none", color: "rgba(255,255,255,0.7)", cursor: "pointer", fontSize: 13, padding: "4px 8px" }}
+              >
+                Not now
               </button>
             </div>
           </form>
