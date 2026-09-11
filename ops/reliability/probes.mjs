@@ -96,7 +96,15 @@ export async function probeAssistant(baseUrl, opts = {}) {
       url,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // Exercise the route without spending a customer LLM call or writing
+          // visitor memory. At the healthy interval this probe runs ~1900 times
+          // a day, which would otherwise consume nearly the whole daily cap and
+          // starve real visitors of the assistant. The model itself is watched
+          // directly by probeInference, so nothing goes unchecked.
+          'x-mira-health-probe': '1',
+        },
         body: JSON.stringify({ message: 'Reply with exactly: ASSISTANT_HEALTH_OK' }),
       },
       o,

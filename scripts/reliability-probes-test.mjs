@@ -89,6 +89,20 @@ test("probeAssistant: a reply without trialGate still passes but flags the shape
   assert.equal(r.detail.usedFallbackShape, false, "no trialGate key means the shape is unrecognised");
 });
 
+test("probeAssistant: THE HEALTH-PROBE HEADER IS ALWAYS SENT", async () => {
+  let seen = null;
+  const capturing = async (_url, init) => {
+    seen = init.headers;
+    return { status: 200, text: async () => JSON.stringify({ reply: "hi", trialGate: false }) };
+  };
+  await probeAssistant(URL_, OPTS(capturing));
+  assert.equal(
+    seen["x-mira-health-probe"],
+    "1",
+    "without this header every probe spends a customer LLM call; ~1900 a day would consume nearly the whole daily cap and starve real visitors",
+  );
+});
+
 test("probeAssistant: AN EXACT ECHO IS NOT REQUIRED", async () => {
   const body = JSON.stringify({ reply: "I can tell you about Mira's plans.", trialGate: false });
   const r = await probeAssistant(URL_, OPTS(fakeFetch(200, body)));
