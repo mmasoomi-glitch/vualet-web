@@ -184,7 +184,7 @@ export function createPoller(config) {
           // able to match it to the incident it ended.
           incidentId: tracker.incidentId || before.incidentId || null,
         });
-        const alert = shouldAlert(tracker.transition, tracker, atMs);
+        const alert = shouldAlert(tracker.transition, tracker, atMs, serviceName);
         if (alert) raise(alert, serviceName, tracker);
       }
 
