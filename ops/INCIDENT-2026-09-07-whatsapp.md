@@ -1,7 +1,58 @@
 # INCIDENT — Mira has been unreachable on WhatsApp since 2026-09-07
 
-**Status: ONGOING at time of writing (2026-09-11). Nothing has been changed on
-production.** Every finding below came from read-only inspection over SSH.
+**Status: PARTIALLY RESOLVED 2026-09-11. Two defects fixed on production under
+explicit owner instruction, which overrode the reviewer's "owner decides"
+ruling.** Everything above the "What was fixed" section below was established
+read-only, before anything was changed.
+
+## What was fixed (2026-09-11)
+
+Both changes are in `/opt/mira/apps/engine/whatsapp-gateway-v2.mjs` on host
+`mira` (`23.88.59.31`). That file has **CRLF line endings** and a standing
+warning against text-mode edits — an earlier text-mode round trip silently
+converted 2,145 of them. Both patches were therefore applied in **binary mode
+with a uniqueness assertion on every anchor**, and both verified `bare LF delta:
+0`, `node --check` clean. Backups: `.bak-jidfix-20260911-151139` and
+`.bak-logfix-20260911-151548`.
+
+**FIX 1 — the reason the outage was permanent.** `startSession()` loaded
+`tenant_id` from the database but never `account_jid`. The close handler decides
+abandonment with `if (!s.accountJid && linkState !== 'ok')` — and its own comment
+says *"a real customer whose phone dropped off wifi has an accountJid and must
+still reconnect."* But `s.accountJid` was only ever populated on a successful
+`connection: open`. With the credentials gone the session never opened, so three
+genuinely-linked customers evaluated as *never linked* and were deleted from the
+session map with no retry. The database knew better the whole time — all three
+rows have `account_jid` **PRESENT**. `startSession()` now restores it from the
+row before any close handler can judge.
+
+Measured effect, before and after restart:
+
+```
+before:  {"ok":false,"linked":0,"total":0,"pending":0,"stale":0}
+after:   {"ok":false,"linked":0,"total":3,"pending":3,"stale":0}
+```
+
+The three customers are **retained and recoverable** instead of discarded. A
+60-second sample after the restart recorded **zero** registration attempts, zero
+reconnect schedules and zero abandons — so this did **not** reintroduce the
+reconnect storm that the abandonment logic was originally added to stop.
+
+**FIX 2 — the reason nobody noticed for four days.** The
+`auth state decrypted for tenant ...` log sat *outside* the `existsSync` guard
+and printed even when zero files were found. It now counts what it actually
+decrypted, returns `false` when that count is zero, and warns honestly. The same
+boot now reports:
+
+```
+[wa-v2] NO auth files found in .../wss_589a3307becefa4c00c54d3a - session will present as NOT logged in
+```
+
+**STILL OUTSTANDING: `linked` is still 0.** The Baileys credentials themselves
+are gone and could not be reconstructed — the Postgres `encrypted_auth` blobs do
+not decrypt (see below). **The three customers must re-pair by scanning a QR
+code.** The pairing flow is live and verified: `https://api.mira.vualet.com/pair`
+returns 200.
 
 ## What a customer experiences
 
