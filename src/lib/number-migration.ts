@@ -37,6 +37,8 @@ import {
 } from "@/lib/channel-binding-store";
 import { getSubscription, putSubscription } from "@/lib/store";
 import { recordChannelEvent } from "@/lib/channel-event-log";
+import { buildNotice, shouldNotify, NOTICE_KINDS } from "@/lib/channel-notice-core.mjs";
+import { emailConfigured, sendMail } from "@/lib/email";
 import { CHANNEL_EVENTS } from "@/lib/channel-events.mjs";
 
 type Migration = {
@@ -189,6 +191,15 @@ export async function commitMigration(
     });
     if (!commit.ok) return { ok: false, reason: commit.reason, migration };
 
+    // OUT-OF-BAND WARNING. Sent to the verified email, never to WhatsApp: the
+    // change may have been made by whoever now controls that number, so a
+    // warning sent there would reach the attacker and nobody else. This is the
+    // control that lets a victim notice a takeover in time to stop it.
+    //
+    // Fire and forget. A customer's number change must not fail because SMTP
+    // was down, and the change has already happened either way.
+    void notifyNumberChanged(migration.accountId, newRawIdentifier, nowMs);
+
     void recordChannelEvent({
       eventType: CHANNEL_EVENTS.ChannelBindingSuperseded,
       actorType: "CUSTOMER",
@@ -204,5 +215,49 @@ export async function commitMigration(
   } catch (err) {
     console.error("[number-migration]", err);
     return { ok: false, reason: "unexpected_error" };
+  }
+}
+
+/**
+ * Tell the account owner, on a channel the change did not go through.
+ *
+ * Everything here is best-effort and swallowed: it runs after the cutover has
+ * already committed, so the only thing a failure costs is the warning itself,
+ * and that is worth logging loudly rather than failing the migration over.
+ */
+async function notifyNumberChanged(
+  accountId: string,
+  newRawIdentifier: string,
+  nowMs: number,
+): Promise<void> {
+  try {
+    const sub = await getSubscription(accountId);
+    const email = sub?.email;
+    const verdict = shouldNotify(NOTICE_KINDS.NUMBER_CHANGED, Boolean(email) && emailConfigured());
+    if (!verdict.notify || !email) {
+      console.warn(`[number-migration] no out-of-band channel to warn ${accountId}: ${verdict.reason}`);
+      return;
+    }
+
+    const base = (process.env.MIRA_WEB_URL || "").replace(/\/+$/, "");
+    const built = buildNotice({
+      kind: NOTICE_KINDS.NUMBER_CHANGED,
+      // The OLD number is not passed: it is already superseded and the masked
+      // form adds nothing a customer can act on that the new one does not.
+      oldIdentifier: null,
+      newIdentifier: newRawIdentifier,
+      atIso: new Date(nowMs).toISOString(),
+      secureAccountUrl: base ? `${base}/mira/account` : "",
+    });
+    // The pure core is plain JS, so TypeScript cannot narrow its union.
+    if (!built.ok || !built.notice) {
+      console.error(`[number-migration] could not build the change notice: ${built.reason ?? "unknown"}`);
+      return;
+    }
+    const notice = built.notice as { subject: string; html: string; text: string };
+
+    await sendMail(email, notice.subject, notice.html, notice.text);
+  } catch (err) {
+    console.error("[number-migration] could not send the change notice:", err);
   }
 }
