@@ -85,7 +85,17 @@ function secret(): string {
  * It also has to match because the bind step compares the two.
  */
 export function channelIdHash(channelType: string, rawIdentifier: string): string {
-  if (channelType === "whatsapp") return whatsappIdHash(rawIdentifier);
+  if (channelType === "whatsapp") {
+    // STRIP A LEADING "+" BEFORE DELEGATING. A binding is created from a JID
+    // ("447700900555@s.whatsapp.net") but a customer types E.164
+    // ("+447700900555"), and whatsappIdHash removes the "@suffix" and the
+    // ":device" part but not the plus. Without this the two forms of the same
+    // number hash differently, which would have meant the "is this number
+    // already somebody else's" check could never fire — letting one customer
+    // migrate onto another's number — and that every migration failed its own
+    // verification at commit time.
+    return whatsappIdHash(String(rawIdentifier).trim().replace(/^\+/, ""));
+  }
   const normalised = String(rawIdentifier).trim().toLowerCase();
   return createHmac("sha256", secret()).update(`${channelType}:${normalised}`).digest("base64url");
 }

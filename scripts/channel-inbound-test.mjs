@@ -219,6 +219,31 @@ test("THE RAW NUMBER IS NEVER STORED", async () => {
   );
 });
 
+test("E.164 AND JID FORMS OF THE SAME NUMBER MUST HASH IDENTICALLY", async () => {
+  const { channelIdHash } = await store();
+  const expected = channelIdHash("whatsapp", "447700900555@s.whatsapp.net");
+
+  for (const form of [
+    "+447700900555",
+    "447700900555",
+    "+447700900555 ",
+    "447700900555:17@s.whatsapp.net",
+    "447700900555@S.WHATSAPP.NET",
+  ]) {
+    assert.equal(
+      channelIdHash("whatsapp", form),
+      expected,
+      `"${form}" hashed differently. A binding is created from a JID but a customer types E.164, so a mismatch here means the "is this number already somebody else's" check can never fire, and every number change fails its own verification at commit`,
+    );
+  }
+
+  assert.notEqual(
+    channelIdHash("whatsapp", "+447700900556"),
+    expected,
+    "but a genuinely different number must still hash differently, or every account would collide",
+  );
+});
+
 test("REDEEMING A LINK TWICE FAILS THE SECOND TIME", async () => {
   const { createBinding, transitionBinding, issueRecovery, redeemRecovery, BINDING_STATES } = await store();
   const now = Date.now();
