@@ -134,6 +134,19 @@ export async function claimConnectWhatsapp(
     return { ok: false, reason: "foreign" };
   }
 
+  // A RECONNECT MAY ONLY EVER RESTORE THE NUMBER IT WAS ISSUED FOR.
+  //
+  // A reconnect token is minted fresh, so it carries no whatsappIdHash yet and
+  // the check above cannot fire — without this, scanning that QR from ANY
+  // WhatsApp account would bind it, and a link delivered to a broken number
+  // would have become a silent number change with no authentication at all.
+  // The reconnect path therefore stamps the number it expects, and a scan from
+  // anything else is refused here. Moving an account to a different number is
+  // a separate flow that authenticates against the canonical account.
+  if (rec.expectedChannelIdHash != null && !sameHash(rec.expectedChannelIdHash, hash)) {
+    return { ok: false, reason: "foreign" };
+  }
+
   const firstBind = rec.whatsappIdHash == null;
   let dirty = false;
   if (firstBind) {

@@ -60,9 +60,20 @@ export function computeHash(/** @type {Omit<AuditRow,"hash">} */ row) {
 
 /**
  * Build the append-only log over a backend.
+ *
+ * `serialise` exists so a SECOND chain can be built over a different row shape
+ * without duplicating the chaining, the append-only guard and the verifier.
+ * The channel-event log needs actorType, correlationId and causationId, which
+ * an admin row has no place for; stuffing channel events into admin rows with
+ * a fabricated adminId would corrupt the trail that security and compliance
+ * read. It DEFAULTS to the admin canonicalisation, so the existing chain
+ * hashes byte-identically and every stored row still verifies.
+ *
  * @param {AuditBackend} backend
+ * @param {(row: any) => string} [serialise]
  */
-export function createAuditLog(backend) {
+export function createAuditLog(backend, serialise = canonicalize) {
+  const hashOf = (row) => createHash("sha256").update(serialise(row)).digest("hex");
   return {
     /**
      * Append one immutable, hash-chained row.
@@ -78,7 +89,7 @@ export function createAuditLog(backend) {
         prevHash = prev.hash;
       }
       const base = { ...input, seq, ts: new Date().toISOString(), prevHash };
-      const row = /** @type {AuditRow} */ ({ ...base, hash: computeHash(base) });
+      const row = /** @type {AuditRow} */ ({ ...base, hash: hashOf(base) });
       const written = await backend.putEventNX(seq, row);
       if (!written) {
         // The seq key already exists — this is the append-only guard firing.
@@ -98,7 +109,7 @@ export function createAuditLog(backend) {
         const row = await backend.getEvent(s);
         if (!row) return { ok: false, length: max, brokenAt: s };
         const { hash, ...rest } = row;
-        if (row.prevHash !== prevHash || hash !== computeHash(rest)) {
+        if (row.prevHash !== prevHash || hash !== hashOf(rest)) {
           return { ok: false, length: max, brokenAt: s };
         }
         prevHash = row.hash;
