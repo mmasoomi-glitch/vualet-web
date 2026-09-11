@@ -207,6 +207,11 @@ const EXCLUDED_PREFIXES: readonly string[] = [
   "/mira/start",
   // Leftover waitlist page - the live funnel entry is /mira/start; excluded so the sitemap cannot split the funnel again.
   "/mira/signup",
+  // Re-pairing flow for EXISTING customers whose WhatsApp link dropped. It is a
+  // utility, not public content: indexing it would put a page that collects a
+  // phone number and a consent tick into search results, competing with the real
+  // funnel entry and reading like a second signup.
+  "/mira/reconnect",
 ];
 
 /** True when a path must be kept out of the sitemap and out of the index. */
