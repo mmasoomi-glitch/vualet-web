@@ -28,13 +28,13 @@
     "test:reconcile": "node --test scripts/dodo-reconcile-test.mjs",
     "reconcile": "node scripts/dodo-reconcile.mjs",
     "test:counterfactual": "node --test scripts/revenue-counterfactual-test.mjs",
-  "test:pair-entry": "node --test scripts/pair-entry-test.mjs",
+    "test:pair-entry": "node --test scripts/pair-entry-test.mjs",
     "test:consent-r2": "node --test scripts/consent-r2-test.mjs",
     "test:revenue": "node --test scripts/revenue-checkout-test.mjs scripts/revenue-portal-idor-test.mjs scripts/revenue-begin-ratelimit-test.mjs scripts/revenue-counterfactual-test.mjs"
   },
   "dependencies": {
-    "next": "16.3.1",
-    "nodemailer": "9.0.5",
+    "next": "16.3.4",
+    "nodemailer": "9.1.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "stripe": "^17.7.0"
