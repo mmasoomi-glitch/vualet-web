@@ -9,7 +9,6 @@ function req(over) {
     current: "companion",
     target: "assistant",
     status: "active",
-    cancelAtPeriodEnd: false,
     hasSubscriptionId: true,
     ...over,
   };
@@ -55,10 +54,34 @@ test("case-insensitive status acceptance", () => {
   assert.ok(decidePlanChange(req({ status: "Trialing" })).allowed, "Trialing should be accepted");
 });
 
-test("cancelAtPeriodEnd true blocks an otherwise-valid upgrade", () => {
-  const res = decidePlanChange(req({ cancelAtPeriodEnd: true }));
-  assert.equal(res.allowed, false, "cancelAtPeriodEnd true should block upgrade");
-  assert.equal(res.kind, "noop", "cancelAtPeriodEnd true should be noop");
+test("an unrecognised STORED plan is reported as unknown_current, not coerced", () => {
+  const res = decidePlanChange(req({ current: "legacy_pro" }));
+  assert.equal(res.allowed, false, "an unreadable stored plan must not be actionable");
+  assert.equal(
+    res.kind,
+    "unknown_current",
+    "coercing a drifted stored plan to free would offer an upgrade-to-paid flow for a plan the customer may already hold",
+  );
+  assert.ok(typeof res.reason === "string" && res.reason.length > 0, "reason must be a non-empty sentence");
+});
+
+test("an unrecognised REQUESTED plan is a plain noop, not a data problem", () => {
+  const res = decidePlanChange(req({ target: "enterprise" }));
+  assert.equal(res.allowed, false, "an unknown target must not be allowed");
+  assert.equal(
+    res.kind,
+    "noop",
+    "a bad target is caller input and must stay distinguishable from a bad stored plan",
+  );
+});
+
+test("a bad stored plan outranks a bad target plan", () => {
+  const res = decidePlanChange(req({ current: "legacy_pro", target: "enterprise" }));
+  assert.equal(
+    res.kind,
+    "unknown_current",
+    "the stored-plan check runs first — our own data problem is the more important one to surface",
+  );
 });
 
 test("free -> companion: upgrade, requiresPayment true, requiresNewCheckout TRUE", () => {

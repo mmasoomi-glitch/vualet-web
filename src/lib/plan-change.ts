@@ -13,7 +13,7 @@
 
 export type Plan = "free" | "companion" | "assistant" | "studio";
 
-export type PlanChangeKind = "upgrade" | "downgrade" | "noop";
+export type PlanChangeKind = "upgrade" | "downgrade" | "noop" | "unknown_current";
 
 export function planRank(plan: Plan): number {
   if (plan === "free") return 0;
@@ -31,9 +31,17 @@ export type PlanChangeRequest = {
   current: Plan;
   target: Plan;
   status: string;
-  cancelAtPeriodEnd: boolean;
   hasSubscriptionId: boolean;
 };
+
+// MISSING GUARD: refusing a change on a subscription that is already set to
+// cancel at period end. That guard IS wanted — without it, changing the plan
+// silently resurrects billing the customer deliberately stopped. It was removed
+// rather than left inert because `ConnectRecord` carries no cancel-at-period-end
+// field, so the only caller could pass nothing but a hardcoded `false` and the
+// branch could never fire. A guard that cannot fire is worse than no guard,
+// because the next reader assumes it protects them. REINSTATE THIS as the first
+// check after the plan checks when the record gains that field.
 
 export type PlanChangeDecision = {
   allowed: boolean;
@@ -44,13 +52,26 @@ export type PlanChangeDecision = {
 };
 
 export function decidePlanChange(req: PlanChangeRequest): PlanChangeDecision {
-  // The type says this cannot happen. Values arriving from a request body are
-  // not bound by the type, so reject rather than trust.
-  if (!isPlan(req.current) || !isPlan(req.target)) {
+  // The type says these cannot happen. Values arriving from a request body and
+  // from a stored record are not bound by the type, so reject rather than trust.
+  // The two are kept distinct deliberately: an unrecognised STORED plan is our
+  // own data problem and must be visible as such, whereas an unrecognised
+  // REQUESTED plan is just bad caller input.
+  if (!isPlan(req.current)) {
+    return {
+      allowed: false,
+      kind: "unknown_current",
+      reason: "The plan stored against this customer is not one we recognise; someone needs to look at the record.",
+      requiresPayment: false,
+      requiresNewCheckout: false,
+    };
+  }
+
+  if (!isPlan(req.target)) {
     return {
       allowed: false,
       kind: "noop",
-      reason: "The plan value on this request was not recognised.",
+      reason: "The requested plan is not one we offer.",
       requiresPayment: false,
       requiresNewCheckout: false,
     };
@@ -75,18 +96,6 @@ export function decidePlanChange(req: PlanChangeRequest): PlanChangeDecision {
       allowed: false,
       kind: "noop",
       reason: `The subscription is ${req.status || "in an unknown state"}, so it cannot be changed without a human.`,
-      requiresPayment: false,
-      requiresNewCheckout: false,
-    };
-  }
-
-  // The customer has already chosen to stop paying. Changing the plan now would
-  // silently resurrect the billing they cancelled.
-  if (req.cancelAtPeriodEnd) {
-    return {
-      allowed: false,
-      kind: "noop",
-      reason: "This subscription is already set to stop at the end of the period; resume it before changing plan.",
       requiresPayment: false,
       requiresNewCheckout: false,
     };

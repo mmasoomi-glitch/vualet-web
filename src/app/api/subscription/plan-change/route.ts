@@ -57,17 +57,29 @@ export async function POST(req: Request) {
       );
     }
 
-    // An unrecognised stored plan is treated as free rather than trusted.
-    const current: Plan = isPlan(found.rec.plan) ? found.rec.plan : "free";
+    // Plan drift is REFUSED, not coerced. Treating an unrecognised stored plan
+    // as "free" would present a customer whose plan string has drifted with an
+    // upgrade-to-paid flow — charging them for something they may already have.
+    // An unreadable record is a support problem, so say so.
+    if (!isPlan(found.rec.plan)) {
+      console.error("[plan-change] unrecognised stored plan", {
+        customerId: found.customerId,
+        plan: found.rec.plan,
+      });
+      return NextResponse.json(
+        {
+          error: "plan_unrecognised",
+          message: "Your plan needs attention from our team before it can be changed.",
+        },
+        { status: 409 },
+      );
+    }
+    const current: Plan = found.rec.plan;
 
-    // This record type does not carry a cancel-at-period-end flag, so the
-    // conservative value is passed. The corresponding guard in decidePlanChange
-    // is therefore inert until that field exists — it is not pretended to work.
     const decision = decidePlanChange({
       current,
       target,
       status: found.rec.status,
-      cancelAtPeriodEnd: false,
       hasSubscriptionId: !!found.rec.subscriptionId,
     });
 
