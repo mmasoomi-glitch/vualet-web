@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { safeEqual, verifyConnectToken } from "@/lib/connect-token";
 import { claimConnectWhatsapp } from "@/lib/whatsapp-claim";
-import { getMigration, putMigration } from "@/lib/channel-binding-store";
+import { getMigration, putMigration, findBindingByChannel } from "@/lib/channel-binding-store";
+import { BINDING_STATES } from "@/lib/channel-binding-core.mjs";
 import { commitMigration } from "@/lib/number-migration";
 import { MIGRATION_STATES } from "@/lib/number-migration-core.mjs";
 
@@ -114,6 +115,40 @@ export async function POST(req: Request) {
   }
   if (!verifyConnectToken(token)) {
     return NextResponse.json({ error: "invalid token" }, { status: 403 });
+  }
+
+  // A NUMBER THAT HAS BEEN TAKEN AWAY MAY NOT BIND ANYTHING.
+  //
+  // Two holes close here. A connect token minted for the old number before a
+  // change could still be sitting in a browser tab afterwards, and scanning it
+  // would hand that number access again — ghost access that revoking recovery
+  // links alone does not cover, because the KV layer has no way to enumerate
+  // outstanding tokens and revoke them one by one.
+  //
+  // And a number a telecom operator has since reassigned would otherwise be
+  // able to pair afresh, which is the recycled-number case arriving through the
+  // pairing door instead of the messaging one.
+  //
+  // Checked HERE rather than inside claimConnectWhatsapp because that module is
+  // what channel-binding-store imports its hashing from; calling back into the
+  // store from there would close an import cycle.
+  try {
+    const existing = await findBindingByChannel("whatsapp", whatsappId);
+    if (
+      existing &&
+      (existing.state === BINDING_STATES.REVOKED || existing.state === BINDING_STATES.SUPERSEDED)
+    ) {
+      console.warn(
+        `[pair-bind] REFUSED: this WhatsApp account has a ${existing.state} binding. ` +
+          "Revoked means revoked; it does not come back by scanning. No number is logged.",
+      );
+      return NextResponse.json({ error: "revoked" }, { status: 409 });
+    }
+  } catch (err) {
+    // A lookup failure must not become a way past the check. Refusing a real
+    // customer for a minute is recoverable; letting a revoked number bind is not.
+    console.error("[pair-bind] binding lookup failed; refusing rather than guessing:", err);
+    return NextResponse.json({ error: "unavailable" }, { status: 503 });
   }
 
   const claim = await claimConnectWhatsapp(token, whatsappId, tenantId || undefined);
