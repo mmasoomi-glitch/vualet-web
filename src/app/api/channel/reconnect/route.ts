@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { mintConnectToken } from "@/lib/connect-token";
 import { putConnect } from "@/lib/store";
+import { whatsappPairUrl } from "@/lib/pairing";
 import { redeemRecovery, getBinding } from "@/lib/channel-binding-store";
 import { recordChannelEvent } from "@/lib/channel-event-log";
 import { CHANNEL_EVENTS } from "@/lib/channel-events.mjs";
@@ -142,7 +143,12 @@ export async function POST(req: Request) {
       correlationId: record.recoveryId,
     });
 
-    return NextResponse.json({ ok: true, pairToken, accountId: record.accountId });
+    // The QR page lives behind the gateway, so the customer needs the built URL
+    // rather than a bare token. A null here means the gateway is unconfigured,
+    // which is an operational fault, not something to hide from the caller.
+    const pairUrl = whatsappPairUrl(pairToken);
+
+    return NextResponse.json({ ok: true, pairToken, pairUrl, accountId: record.accountId });
   } catch (err) {
     console.error("[channel-reconnect]", err);
     return NextResponse.json({ error: "unavailable" }, { status: 503 });
