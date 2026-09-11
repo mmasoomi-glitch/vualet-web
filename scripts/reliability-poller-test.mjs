@@ -378,6 +378,26 @@ test("the transition is timestamped at the PROBE, not a later clock read", async
   );
 });
 
+test("THE EVENT THAT CLOSES AN INCIDENT STILL CARRIES ITS ID", async () => {
+  const { poller, okRef, events, harness } = setup({ ok: false, fallback: true });
+  for (let i = 0; i < 3; i++) await poller.pollOnce("svc1");
+  const opened = events.find((e) => e.type === "transition" && e.to === "FAILOVER_ACTIVE");
+  assert.ok(opened.incidentId, "failing over opens an incident with an id");
+
+  // Past the anti-oscillation cooldown, or the service is held in
+  // FAILOVER_ACTIVE no matter how many successes arrive.
+  await harness.advance(61000);
+  okRef.ok = true;
+  for (let i = 0; i < 4; i++) await poller.pollOnce("svc1");
+  const closed = events.find((e) => e.type === "transition" && e.to === "HEALTHY");
+  assert.ok(closed, "the service recovered");
+  assert.equal(
+    closed.incidentId,
+    opened.incidentId,
+    "recovering clears the tracker's incident id, so without carrying the previous one the closing event would be unattributable and the incident would read as open forever",
+  );
+});
+
 test("reaching FAILOVER_ACTIVE alerts a developer", async () => {
   const { poller, alerts } = setup({ ok: false, fallback: true });
   await poller.pollOnce("svc1");

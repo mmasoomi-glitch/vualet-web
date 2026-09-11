@@ -152,7 +152,8 @@ export function createPoller(config) {
       // not emit, alert or reschedule.
       if (scheduled && !running) return trackers.get(serviceName);
 
-      const tracker = onProbe(trackers.get(serviceName), probe, policies.get(serviceName));
+      const before = trackers.get(serviceName);
+      const tracker = onProbe(before, probe, policies.get(serviceName));
       trackers.set(serviceName, tracker);
 
       // The state machine treats probe.atMs as "now", so every event and the
@@ -178,7 +179,10 @@ export function createPoller(config) {
           from: tracker.transition.from,
           to: tracker.transition.to,
           reason: tracker.transition.reason,
-          incidentId: tracker.incidentId,
+          // Recovering CLEARS the incident id, so the very event that closes an
+          // incident would otherwise carry none and the history would never be
+          // able to match it to the incident it ended.
+          incidentId: tracker.incidentId || before.incidentId || null,
         });
         const alert = shouldAlert(tracker.transition, tracker, atMs);
         if (alert) raise(alert, serviceName, tracker);
