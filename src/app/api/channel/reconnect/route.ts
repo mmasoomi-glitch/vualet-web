@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { mintConnectToken } from "@/lib/connect-token";
 import { putConnect } from "@/lib/store";
 import { redeemRecovery, getBinding } from "@/lib/channel-binding-store";
+import { recordChannelEvent } from "@/lib/channel-event-log";
+import { CHANNEL_EVENTS } from "@/lib/channel-events.mjs";
 
 /**
  * POST /api/channel/reconnect — spend a reconnect link.
@@ -82,6 +84,18 @@ export async function POST(req: Request) {
     const redeemed = await redeemRecovery(token, now, "RECONNECT_SAME_NUMBER");
 
     if (!redeemed.ok) {
+      // An expired link and a REPLAYED one are different events on purpose:
+      // one is a customer who walked away, the other is a double click or an
+      // attacker, and a dispute later turns on which it was.
+      void recordChannelEvent({
+        eventType:
+          redeemed.state === "EXPIRED"
+            ? CHANNEL_EVENTS.RecoveryLinkExpired
+            : CHANNEL_EVENTS.RecoveryFailed,
+        actorType: "CUSTOMER",
+        source: "RECONNECT_LINK",
+        detail: { outcome: redeemed.state },
+      });
       const failure = FAILURES[redeemed.state] ?? INVALID;
       return NextResponse.json({ error: failure.code, message: failure.message }, { status: 400 });
     }
@@ -117,6 +131,15 @@ export async function POST(req: Request) {
       // change" an enforced rule rather than an intention.
       expectedChannelIdHash: binding.channelIdHash,
       createdAt: new Date(now).toISOString(),
+    });
+
+    void recordChannelEvent({
+      eventType: CHANNEL_EVENTS.RecoveryLinkUsed,
+      actorType: "CUSTOMER",
+      accountId: record.accountId,
+      bindingId: binding.bindingId,
+      source: "RECONNECT_LINK",
+      correlationId: record.recoveryId,
     });
 
     return NextResponse.json({ ok: true, pairToken, accountId: record.accountId });

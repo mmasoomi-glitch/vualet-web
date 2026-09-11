@@ -36,6 +36,8 @@ import {
   REASON_CODES,
 } from "@/lib/channel-binding-store";
 import { getSubscription, putSubscription } from "@/lib/store";
+import { recordChannelEvent } from "@/lib/channel-event-log";
+import { CHANNEL_EVENTS } from "@/lib/channel-events.mjs";
 
 type Migration = {
   migrationId: string;
@@ -139,6 +141,17 @@ export async function commitMigration(
             supersededBy: newBindingId,
           });
           if (!moved.ok) return { ok: false as const, reason: moved.reason };
+          void recordChannelEvent({
+            eventType: CHANNEL_EVENTS.OldNumberRevoked,
+            actorType: "CUSTOMER",
+            accountId: migration.accountId,
+            bindingId: migration.oldBindingId,
+            reasonCode: REASON_CODES.USER_CHANGED_NUMBER,
+            previousState: old.state,
+            newState: BINDING_STATES.SUPERSEDED,
+            correlationId: migration.migrationId,
+            detail: { supersededBy: newBindingId },
+          });
         }
       }
       // No live reconnect link may survive a number change: one issued to the
@@ -175,6 +188,17 @@ export async function commitMigration(
       return { ok: true as const };
     });
     if (!commit.ok) return { ok: false, reason: commit.reason, migration };
+
+    void recordChannelEvent({
+      eventType: CHANNEL_EVENTS.ChannelBindingSuperseded,
+      actorType: "CUSTOMER",
+      accountId: migration.accountId,
+      bindingId: newBindingId,
+      reasonCode: REASON_CODES.USER_CHANGED_NUMBER,
+      newState: BINDING_STATES.ACTIVE,
+      correlationId: migration.migrationId,
+      causationId: migration.oldBindingId,
+    });
 
     return { ok: true, migration, newBindingId };
   } catch (err) {

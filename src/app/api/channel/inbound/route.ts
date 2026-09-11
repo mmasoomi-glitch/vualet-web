@@ -7,6 +7,8 @@ import {
   touchBinding,
   type BindingRecord,
 } from "@/lib/channel-binding-store";
+import { recordChannelEvent } from "@/lib/channel-event-log";
+import { CHANNEL_EVENTS } from "@/lib/channel-events.mjs";
 
 /**
  * POST /api/channel/inbound — THE ENGINE'S CALLBACK FOR AN ARRIVING MESSAGE.
@@ -147,6 +149,19 @@ export async function POST(req: Request) {
         retryAfterMs: issued.retryAfterMs,
       });
     }
+
+    // Evidence, written after the fact and never gating the reply: a customer
+    // must not fail to get their link because the log was unavailable.
+    void recordChannelEvent({
+      eventType: CHANNEL_EVENTS.RecoveryLinkIssued,
+      actorType: "SYSTEM",
+      accountId: verdict.accountId,
+      bindingId: verdict.bindingId,
+      source: "WHATSAPP_INBOUND",
+      newState: "REAUTH_REQUIRED",
+      correlationId: issued.record.recoveryId,
+      detail: { expiresAtMs: issued.record.expiresAt, reused: issued.reused },
+    });
 
     const base = (process.env.MIRA_WEB_URL || "").replace(/\/+$/, "");
     return NextResponse.json({
