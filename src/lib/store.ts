@@ -245,6 +245,19 @@ export type ConnectRecord = {
   // has no channel at all, so readers must treat `undefined` as "legacy Telegram"
   // rather than assuming a value is present.
   channel?: "whatsapp" | "telegram";
+  /**
+   * SET ONLY BY THE RECONNECT PATH. When present, this connect token was minted
+   * to re-pair an EXISTING binding rather than to onboard somebody new.
+   *
+   * `expectedChannelIdHash` is the hash of the number that is already bound.
+   * The bind step compares the scanning account against it and refuses a
+   * mismatch, which is what stops a reconnect link from quietly becoming a
+   * number change — a reconnect may only ever restore the number it was issued
+   * for, and moving an account to a different number is a separately
+   * authenticated flow.
+   */
+  reconnectOfBindingId?: string;
+  expectedChannelIdHash?: string;
   // PROOF OF THE GATE-C1 DISCLOSURE (specs#160): which boxes this customer
   // ticked, when, and against which revision of the disclosure copy. Written by
   // every path that binds a WhatsApp number (/api/begin and /api/checkout) so

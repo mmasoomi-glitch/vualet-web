@@ -25,6 +25,7 @@
 
 import { createHash, createHmac, randomBytes } from "crypto";
 import { kvGet, kvSet, kvDel } from "@/lib/store";
+import { whatsappIdHash } from "@/lib/whatsapp-claim";
 import {
   BINDING_STATES,
   ACTOR_TYPES,
@@ -70,12 +71,23 @@ function secret(): string {
 
 /**
  * The one place a raw channel identifier is turned into a stored value.
+ *
  * Keyed HMAC rather than a bare hash: a phone number has far too little
- * entropy to survive an unkeyed digest, and an attacker with the database
+ * entropy to survive an unkeyed digest, and an attacker holding the database
  * could otherwise recover every number by enumerating them.
+ *
+ * FOR WHATSAPP THIS DELEGATES TO whatsappIdHash AND MUST CONTINUE TO. That
+ * function normalises a JID first — lowercasing it and stripping both the
+ * "@s.whatsapp.net" suffix and the ":<device>" part. A second, unnormalised
+ * hash would mean "12025551234@s.whatsapp.net" and "12025551234:12@s.whatsapp.net"
+ * produced different values for the same human, so a returning customer whose
+ * device id had changed would look like a stranger and be onboarded afresh.
+ * It also has to match because the bind step compares the two.
  */
-export function channelIdHash(rawIdentifier: string): string {
-  return createHmac("sha256", secret()).update(String(rawIdentifier)).digest("hex");
+export function channelIdHash(channelType: string, rawIdentifier: string): string {
+  if (channelType === "whatsapp") return whatsappIdHash(rawIdentifier);
+  const normalised = String(rawIdentifier).trim().toLowerCase();
+  return createHmac("sha256", secret()).update(`${channelType}:${normalised}`).digest("base64url");
 }
 
 /** Recovery tokens are looked up BY hash, so this one is unkeyed on purpose. */
@@ -115,7 +127,7 @@ export async function findBindingByChannel(
   rawIdentifier: string,
 ): Promise<BindingRecord | null> {
   if (!channelType || !rawIdentifier) return null;
-  const bindingId = await kvGet<string>(kBindingByChannel(channelType, channelIdHash(rawIdentifier)));
+  const bindingId = await kvGet<string>(kBindingByChannel(channelType, channelIdHash(channelType, rawIdentifier)));
   return bindingId ? getBinding(bindingId) : null;
 }
 
@@ -126,7 +138,7 @@ export async function createBinding(input: {
   providerIdentifier?: string | null;
   nowMs: number;
 }): Promise<BindingRecord> {
-  const idHash = channelIdHash(input.rawIdentifier);
+  const idHash = channelIdHash(input.channelType, input.rawIdentifier);
   const record: BindingRecord = {
     bindingId: newId("bnd"),
     accountId: input.accountId,

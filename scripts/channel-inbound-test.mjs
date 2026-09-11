@@ -211,10 +211,10 @@ test("THE RAW NUMBER IS NEVER STORED", async () => {
   const serialised = JSON.stringify(b);
   assert.ok(!serialised.includes("447700900123"), "the number must not appear in the binding record");
   assert.ok(!serialised.includes("@s.whatsapp.net"), "nor the JID suffix");
-  assert.equal(b.channelIdHash, channelIdHash(raw), "only a keyed hash, which answers equality and nothing else");
+  assert.equal(b.channelIdHash, channelIdHash("whatsapp", raw), "only a keyed hash, which answers equality and nothing else");
   assert.notEqual(
     b.channelIdHash,
-    channelIdHash("447700900124@s.whatsapp.net"),
+    channelIdHash("whatsapp", "447700900124@s.whatsapp.net"),
     "and different numbers hash differently, or the lookup would collide accounts",
   );
 });
