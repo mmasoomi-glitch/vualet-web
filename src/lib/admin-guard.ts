@@ -36,8 +36,17 @@ export type AdminContext = {
 };
 
 export class AdminAuthError extends Error {
-  constructor(public status: number, public code: string, message: string) {
+  // Declared and assigned explicitly rather than as constructor parameter
+  // properties: that syntax needs a full TypeScript compile, and it is what
+  // stopped every route importing this guard from being loadable by the test
+  // harness, which strips types rather than compiling them.
+  readonly status: number;
+  readonly code: string;
+
+  constructor(status: number, code: string, message: string) {
     super(message);
+    this.status = status;
+    this.code = code;
   }
 }
 

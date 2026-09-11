@@ -395,6 +395,28 @@ export async function POST(req: Request) {
   }
   if (message.length > MSG_MAX_LEN) message = message.slice(0, MSG_MAX_LEN);
 
+  // Health probe. The reliability poller hits this route continuously, and at
+  // the healthy interval that is ~1900 requests a day — which would consume
+  // almost the entire GLOBAL_DAILY_CAP on monitoring and starve real visitors
+  // of the assistant, and would write ~1900 fake turns into visitor memory.
+  //
+  // So a probe exercises the real route, the real KB and the real response
+  // shape, but spends no customer LLM call and learns nothing. The model
+  // itself is covered separately and directly by the inference probe, so
+  // nothing goes unwatched.
+  //
+  // The header is not a secret and needs no guard: it only ever asks for LESS
+  // (no LLM call, no write), the per-IP rate limit above still applies, and it
+  // grants no access a visitor does not already have.
+  if (req.headers.get("x-mira-health-probe") === "1") {
+    return withCookie(
+      NextResponse.json({
+        reply: kbFallbackAnswer(message) ?? "Mira is answering.",
+        trialGate: false,
+      }),
+    );
+  }
+
   // Load this visitor's canonical memory (never throws → empty on any error).
   const mem = isNewVisitor ? { id: visitorId, facts: [], turns: [] } : await getMemory(visitorId);
 
