@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, adminErrorResponse } from "@/lib/admin-guard";
 import { reliability } from "@/lib/reliability-runtime";
+import { channelReadiness } from "@/lib/channel-readiness";
 
 /**
  * The one-line answer to "is the assistant working right now".
@@ -22,6 +23,10 @@ export async function GET() {
       ...runtime.status(),
       polling: runtime.isRunning(),
       alerts: runtime.recentAlerts(5),
+      // Reported here because this endpoint is where an operator looks first.
+      // Automatic reconnection is built and inert until the engine calls in,
+      // and that failure is silent — everything answers, nothing happens.
+      channelRecovery: await channelReadiness(Date.now()),
     });
   } catch (err) {
     return adminErrorResponse(err);

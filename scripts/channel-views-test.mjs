@@ -233,3 +233,102 @@ test("THE REVIEW LIST NEVER CARRIES THE CHANNEL HASH", async () => {
   );
   assert.ok(serialised.includes("REVOKE_OLD_BINDING"), "while the steps that DID run are shown, which is what a reviewer needs");
 });
+
+/* ── operational readiness ─────────────────────────────────────────────── */
+
+test("BEFORE THE ENGINE EVER CALLS, READINESS SAYS SO LOUDLY", async () => {
+  resetNet();
+  const { channelReadiness } = await import("../src/lib/channel-readiness.ts");
+  const { kvDel } = await import("../src/lib/store.ts");
+  const now = Date.now();
+
+  // Earlier tests in this file drive the real inbound route, and the store is
+  // shared across them, so the never-called state has to be established rather
+  // than assumed.
+  await kvDel("mira:chan:inbound:last");
+
+  const before = await channelReadiness(now);
+  assert.equal(
+    before.state,
+    "NOT_INTEGRATED",
+    "everything on this side answers and nothing happens — that failure is silent, and silence is exactly what the four-day outage was made of",
+  );
+  assert.equal(before.lastInboundAt, null, "because no call has ever arrived");
+  assert.ok(
+    /inert|never called/i.test(before.detail),
+    "and the detail says plainly that a disconnected customer still receives nothing",
+  );
+});
+
+test("A REAL ENGINE CALL FLIPS READINESS TO LIVE", async () => {
+  resetNet();
+  const { channelReadiness } = await import("../src/lib/channel-readiness.ts");
+  const now = Date.now();
+
+  const inbound = await loadRoute("src/app/api/channel/inbound/route.ts");
+  await readJson(
+    await inbound.POST(
+      new Request("https://mira.vualet.com/api/channel/inbound", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-mira-bind-secret": "test-bind-secret" },
+        body: JSON.stringify({ identifier: "12025590001@s.whatsapp.net" }),
+      }),
+    ),
+  );
+
+  const after = await channelReadiness(now + 1000);
+  assert.equal(after.state, "LIVE", "one authenticated call is enough to prove the loop is wired");
+  assert.ok(after.lastInboundAt, "and the time is recorded");
+});
+
+test("AN UNAUTHENTICATED CALL MUST NOT MAKE THE LOOP LOOK INTEGRATED", async () => {
+  resetNet();
+  const { noteInboundCall, channelReadiness } = await import("../src/lib/channel-readiness.ts");
+  const now = Date.now();
+
+  const inbound = await loadRoute("src/app/api/channel/inbound/route.ts");
+  const { status } = await readJson(
+    await inbound.POST(
+      new Request("https://mira.vualet.com/api/channel/inbound", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-mira-bind-secret": "wrong" },
+        body: JSON.stringify({ identifier: "12025590002@s.whatsapp.net" }),
+      }),
+    ),
+  );
+  assert.equal(status, 401, "the call is refused");
+
+  // Prove the recording happens after auth by checking a stale marker is not
+  // refreshed by a refused call.
+  await noteInboundCall(now - 40 * 3600 * 1000);
+  await inbound.POST(
+    new Request("https://mira.vualet.com/api/channel/inbound", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-mira-bind-secret": "wrong" },
+      body: JSON.stringify({ identifier: "12025590003@s.whatsapp.net" }),
+    }),
+  );
+
+  const after = await channelReadiness(now);
+  assert.equal(
+    after.state,
+    "STALE",
+    "a stranger hitting the endpoint must not be able to make a dead integration look alive",
+  );
+});
+
+test("A LOOP THAT STOPPED READS DIFFERENTLY FROM ONE THAT NEVER STARTED", async () => {
+  resetNet();
+  const { noteInboundCall, channelReadiness } = await import("../src/lib/channel-readiness.ts");
+  const now = Date.now();
+
+  await noteInboundCall(now - 30 * 3600 * 1000);
+  const stale = await channelReadiness(now);
+  assert.equal(stale.state, "STALE", "it worked once and has gone quiet");
+  assert.notEqual(
+    stale.state,
+    "NOT_INTEGRATED",
+    "one has never worked and the other has stopped, and those call for different investigations",
+  );
+  assert.ok(/hours ago/.test(stale.detail), "and the detail says how long it has been");
+});
