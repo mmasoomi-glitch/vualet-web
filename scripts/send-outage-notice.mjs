@@ -1,5 +1,5 @@
 /**
- * Tell the customers whose assistant went silent.
+ * Tell the customers who are paying and have no working assistant.
  *
  * RUN ON THE PRODUCTION HOST, where the store and SMTP live:
  *
@@ -15,6 +15,9 @@
  *
  * ── WHY DRY RUN IS THE DEFAULT ────────────────────────────────────────────
  * This writes to real people who are already unhappy, and there is no unsend.
+ * The first draft of the copy blamed a change on our side; checking the store
+ * immediately before sending showed that could not be proven. Dry run is the
+ * default because that check only happens if there is a step at which to make it.
  *
  * It is IDEMPOTENT: every recipient is recorded and a second run skips them.
  * Running it twice must not apologise twice.
@@ -34,8 +37,17 @@ const SENT_KEY = "mira:outage:notified:2026-09";
 const GOODWILL_KEY = "mira:outage:goodwill:2026-09";
 const SEND = process.argv.includes("--send");
 
-/** When the credentials broke, from the incident record. */
-const SINCE_ISO = "2026-09-07T00:00:00.000Z";
+/**
+ * When they started paying — NOT when a connection broke.
+ *
+ * We cannot evidence a break. None of these subscriptions carries a tenant id
+ * or a bound identifier and their connect records had expired by the time this
+ * ran, so "we broke it" and "they never finished pairing" are indistinguishable
+ * from here. What IS certain is the date they began paying and the fact that
+ * they have had no working assistant since. That is the interval we owe for,
+ * and it is the larger, more honest one.
+ */
+const SINCE_ISO = "2026-09-05T00:00:00.000Z";
 const SUPPORT_EMAIL = "support@vualet.com";
 
 /**
@@ -157,7 +169,9 @@ function goodwillEntry(customerId, nowIso) {
     createdAt: nowIso,
     subjectRef: customerId,
     incidentId: null,
-    reason: "WhatsApp connection lost by our fault, 2026-09-07",
+    // Read by a human months from now. It must not assert the cause we could
+    // not establish, only the obligation, which is not in doubt.
+    reason: "Paid from 2026-09-05 with no connected WhatsApp; cause not established",
     kind: OUTAGE_OFFER.kind,
     value: OUTAGE_OFFER.value,
     status: "owed",
