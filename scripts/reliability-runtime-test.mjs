@@ -416,3 +416,109 @@ test("THE PROVIDER PROBE IS WIRED TO A REAL CALL", async () => {
   const logged = JSON.stringify(store.lines);
   assert.ok(!logged.includes("sk-live-SECRET"), "and the key never reaches the incident log");
 });
+
+/* ── the judge's REQUIRED_ACTIONS: alerts must reach a human ───────────── */
+
+test("A STATE ALERT ACTUALLY REACHES THE TRANSPORT", async () => {
+  const delivered = [];
+  const store = memoryIo();
+  let now = 1000;
+  const rt = createRuntime({
+    env: {},
+    logPath: "data/test.jsonl",
+    io: store.io,
+    clock: () => now,
+    setTimer: () => 0,
+    clearTimer: () => {},
+    fetchImpl: async () => {
+      throw new Error("down");
+    },
+    sendAlert: async (m) => void delivered.push(m),
+  });
+
+  await rt.pollOnce("assistant");
+  assert.ok(
+    delivered.length > 0,
+    "an alert that only ever reaches a ring buffer is an alert nobody receives — the judge rejected exactly that",
+  );
+  assert.ok(/assistant/.test(delivered[0].subject), "and it names the service");
+});
+
+test("CREDIT WARNING IS ACTUALLY INVOKED, NOT MERELY DEFINED", async () => {
+  const delivered = [];
+  const store = memoryIo();
+  let now = 1000;
+  const rt = createRuntime({
+    env: { OPENROUTER_API_KEY: "sk-live" },
+    logPath: "data/test.jsonl",
+    io: store.io,
+    clock: () => now,
+    setTimer: () => 0,
+    clearTimer: () => {},
+    // A healthy key with almost nothing left: the provider still answers 200.
+    fetchImpl: async () => ({
+      status: 200,
+      text: async () => JSON.stringify({ data: { usage: 99.5, limit: 100, is_free_tier: false } }),
+    }),
+    sendAlert: async (m) => void delivered.push(m),
+  });
+
+  const tracker = await rt.pollOnce("inference");
+  assert.equal(tracker.state, "RECOVERING", "the provider is still healthy — that is the whole problem");
+
+  const warning = delivered.find((m) => /credit/i.test(m.subject));
+  assert.ok(
+    warning,
+    "credit is not a state transition: the provider reports healthy all the way down to zero, so a warning driven by transitions would arrive one poll too late",
+  );
+  assert.ok(/HIGH/.test(warning.subject), "and it is urgent enough to act on");
+  assert.ok(/knowledge base/i.test(warning.text), "and says what the customer will actually experience");
+});
+
+test("AN UNRECOGNISED PROVIDER PAYLOAD IS LOUD, NOT SILENTLY HEALTHY", async () => {
+  const store = memoryIo();
+  let now = 1000;
+  const rt = createRuntime({
+    env: { OPENROUTER_API_KEY: "sk-live" },
+    logPath: "data/test.jsonl",
+    io: store.io,
+    clock: () => now,
+    setTimer: () => 0,
+    clearTimer: () => {},
+    // The provider changed its schema. Field names no longer match.
+    fetchImpl: async () => ({
+      status: 200,
+      text: async () => JSON.stringify({ data: { spend: 4, ceiling: 10, tier: "pro" } }),
+    }),
+  });
+
+  const tracker = await rt.pollOnce("inference");
+  assert.equal(
+    tracker.state,
+    "DEGRADED",
+    "without this the probe degrades into a liveness check that can NEVER detect credit exhaustion, and nobody would ever know",
+  );
+  assert.equal(tracker.lastError, "unrecognised key payload", "and it names the problem");
+});
+
+test("WITHOUT A TRANSPORT, NOTHING PRETENDS TO HAVE BEEN SENT", async () => {
+  const store = memoryIo();
+  const rt = createRuntime({
+    env: {},
+    logPath: "data/test.jsonl",
+    io: store.io,
+    clock: () => 1000,
+    setTimer: () => 0,
+    clearTimer: () => {},
+    fetchImpl: async () => {
+      throw new Error("down");
+    },
+  });
+
+  await rt.pollOnce("assistant");
+  assert.deepEqual(
+    rt.notifications(),
+    { sentInWindow: 0, trackedKeys: 0, configured: false },
+    "an unconfigured transport must report itself as unconfigured rather than as quietly working",
+  );
+});

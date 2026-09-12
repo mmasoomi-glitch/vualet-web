@@ -10,7 +10,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { probeAssistant, probeInference, probeWhatsApp, probeOpenRouterKey } from './probes.mjs';
+import { probeAssistant, probeInference, probeWhatsApp, probeOpenRouterKey, creditWarning } from './probes.mjs';
+import { createNotifier } from './notifier.mjs';
 import { createPoller } from './poller.mjs';
 import { createIncidentLog } from './incidents.mjs';
 import { chooseProvider } from './router.mjs';
@@ -153,16 +154,41 @@ export function createRuntime(options = {}) {
     clearTimer = clearTimeout,
     // Injectable so the wiring can be tested without touching the network.
     fetchImpl = undefined,
+    // The transport that actually reaches a human. Without one, alerts still
+    // reach the log and the in-memory buffer and NOBODY IS TOLD — which is the
+    // failure this subsystem exists to remove, so production must supply it.
+    sendAlert = null,
   } = options;
 
   const services = resolveServices(env);
   const providers = resolveProviders(env);
   const incidentLog = createIncidentLog({ filePath: logPath, io, maxLines: MAX_LOG_LINES });
 
+  const notifier = typeof sendAlert === 'function' ? createNotifier({ send: sendAlert, clock }) : null;
   const alerts = [];
   let sequence = 0;
   /** Event ids must be unique within a millisecond, hence the counter. */
   const nextId = (atMs) => `ev_${atMs}_${sequence++}`;
+
+  /**
+   * Probe the provider AND warn on low credit.
+   *
+   * CREDIT IS NOT A STATE TRANSITION. The provider reports healthy the whole
+   * way down to zero, and only then does the assistant silently drop to its
+   * knowledge base — so a warning driven by state changes would arrive exactly
+   * one poll too late to be any use. It is checked on every result instead,
+   * and the notifier's own deduplication is what stops that becoming a flood.
+   */
+  async function probeProviderKeyAndWarn(svc, opts) {
+    const result = await probeOpenRouterKey(svc.url, env.OPENROUTER_API_KEY, opts);
+    if (notifier && result && result.detail) {
+      const warning = creditWarning(result.detail);
+      // Fire and forget: a mail outage must not break the probe, and the credit
+      // is running out whether or not the message got through.
+      if (warning) void notifier.notify(warning, svc.name).catch(() => {});
+    }
+    return result;
+  }
 
   const pollerServices = services.map((svc) => ({
     name: svc.name,
@@ -174,7 +200,7 @@ export function createRuntime(options = {}) {
       // production; a test supplies its own.
       if (fetchImpl) opts.fetchImpl = fetchImpl;
       if (svc.kind === 'inference') return probeInference(svc.url, svc.model, opts);
-      if (svc.kind === 'provider_key') return probeOpenRouterKey(svc.url, env.OPENROUTER_API_KEY, opts);
+      if (svc.kind === 'provider_key') return probeProviderKeyAndWarn(svc, opts);
       if (svc.kind === 'whatsapp') return probeWhatsApp(svc.url, opts);
       return probeAssistant(svc.url, opts);
     },
@@ -207,6 +233,9 @@ export function createRuntime(options = {}) {
       const atMs = tracker && typeof tracker.stateSince === 'number' ? tracker.stateSince : clock();
       alerts.push({ ...alert, service: serviceName, atMs });
       if (alerts.length > MAX_ALERTS) alerts.shift();
+      // The whole point of the rework: an alert that only ever reaches a ring
+      // buffer is an alert nobody receives.
+      if (notifier) void notifier.notify(alert, serviceName).catch(() => {});
       incidentLog
         .record({
           id: nextId(atMs),
@@ -245,6 +274,7 @@ export function createRuntime(options = {}) {
     providers,
     status,
     recentAlerts: (limit = 20) => alerts.slice(-limit).reverse(),
+    notifications: () => (notifier ? notifier.stats() : { sentInWindow: 0, trackedKeys: 0, configured: false }),
     incidents: (limit) => incidentLog.incidents(limit),
     events: (limit) => incidentLog.list(limit),
     prune: () => incidentLog.prune(),
