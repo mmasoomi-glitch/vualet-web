@@ -164,7 +164,44 @@ export function createRuntime(options = {}) {
   const providers = resolveProviders(env);
   const incidentLog = createIncidentLog({ filePath: logPath, io, maxLines: MAX_LOG_LINES });
 
-  const notifier = typeof sendAlert === 'function' ? createNotifier({ send: sendAlert, clock }) : null;
+  /**
+   * The outcome of every notification is logged.
+   *
+   * Without this a failed send vanishes without trace, which is the same
+   * failure this subsystem exists to remove one level up: the alarm is wired,
+   * the dashboard says so, and nothing arrives. Suppressions are logged too —
+   * an operator asking "why was I not told" needs to see that the answer was a
+   * deliberate dedupe rather than a broken transport.
+   *
+   * Titles and severities only. The detail can carry operational specifics and
+   * this is a log line, not an incident record.
+   */
+  const notifier =
+    typeof sendAlert === 'function'
+      ? createNotifier({
+          send: sendAlert,
+          clock,
+          onDrop: (reason, alert) => {
+            const title = (alert && alert.title) || 'unknown';
+            if (reason === 'send_failed') {
+              console.error(`[reliability] ALERT NOT DELIVERED (${reason}): ${title}`);
+            } else {
+              console.log(`[reliability] alert suppressed (${reason}): ${title}`);
+            }
+          },
+        })
+      : null;
+
+  /** Log a delivered alert, so "it was sent" is a fact rather than a hope. */
+  const announce = (alert, serviceName) => {
+    if (!notifier) return;
+    void notifier
+      .notify(alert, serviceName)
+      .then((r) => {
+        if (r && r.sent) console.log(`[reliability] alert delivered: ${serviceName} ${alert.severity} ${alert.title}`);
+      })
+      .catch(() => {});
+  };
   const alerts = [];
   let sequence = 0;
   /** Event ids must be unique within a millisecond, hence the counter. */
@@ -185,7 +222,7 @@ export function createRuntime(options = {}) {
       const warning = creditWarning(result.detail);
       // Fire and forget: a mail outage must not break the probe, and the credit
       // is running out whether or not the message got through.
-      if (warning) void notifier.notify(warning, svc.name).catch(() => {});
+      if (warning) announce(warning, svc.name);
     }
     return result;
   }
@@ -235,7 +272,7 @@ export function createRuntime(options = {}) {
       if (alerts.length > MAX_ALERTS) alerts.shift();
       // The whole point of the rework: an alert that only ever reaches a ring
       // buffer is an alert nobody receives.
-      if (notifier) void notifier.notify(alert, serviceName).catch(() => {});
+      announce(alert, serviceName);
       incidentLog
         .record({
           id: nextId(atMs),
