@@ -33,9 +33,25 @@ async function sendAlert(message: { subject: string; text: string }): Promise<vo
   await sendMail(to, message.subject, `<pre>${message.text}</pre>`, message.text);
 }
 
+/**
+ * Is there anywhere for an alert to actually go?
+ *
+ * A transport with no destination is worse than no transport: the runtime
+ * would report alerting as configured while every message failed, which is the
+ * same lie as a monitor that is quietly doing nothing. So the transport is
+ * only supplied when it can genuinely deliver, and its absence is reported as
+ * absence.
+ */
+export function alertTransportReady(): boolean {
+  return (process.env.MIRA_ALERT_EMAIL || "").trim().length > 0 && emailConfigured();
+}
+
 /** The process-wide runtime, polling. Safe to call on every request. */
 export function reliability() {
-  const runtime = getRuntime({ env: process.env, sendAlert });
+  const runtime = getRuntime({
+    env: process.env,
+    sendAlert: alertTransportReady() ? sendAlert : null,
+  });
   if (!started) {
     started = true;
     // start() is idempotent, but the flag keeps a hot path from re-entering it.
