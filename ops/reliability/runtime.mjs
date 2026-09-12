@@ -249,9 +249,14 @@ export function createRuntime(options = {}) {
     setTimer,
     clearTimer,
     onEvent: (event) => {
+      if (!event) return;
+      if (event.type === 'probe') {
+        maybePrune();
+        return;
+      }
       // ONLY transitions are persisted. A probe every 45 seconds forever would
       // fill the disk with noise and bury the handful of events that matter.
-      if (!event || event.type !== 'transition') return;
+      if (event.type !== 'transition') return;
       incidentLog
         .record({
           id: nextId(event.atMs),
@@ -288,6 +293,32 @@ export function createRuntime(options = {}) {
         .catch(() => {});
     },
   });
+
+  /**
+   * Keep the incident log bounded.
+   *
+   * prune() existed and nothing ever called it, so the log grew without limit
+   * on a host that also holds customer data — the same "defined but never
+   * invoked" defect that got this subsystem a FAIL verdict once already.
+   *
+   * Driven off polls rather than its own timer: it needs no scheduler, it
+   * cannot fire on a stopped poller, and a log only grows when something is
+   * being written to it anyway. Every 200 polls at the healthy interval is
+   * roughly every two hours.
+   */
+  let pollsSincePrune = 0;
+  function maybePrune() {
+    if (++pollsSincePrune < 200) return;
+    pollsSincePrune = 0;
+    incidentLog
+      .prune()
+      .then((r) => {
+        if (r && r.pruned > 0) console.log(`[reliability] pruned ${r.pruned} old incident lines`);
+      })
+      // A failed prune is a disk-space problem for later, never a reason to
+      // interrupt monitoring.
+      .catch(() => {});
+  }
 
   function status() {
     const snapshot = poller.snapshot();

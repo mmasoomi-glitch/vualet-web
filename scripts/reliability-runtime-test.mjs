@@ -522,3 +522,35 @@ test("WITHOUT A TRANSPORT, NOTHING PRETENDS TO HAVE BEEN SENT", async () => {
     "an unconfigured transport must report itself as unconfigured rather than as quietly working",
   );
 });
+
+test("THE INCIDENT LOG IS ACTUALLY PRUNED, NOT MERELY PRUNABLE", async () => {
+  const store = memoryIo();
+  // Well over the 10000-line cap the runtime configures, so a prune must bite.
+  for (let i = 0; i < 10050; i++) store.lines.push(JSON.stringify({ id: `e${i}`, atMs: i, service: "assistant" }));
+
+  let now = 1000;
+  const rt = createRuntime({
+    env: {},
+    logPath: "data/test.jsonl",
+    io: store.io,
+    clock: () => now,
+    setTimer: () => 0,
+    clearTimer: () => {},
+    fetchImpl: DEAD_FETCH,
+  });
+
+  const before = store.lines.length;
+  // Drive enough polls to cross the prune interval.
+  for (let i = 0; i < 205; i++) {
+    now += 1000;
+    await rt.pollOnce("assistant");
+  }
+  // Let the fire-and-forget prune settle.
+  await new Promise((r) => setImmediate(r));
+
+  assert.ok(
+    store.lines.length < before,
+    `the log grew unbounded: prune() existed and nothing ever called it, which is the same "defined but never invoked" defect that failed review once already (before=${before}, after=${store.lines.length})`,
+  );
+  assert.ok(store.lines.length <= 10000, `and it is bounded at the cap, got ${store.lines.length}`);
+});
