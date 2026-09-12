@@ -149,6 +149,25 @@ export async function createBinding(input: {
   nowMs: number;
 }): Promise<BindingRecord> {
   const idHash = channelIdHash(input.channelType, input.rawIdentifier);
+
+  // IDEMPOTENT PER (account, identifier) WHILE STILL PENDING.
+  //
+  // A migration that creates the binding and then dies before recording the id
+  // would, on retry, create a second one for the same number — an orphan in the
+  // account's list and a confusing thing for anybody reading it later.
+  //
+  // Reuse is deliberately limited to a PENDING binding on the SAME account. A
+  // binding that is REVOKED or SUPERSEDED must never be handed back: that is
+  // exactly how a recycled number would walk back into its previous owner's
+  // account.
+  const existingId = await kvGet<string>(kBindingByChannel(input.channelType, idHash));
+  if (existingId) {
+    const existing = await getBinding(existingId);
+    if (existing && existing.accountId === input.accountId && existing.state === BINDING_STATES.PENDING) {
+      return existing;
+    }
+  }
+
   const record: BindingRecord = {
     bindingId: newId("bnd"),
     accountId: input.accountId,
@@ -219,6 +238,20 @@ export async function transitionBinding(
   }
 
   await kvSet(kBinding(bindingId), next);
+
+  // A BINDING GOING TERMINAL KILLS THAT ACCOUNT'S LIVE RECONNECT LINKS.
+  //
+  // Without this, a link issued moments before an admin or security revocation
+  // stays spendable: it would mint a pairing session for a binding that is
+  // already dead. The bind step refuses the scan, so nothing is actually taken
+  // over — but the customer is walked through a flow that cannot succeed, and
+  // the only thing standing between a revoked number and a live one is that
+  // single downstream check. The migration path already did this; doing it here
+  // covers every other way a binding dies.
+  if (to === BINDING_STATES.REVOKED || to === BINDING_STATES.SUPERSEDED || to === BINDING_STATES.COMPROMISED) {
+    await revokeAllRecoveries(current.accountId, opts.nowMs).catch(() => {});
+  }
+
   return { ok: true, record: next };
 }
 

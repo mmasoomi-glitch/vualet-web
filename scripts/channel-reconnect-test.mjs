@@ -175,3 +175,136 @@ test("a link whose binding has vanished is refused rather than guessed at", asyn
   assert.equal(status, 409, "there is nothing to reconnect");
   assert.equal(body.error, "no_binding", "and it says so plainly");
 });
+
+/* ── found by an independent Forge review of the shipped code ──────────── */
+
+test("REVOKING A BINDING KILLS ITS LIVE RECONNECT LINKS", async () => {
+  resetNet();
+  const { createBinding, transitionBinding, issueRecovery, redeemRecovery, BINDING_STATES, REASON_CODES } =
+    await store();
+  const now = Date.now();
+
+  const b = await createBinding({
+    accountId: "acct_rev1",
+    channelType: "whatsapp",
+    rawIdentifier: "12025556001@s.whatsapp.net",
+    nowMs: now,
+  });
+  await transitionBinding(b.bindingId, BINDING_STATES.ACTIVE, { nowMs: now });
+  await transitionBinding(b.bindingId, BINDING_STATES.DISCONNECTED, { nowMs: now + 1 });
+
+  const issued = await issueRecovery({
+    accountId: "acct_rev1",
+    oldBindingId: b.bindingId,
+    purpose: "RECONNECT_SAME_NUMBER",
+    nowMs: now + 2,
+  });
+  assert.equal(issued.ok, true, "a live link exists");
+
+  // A security or admin revocation, with no migration involved — the path that
+  // previously left the link spendable.
+  await transitionBinding(b.bindingId, BINDING_STATES.REVOKED, {
+    nowMs: now + 3,
+    reasonCode: REASON_CODES.SECURITY_REVOCATION,
+  });
+
+  const after = await redeemRecovery(issued.token, now + 4);
+  assert.equal(after.ok, false, "the link cannot be spent");
+  assert.equal(
+    after.state,
+    "REVOKED",
+    "a binding going terminal must take its outstanding links with it, however it died — not only via a number change",
+  );
+});
+
+test("A TERMINAL BINDING IS NOT RECONNECTABLE EVEN WITH A GOOD TOKEN", async () => {
+  resetNet();
+  const { createBinding, transitionBinding, issueRecovery, putMigration, BINDING_STATES } = await store();
+  const { kvSet } = await import("../src/lib/store.ts");
+  const now = Date.now();
+
+  const b = await createBinding({
+    accountId: "acct_rev2",
+    channelType: "whatsapp",
+    rawIdentifier: "12025556002@s.whatsapp.net",
+    nowMs: now,
+  });
+  await transitionBinding(b.bindingId, BINDING_STATES.ACTIVE, { nowMs: now });
+  await transitionBinding(b.bindingId, BINDING_STATES.DISCONNECTED, { nowMs: now + 1 });
+
+  const issued = await issueRecovery({
+    accountId: "acct_rev2",
+    oldBindingId: b.bindingId,
+    purpose: "RECONNECT_SAME_NUMBER",
+    nowMs: now + 2,
+  });
+
+  // Supersede the binding by writing it directly, so the token is deliberately
+  // NOT revoked — this isolates the route's own guard from the store's.
+  const current = await (await store()).getBinding(b.bindingId);
+  await kvSet(`mira:binding:${b.bindingId}`, { ...current, state: BINDING_STATES.SUPERSEDED });
+
+  const { POST } = await load();
+  const { status, body } = await readJson(await POST(post({ token: issued.token })));
+
+  assert.equal(status, 400, "a superseded binding cannot be reconnected");
+  assert.equal(
+    body.error,
+    "link_revoked",
+    "the route refuses on its own, without relying on the store having revoked the link or on the bind step catching the scan",
+  );
+});
+
+test("CREATING A BINDING TWICE FOR THE SAME NUMBER REUSES THE PENDING ONE", async () => {
+  resetNet();
+  const { createBinding, bindingsOfAccount } = await store();
+  const now = Date.now();
+  const jid = "12025556003@s.whatsapp.net";
+
+  const first = await createBinding({ accountId: "acct_rev3", channelType: "whatsapp", rawIdentifier: jid, nowMs: now });
+  const second = await createBinding({ accountId: "acct_rev3", channelType: "whatsapp", rawIdentifier: jid, nowMs: now + 1 });
+
+  assert.equal(
+    second.bindingId,
+    first.bindingId,
+    "a migration that created the binding and died before recording its id must not mint a second one on retry",
+  );
+  const all = await bindingsOfAccount("acct_rev3");
+  assert.equal(all.length, 1, `exactly one binding, got ${all.length}`);
+});
+
+test("REUSE NEVER HANDS BACK A TERMINAL BINDING", async () => {
+  resetNet();
+  const { createBinding, transitionBinding, BINDING_STATES } = await store();
+  const now = Date.now();
+  const jid = "12025556004@s.whatsapp.net";
+
+  const first = await createBinding({ accountId: "acct_rev4", channelType: "whatsapp", rawIdentifier: jid, nowMs: now });
+  await transitionBinding(first.bindingId, BINDING_STATES.ACTIVE, { nowMs: now });
+  await transitionBinding(first.bindingId, BINDING_STATES.SUPERSEDED, { nowMs: now + 1 });
+
+  const fresh = await createBinding({ accountId: "acct_rev4", channelType: "whatsapp", rawIdentifier: jid, nowMs: now + 2 });
+  assert.notEqual(
+    fresh.bindingId,
+    first.bindingId,
+    "handing back a superseded binding is exactly how a recycled number would walk into its previous owner's account",
+  );
+  assert.equal(fresh.state, "PENDING", "the new one starts from scratch and must prove itself");
+});
+
+test("REUSE NEVER CROSSES ACCOUNTS", async () => {
+  resetNet();
+  const { createBinding } = await store();
+  const now = Date.now();
+  const jid = "12025556005@s.whatsapp.net";
+
+  const mine = await createBinding({ accountId: "acct_rev5a", channelType: "whatsapp", rawIdentifier: jid, nowMs: now });
+  const theirs = await createBinding({ accountId: "acct_rev5b", channelType: "whatsapp", rawIdentifier: jid, nowMs: now + 1 });
+
+  assert.notEqual(
+    theirs.bindingId,
+    mine.bindingId,
+    "reuse is keyed on the account as well as the number, or one customer would inherit another's pending binding",
+  );
+  assert.equal(theirs.accountId, "acct_rev5b", "and it belongs to whoever asked for it");
+});

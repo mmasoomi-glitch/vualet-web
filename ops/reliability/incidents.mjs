@@ -31,6 +31,26 @@ const SEVERITY_ORDER = ['OFFLINE', 'FAILOVER_ACTIVE', 'DEGRADED', 'RECOVERING', 
 
 const MAX_VALUE_LENGTH = 200;
 
+/**
+ * Does this value look like a phone number or an address, whatever it is
+ * called?
+ *
+ * The key list above only catches a value somebody labelled honestly. This
+ * catches one sitting under an innocent name — `note`, `detail`, `contactInfo`
+ * — which is how PII actually ends up in a log: not by anyone deciding to put
+ * it there, but by a value being passed through under a name nobody thought
+ * about.
+ *
+ * The punctuation people write numbers with is stripped before counting
+ * digits, so "(202) 555-1234" and "202.555.1234" are caught along with the
+ * plain forms. A timestamp or an id keeps its letters and fails the test.
+ */
+function looksIdentifying(value) {
+  if (typeof value !== 'string') return false;
+  if (value.includes('@')) return true;
+  return /^\d{7,}$/.test(value.replace(/[\s\-().+]/g, ''));
+}
+
 export function redactDetail(detail) {
   if (!detail || typeof detail !== 'object' || Array.isArray(detail)) return {};
 
@@ -48,6 +68,10 @@ export function redactDetail(detail) {
     if (value === null) {
       out[key] = null;
     } else if (typeof value === 'string') {
+      if (looksIdentifying(value)) {
+        out[key] = '[redacted]';
+        continue;
+      }
       // A probe body or a model reply must never be dumped in wholesale.
       out[key] = value.length > MAX_VALUE_LENGTH ? `${value.slice(0, MAX_VALUE_LENGTH)}…` : value;
     } else if (typeof value === 'number' || typeof value === 'boolean') {
