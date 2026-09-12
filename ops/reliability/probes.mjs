@@ -337,6 +337,81 @@ export async function probeOpenRouterKey(baseUrl, apiKey, opts = {}) {
 }
 
 /**
+ * Is the store actually keeping what we give it?
+ *
+ * This is the component with the largest blast radius: payments, sessions,
+ * entitlement and channel bindings all live here. It is also the one whose
+ * failure is completely silent — its persist() wraps the file write in
+ * try/catch and only logs, so a full disk or a permissions change means every
+ * write still SUCCEEDS in memory and is lost on the next restart.
+ *
+ * A write-then-read probe cannot catch that: the in-process map answers the
+ * read correctly while nothing reached the disk. So this verifies DURABILITY,
+ * which is the only property that actually matters here.
+ */
+export async function probeStore(store, opts = {}) {
+  const o = resolveOpts(opts);
+  const start = o.clock();
+
+  if (
+    !store ||
+    typeof store !== 'object' ||
+    typeof store.write !== 'function' ||
+    typeof store.read !== 'function' ||
+    typeof store.configured !== 'function' ||
+    typeof store.tier !== 'function'
+  ) {
+    return makeResult(false, o.nowMs, 0, 'store not wired', {});
+  }
+
+  try {
+    const tier = store.tier();
+    const detail = { tier, durabilityChecked: false };
+
+    // On the memory tier every write lives only in this process, so a restart
+    // silently discards paid subscriptions, live sessions and channel
+    // bindings. It is data loss that looks exactly like healthy operation
+    // right up until somebody restarts the service.
+    if (!store.configured()) {
+      return makeResult(false, o.nowMs, o.clock() - start, 'store not durable', detail);
+    }
+
+    const key = 'mira:health:canary';
+    const value = String(o.nowMs);
+    await store.write(key, value, 300);
+    const readBack = await store.read(key);
+
+    if (readBack === null || readBack === undefined) {
+      return makeResult(false, o.nowMs, o.clock() - start, 'canary vanished', detail);
+    }
+    if (readBack !== value) {
+      return makeResult(false, o.nowMs, o.clock() - start, 'canary mismatch', detail);
+    }
+
+    if (typeof store.durable === 'function') {
+      // THE CHECK THAT MATTERS. A read-back only proves the value is in the
+      // active read path. This proves it reached the disk, which is the
+      // difference between "working" and "quietly losing every customer
+      // record since the disk filled".
+      if (!(await store.durable(key))) {
+        return makeResult(false, o.nowMs, o.clock() - start, 'write not durable', detail);
+      }
+      detail.durabilityChecked = true;
+    }
+    // When durability cannot be checked the result stays ok but says so.
+    // An unverified claim must be visible as unverified rather than counted
+    // as healthy, or the gap disappears into a green dashboard.
+
+    // Never the canary value, and never any other stored value: this store
+    // holds customer records.
+    detail.roundTripMs = o.clock() - start;
+    return makeResult(true, o.nowMs, detail.roundTripMs, null, detail);
+  } catch (err) {
+    return makeResult(false, o.nowMs, o.clock() - start, shortError(err), {});
+  }
+}
+
+/**
  * Should somebody be told about the remaining credit?
  *
  * Separate from the probe because running out is not the same event as being

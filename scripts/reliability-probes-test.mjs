@@ -14,6 +14,7 @@ import {
   summarise,
   probeOpenRouterKey,
   creditWarning,
+  probeStore,
 } from "../ops/reliability/probes.mjs";
 
 function fakeFetch(status, bodyText) {
@@ -307,4 +308,93 @@ test("AN UNKNOWN BUDGET IS NOT A WARNING", () => {
       `${JSON.stringify(detail)} must not warn — crying wolf about an unlimited or unknown budget teaches people to ignore the alert that matters`,
     );
   }
+});
+
+/* ── the store: the component whose failure is silent ──────────────────── */
+
+function fakeStore(over = {}) {
+  const kept = new Map();
+  return {
+    configured: () => true,
+    tier: () => "file",
+    write: async (k, v) => void kept.set(k, v),
+    read: async (k) => (kept.has(k) ? kept.get(k) : null),
+    durable: async (k) => kept.has(k),
+    ...over,
+  };
+}
+
+test("a healthy store round-trips and proves durability", async () => {
+  const r = await probeStore(fakeStore(), OPTS());
+  assert.equal(r.ok, true, "written, read back, and confirmed on disk");
+  assert.equal(r.detail.durabilityChecked, true, "and the durability check actually ran");
+  assert.equal(r.detail.tier, "file", "with the tier recorded");
+});
+
+test("A WRITE THAT NEVER REACHED DISK IS THE WHOLE POINT", async () => {
+  // The canary reads back fine — the in-memory map answers correctly — while
+  // nothing was persisted. This is what a full disk looks like.
+  const r = await probeStore(fakeStore({ durable: async () => false }), OPTS());
+  assert.equal(
+    r.ok,
+    false,
+    "store.ts persists inside a try/catch that only logs, so a full disk keeps answering reads while silently discarding every paid subscription, session and binding",
+  );
+  assert.equal(r.error, "write not durable", "and it is named for what it is");
+});
+
+test("AN UNCONFIGURED STORE IS DATA LOSS THAT LOOKS HEALTHY", async () => {
+  const r = await probeStore(fakeStore({ configured: () => false, tier: () => "memory" }), OPTS());
+  assert.equal(r.ok, false, "memory-only is not a durable store");
+  assert.equal(r.error, "store not durable", "and says so");
+  assert.equal(
+    r.detail.tier,
+    "memory",
+    "naming the tier matters: this looks perfect until the moment somebody restarts the service",
+  );
+});
+
+test("a canary that vanishes or changes is caught", async () => {
+  const gone = await probeStore(fakeStore({ read: async () => null }), OPTS());
+  assert.equal(gone.error, "canary vanished", "a write that did not survive its own read-back");
+
+  const wrong = await probeStore(fakeStore({ read: async () => "something else" }), OPTS());
+  assert.equal(wrong.error, "canary mismatch", "and one that came back as something else");
+});
+
+test("UNVERIFIED DURABILITY IS REPORTED, NOT ASSUMED", async () => {
+  const noCheck = fakeStore();
+  delete noCheck.durable;
+  const r = await probeStore(noCheck, OPTS());
+  assert.equal(r.ok, true, "it still passes, because nothing observed is broken");
+  assert.equal(
+    r.detail.durabilityChecked,
+    false,
+    "but the gap is visible — an unverified claim counted as healthy is how a gap disappears into a green dashboard",
+  );
+});
+
+test("THE STORE PROBE NEVER LOGS A STORED VALUE", async () => {
+  const r = await probeStore(fakeStore({ read: async () => String(1000) }), OPTS());
+  const serialised = JSON.stringify(r.detail);
+  assert.ok(!serialised.includes("1000"), "the canary value must not appear — this store holds customer records");
+  assert.ok(!/customer|email|phone|token/i.test(serialised), "and nothing resembling a record");
+});
+
+test("probeStore refuses an unwired store and never throws", async () => {
+  for (const bad of [null, undefined, {}, "nope", 5, { write: () => {} }]) {
+    const r = await probeStore(bad, OPTS());
+    assert.equal(r.ok, false, `${JSON.stringify(bad)} is not a store`);
+    assert.equal(r.error, "store not wired", "and is refused before anything is called");
+  }
+  const boom = await probeStore(
+    fakeStore({
+      write: async () => {
+        throw new Error("ENOSPC");
+      },
+    }),
+    OPTS(),
+  );
+  assert.equal(boom.ok, false, "a throwing store is a failed probe");
+  assert.equal(boom.error, "ENOSPC", "not an exception out of a timer");
 });
