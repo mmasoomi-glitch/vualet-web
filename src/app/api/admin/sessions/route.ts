@@ -35,6 +35,13 @@ export async function GET(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    // AUTH FIRST. Below this line the request body and a store lookup keyed on
+    // it both happen; before this change they happened for anybody at all, so
+    // an unauthenticated stranger could drive arbitrary reads against the
+    // session store. Deciding auth before any input is trusted is what keeps a
+    // parser or lookup bug from becoming a pre-auth attack surface.
+    const self = await requireAdmin();
+
     let body: { sid?: string };
     try {
       body = await req.json();
@@ -45,8 +52,6 @@ export async function DELETE(req: Request) {
     if (!sid) return NextResponse.json({ error: "missing_sid" }, { status: 400 });
 
     const record = await getSessionRecord(sid);
-    // First resolve the caller with base auth to learn ownership.
-    const self = await requireAdmin();
     const isOwn = record?.aid === self.admin.id;
 
     // Revoking someone else's session is a dangerous, reauth-gated action.
