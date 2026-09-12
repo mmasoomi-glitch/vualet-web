@@ -365,3 +365,34 @@ test("prune keeps the most recent lines", async () => {
   assert.equal(h.calls.replace, 1, "rewritten once");
   assert.deepEqual(h.lines, ["l3", "l4", "l5"], "the OLDEST are dropped, never the newest");
 });
+
+test("A NUMBER UNDER AN INNOCENT KEY IS STILL CAUGHT", () => {
+  // The key list only catches a value somebody labelled honestly. PII reaches a
+  // log the other way: a value passed through under a name nobody thought
+  // about. Found by probing the shipped code, not by reading it.
+  for (const written of [
+    "(202) 555-1234",
+    "+1 (202) 555-1234",
+    "202.555.1234",
+    "+971554292699",
+    "user@example.com",
+    "12025551234@s.whatsapp.net",
+  ]) {
+    assert.equal(
+      redactDetail({ note: written }).note,
+      "[redacted]",
+      `"${written}" reached the incident log under a key the word list does not match`,
+    );
+  }
+});
+
+test("but what an operator needs to diagnose still survives", () => {
+  for (const keep of ["no linked devices", "timeout", "empty reply", "http 503", "inc_1789159166628"]) {
+    assert.equal(
+      redactDetail({ note: keep }).note,
+      keep,
+      `"${keep}" was redacted — the log has to keep the evidence it exists to hold`,
+    );
+  }
+});
+
