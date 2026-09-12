@@ -21,6 +21,36 @@ import { kvGet, kvSet, getSubscription } from "../src/lib/store.ts";
 import { emailConfigured, sendMail } from "../src/lib/email.ts";
 import { OUTAGE_OFFER, buildOutageNotice } from "../src/lib/outage-notice-core.mjs";
 import { createEntry } from "../src/lib/goodwill.ts";
+import fs from "node:fs";
+
+/**
+ * Load runtime.conf WITHOUT a shell.
+ *
+ * It is systemd's EnvironmentFile format, not a shell script: values are taken
+ * literally and are NOT quoted. `MIRA_SMTP_FROM=Mira <login@vualet.com>` is
+ * valid there and a redirection to the shell. Sourcing a file like this is how
+ * a private key got executed and printed earlier in this project's history, so
+ * it is parsed here instead — plainly, line by line, with no interpretation.
+ */
+function loadRuntimeConf(path) {
+  const { existsSync, readFileSync } = fs;
+  if (!existsSync(path)) return 0;
+  let loaded = 0;
+  const SEP = new RegExp(String.fromCharCode(13) + "?" + String.fromCharCode(10));
+  for (const line of readFileSync(path, "utf8").split(SEP)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq <= 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    if (!/^[A-Z_][A-Z0-9_]*$/.test(key)) continue;
+    if (process.env[key] === undefined) {
+      process.env[key] = trimmed.slice(eq + 1);
+      loaded++;
+    }
+  }
+  return loaded;
+}
 
 const SENT_KEY = "mira:outage:notified:2026-09";
 const GOODWILL_KEY = "mira:outage:goodwill:2026-09";
@@ -59,6 +89,8 @@ async function affectedCustomers() {
 }
 
 async function main() {
+  loadRuntimeConf(process.env.MIRA_RUNTIME_CONF || "/opt/mira-web/runtime.conf");
+
   const customers = await affectedCustomers();
   const already = (await kvGet(SENT_KEY)) || [];
   const built = buildOutageNotice({
