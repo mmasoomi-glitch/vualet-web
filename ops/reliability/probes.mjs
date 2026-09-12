@@ -179,6 +179,61 @@ export async function probeInference(baseUrl, model, opts = {}) {
   }
 }
 
+/**
+ * Which host does somebody actually go to?
+ *
+ * The WhatsApp healthz URL is the local end of an SSH tunnel, not the gateway.
+ * So two completely different failures look identical from here: the tunnel
+ * dying on THIS host while the gateway is perfectly healthy, or the gateway
+ * dying on the OTHER host while the tunnel is fine.
+ *
+ * The difference decides which machine a human opens at 3am, and getting that
+ * wrong costs more than the outage did. The connection error shape tells them
+ * apart: nothing listening locally refuses the connection outright, whereas a
+ * live tunnel accepts it and then the far end drops it.
+ */
+export function classifyTransportError(err) {
+  if (err === null || err === undefined) return { layer: 'unknown', error: 'error' };
+
+  const code = typeof err === 'object' && err.code ? String(err.code) : '';
+  // A non-Error (a string, a number) has no .message, and reading one would
+  // classify every such failure as the literal text "undefined".
+  const raw = typeof err === 'object' && err.message ? String(err.message) : String(err);
+  const text = `${code} ${raw}`.toLowerCase();
+  const name = typeof err === 'object' ? err.name : '';
+
+  const has = (...needles) => needles.some((n) => text.includes(n));
+
+  // Nothing is listening on the local port at all.
+  if (has('econnrefused')) return { layer: 'transport', error: 'tunnel down' };
+  if (has('enotfound', 'eai_again')) return { layer: 'transport', error: 'host not resolvable' };
+
+  // The local socket was accepted and then died — the tunnel is up and the far
+  // end is what is not answering.
+  if (has('econnreset', 'epipe', 'socket hang up', 'premature close')) {
+    return { layer: 'gateway', error: 'gateway unreachable' };
+  }
+
+  // Genuinely ambiguous. Reported as ambiguous rather than guessed, because a
+  // confident wrong answer here sends somebody to the wrong machine.
+  if (name === 'AbortError' || has('etimedout', 'timeout', 'aborted')) {
+    return { layer: 'unknown', error: 'timeout' };
+  }
+
+  return { layer: 'unknown', error: raw.toLowerCase() || 'error' };
+}
+
+/** One sentence for the alert, naming what to check. */
+export function whatsappFailureGuidance(layer) {
+  if (layer === 'transport') {
+    return 'The tunnel on the web host is down. The gateway itself may be fine — check the tunnel first.';
+  }
+  if (layer === 'gateway') {
+    return 'The tunnel is up and the gateway host is not answering. Go to the gateway host.';
+  }
+  return 'Which side failed is not yet clear. Check the tunnel on the web host and the gateway host.';
+}
+
 export async function probeWhatsApp(healthzUrl, opts = {}) {
   const o = resolveOpts(opts);
   const start = o.clock();
@@ -209,7 +264,13 @@ export async function probeWhatsApp(healthzUrl, opts = {}) {
     }
     return makeResult(true, o.nowMs, latency, null, detail);
   } catch (err) {
-    return makeResult(false, o.nowMs, o.clock() - start, shortError(err), { url: healthzUrl });
+    // A connection failure here is ambiguous between the tunnel and the
+    // gateway, and the alert has to say which so nobody opens the wrong host.
+    const { layer, error } = classifyTransportError(err);
+    return makeResult(false, o.nowMs, o.clock() - start, error, {
+      layer,
+      guidance: whatsappFailureGuidance(layer),
+    });
   }
 }
 

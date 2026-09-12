@@ -36,8 +36,13 @@ curl -s http://127.0.0.1:8790/healthz    # on the prod host: the raw counts
 
 - `linked: 0`, `total: 3` → three customers disconnected. **Real.**
 - `linked` > 0 → recovered; the alert was a transient and will clear.
-- Endpoint unreachable → the gateway or its tunnel is down, which is a *different*
-  fault from "alive but empty". Check the gateway host, not this app.
+- Endpoint unreachable → the probe now tells you **which side**. Read
+  `detail.layer` and `detail.guidance` on the failing tracker:
+  - `tunnel down` / `layer: transport` → nothing is listening on 127.0.0.1:8790
+    on **this** host. The gateway may be perfectly healthy. Restart the tunnel here.
+  - `gateway unreachable` / `layer: gateway` → the tunnel is up and forwarding;
+    the **far** host is not answering. Go to the gateway host.
+  - `timeout` / `layer: unknown` → genuinely ambiguous. Check both.
 
 **Remediation:** customers must re-scan a QR. **Nobody can reconnect them
 remotely.** Point them at `https://mira.vualet.com/mira/reconnect`.
