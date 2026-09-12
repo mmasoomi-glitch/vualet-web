@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, adminErrorResponse } from "@/lib/admin-guard";
-import { reliability } from "@/lib/reliability-runtime";
+import { reliability, alertTransportReady } from "@/lib/reliability-runtime";
 import { channelReadiness } from "@/lib/channel-readiness";
 
 /**
@@ -27,6 +27,14 @@ export async function GET() {
       // Automatic reconnection is built and inert until the engine calls in,
       // and that failure is silent — everything answers, nothing happens.
       channelRecovery: await channelReadiness(Date.now()),
+      // Where alerts actually go. An operator must be able to see that the
+      // answer is "nowhere" — a monitor whose alarms reach no one is the
+      // failure this subsystem exists to remove, wearing a working dashboard.
+      alerting: {
+        transportReady: alertTransportReady(),
+        destinationConfigured: (process.env.MIRA_ALERT_EMAIL || "").trim().length > 0,
+        ...runtime.notifications(),
+      },
     });
   } catch (err) {
     return adminErrorResponse(err);
