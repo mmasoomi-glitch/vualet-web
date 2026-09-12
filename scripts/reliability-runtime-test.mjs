@@ -353,3 +353,66 @@ test("the runtime singleton is one instance, and resettable", () => {
   assert.notEqual(a, c, "resetting really does clear it, so tests can start clean");
   resetRuntime();
 });
+
+/* ── the production shape: paid provider, no self-hosted pod ───────────── */
+
+test("THE MODEL IS MONITORED ON A HOSTED-ONLY DEPLOYMENT", () => {
+  // This is production: no MIRA_LLM_BASE_URL, an OpenRouter key. The assistant
+  // probe answers from the KB to avoid spending a customer call, so without
+  // this the model has nothing watching it at all.
+  const services = resolveServices({ OPENROUTER_API_KEY: "sk-live" });
+  const inference = services.find((s) => s.name === "inference");
+
+  assert.ok(
+    inference,
+    "the provider could have been failing and nobody would have known — the assistant probe deliberately never calls it",
+  );
+  assert.equal(inference.kind, "provider_key", "checked by key and credit, not by generating text");
+  assert.equal(inference.url, "https://openrouter.ai/api/v1", "at the provider's base");
+});
+
+test("A SELF-HOSTED POD IS STILL PROBED BY GENERATION, NOT BY KEY", () => {
+  // A pod costs nothing per call, so there it is worth proving the model
+  // actually produces words rather than merely that a credential is valid.
+  const services = resolveServices({ MIRA_LLM_BASE_URL: "http://pod:8000/v1", OPENROUTER_API_KEY: "sk-live" });
+  const inference = services.filter((s) => s.name === "inference");
+
+  assert.equal(inference.length, 1, "exactly one inference service, never two");
+  assert.equal(inference[0].kind, "inference", "the free pod is generation-probed");
+  assert.equal(inference[0].url, "http://pod:8000/v1", "at the pod");
+});
+
+test("with no model configured at all there is nothing to monitor", () => {
+  const services = resolveServices({});
+  assert.equal(services.find((s) => s.name === "inference"), undefined, "and none is invented");
+  assert.ok(services.find((s) => s.name === "assistant"), "while the assistant check is never optional");
+});
+
+test("THE PROVIDER PROBE IS WIRED TO A REAL CALL", async () => {
+  let seen = null;
+  const store = memoryIo();
+  let now = 1000;
+  const rt = createRuntime({
+    env: { OPENROUTER_API_KEY: "sk-live-SECRET" },
+    logPath: "data/test.jsonl",
+    io: store.io,
+    clock: () => now,
+    setTimer: () => 0,
+    clearTimer: () => {},
+    fetchImpl: async (url, init) => {
+      seen = { url, init };
+      return {
+        status: 200,
+        text: async () => JSON.stringify({ data: { label: "k", usage: 1, limit: 10, is_free_tier: false } }),
+      };
+    },
+  });
+
+  const tracker = await rt.pollOnce("inference");
+  assert.ok(/\/key$/.test(seen.url), `the probe hits the key endpoint, got ${seen.url}`);
+  assert.equal(seen.init.method, "GET", "and never posts a completion, which would be billable");
+  assert.equal(tracker.state, "RECOVERING", "a healthy key starts the recovery climb");
+
+  const logged = JSON.stringify(store.lines);
+  assert.ok(!logged.includes("sk-live-SECRET"), "and the key never reaches the incident log");
+});

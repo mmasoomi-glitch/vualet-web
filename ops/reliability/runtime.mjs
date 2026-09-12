@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { probeAssistant, probeInference, probeWhatsApp } from './probes.mjs';
+import { probeAssistant, probeInference, probeWhatsApp, probeOpenRouterKey } from './probes.mjs';
 import { createPoller } from './poller.mjs';
 import { createIncidentLog } from './incidents.mjs';
 import { chooseProvider } from './router.mjs';
@@ -46,6 +46,24 @@ export function resolveServices(env) {
       kind: 'inference',
       url: llm,
       model: trimmed(e.MIRA_LLM_MODEL) || 'default',
+    });
+  }
+
+  // THE MODEL ITSELF MUST BE WATCHED, and on this deployment it is reached
+  // through a paid API rather than a self-hosted pod. The assistant probe
+  // deliberately answers from the knowledge base to avoid spending a customer
+  // call on monitoring, which means nothing else calls the model at all —
+  // without this, the provider could be failing and nobody would know.
+  //
+  // It checks the KEY, not generation: a revoked key and exhausted credit are
+  // the failures that actually happen, and neither costs anything to detect.
+  const openRouter = trimmed(e.OPENROUTER_API_KEY);
+  if (!llm && openRouter) {
+    services.push({
+      name: 'inference',
+      kind: 'provider_key',
+      url: trimmed(e.OPENROUTER_BASE_URL) || 'https://openrouter.ai/api/v1',
+      model: null,
     });
   }
 
@@ -156,6 +174,7 @@ export function createRuntime(options = {}) {
       // production; a test supplies its own.
       if (fetchImpl) opts.fetchImpl = fetchImpl;
       if (svc.kind === 'inference') return probeInference(svc.url, svc.model, opts);
+      if (svc.kind === 'provider_key') return probeOpenRouterKey(svc.url, env.OPENROUTER_API_KEY, opts);
       if (svc.kind === 'whatsapp') return probeWhatsApp(svc.url, opts);
       return probeAssistant(svc.url, opts);
     },

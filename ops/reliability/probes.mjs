@@ -227,3 +227,110 @@ export function summarise(results) {
   }
   return { allOk: failed.length === 0, failed, worstLatencyMs };
 }
+
+/**
+ * Is the model provider going to keep working tomorrow?
+ *
+ * This deliberately does NOT generate text. Production reaches its model
+ * through a paid per-call API, and a generation probe at the healthy interval
+ * would run ~1900 times a day and bill for every one of them. Monitoring that
+ * costs a meaningful fraction of what it monitors gets turned off.
+ *
+ * So it checks the two things that actually break: a revoked key, and credit
+ * running out. The second is the valuable one — it is a failure you can see
+ * coming. The assistant keeps answering right up until the credit is gone and
+ * then silently drops to a knowledge-base reply, which is exactly the shape of
+ * "broken and nobody told us" this subsystem exists to end.
+ */
+export async function probeOpenRouterKey(baseUrl, apiKey, opts = {}) {
+  const o = resolveOpts(opts);
+  const start = o.clock();
+
+  // Checked BEFORE any request. Probing with no key would report the PROVIDER
+  // as broken when it is our own configuration that is missing, and that sends
+  // somebody to investigate the wrong system at the worst possible moment.
+  if (typeof apiKey !== 'string' || apiKey.length === 0) {
+    return makeResult(false, o.nowMs, 0, 'no api key', {});
+  }
+
+  const url = `${baseUrl}/key`;
+  try {
+    const { res, text } = await request(
+      url,
+      { method: 'GET', headers: { Authorization: `Bearer ${apiKey}` } },
+      o,
+    );
+    const latency = o.clock() - start;
+    // Parsed regardless of status, for the same reason probeWhatsApp does it:
+    // a non-2xx body still carries the thing that says why.
+    const json = safeParseJson(text);
+
+    if (res.status === 401 || res.status === 403) {
+      return makeResult(false, o.nowMs, latency, 'invalid key', { status: res.status });
+    }
+    if (res.status < 200 || res.status >= 300) {
+      return makeResult(false, o.nowMs, latency, `http ${res.status}`, { status: res.status });
+    }
+    if (!json || typeof json !== 'object') {
+      return makeResult(false, o.nowMs, latency, 'unparseable body', { status: res.status });
+    }
+
+    const data = json.data && typeof json.data === 'object' ? json.data : {};
+    const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+    const usage = num(data.usage);
+    const limit = num(data.limit);
+    // A null limit means unlimited, which is not the same as zero remaining.
+    const remaining = usage !== null && limit !== null ? limit - usage : null;
+
+    // NEVER the key, never any part of it, and never `label` — that is a
+    // human-chosen key name and has been known to carry identifying text.
+    const detail = {
+      status: res.status,
+      usage,
+      limit,
+      isFreeTier: typeof data.is_free_tier === 'boolean' ? data.is_free_tier : null,
+      remaining,
+    };
+
+    if (remaining !== null && remaining <= 0) {
+      return makeResult(false, o.nowMs, latency, 'credit exhausted', detail);
+    }
+    return makeResult(true, o.nowMs, latency, null, detail);
+  } catch (err) {
+    return makeResult(false, o.nowMs, o.clock() - start, shortError(err), { url });
+  }
+}
+
+/**
+ * Should somebody be told about the remaining credit?
+ *
+ * Separate from the probe because running out is not the same event as being
+ * down: the assistant is still answering, and what matters is that a human
+ * acts before it stops.
+ */
+export function creditWarning(detail, warnBelow = 1) {
+  // An unlimited or unknown budget is not a warning. Crying wolf about one
+  // teaches people to ignore the alert that matters.
+  if (!detail || typeof detail !== 'object') return null;
+  const remaining = detail.remaining;
+  if (typeof remaining !== 'number' || !Number.isFinite(remaining)) return null;
+
+  const consequence =
+    'The assistant falls back to its knowledge base when the credit runs out, so it keeps answering but stops being able to reason.';
+
+  if (remaining <= 0) {
+    return {
+      severity: 'critical',
+      title: 'Assistant credit exhausted',
+      detail: `Remaining credit: ${remaining}. ${consequence}`,
+    };
+  }
+  if (remaining <= warnBelow) {
+    return {
+      severity: 'high',
+      title: 'Assistant credit nearly exhausted',
+      detail: `Remaining credit: ${remaining}. ${consequence}`,
+    };
+  }
+  return null;
+}

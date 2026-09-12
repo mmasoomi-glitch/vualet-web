@@ -12,6 +12,8 @@ import {
   probeInference,
   probeWhatsApp,
   summarise,
+  probeOpenRouterKey,
+  creditWarning,
 } from "../ops/reliability/probes.mjs";
 
 function fakeFetch(status, bodyText) {
@@ -195,4 +197,114 @@ test("summarise is defensive", async () => {
   assert.equal(summarise(undefined).allOk, true, "undefined must not throw");
   assert.equal(summarise("string").allOk, true, "a non-object must not throw");
   assert.equal(summarise({ a: "not a result" }).allOk, true, "a malformed entry is skipped, not fatal");
+});
+
+/* ── the paid provider: key and credit, never generation ───────────────── */
+
+const keyBody = (over = {}) =>
+  JSON.stringify({ data: { label: "sk-my-personal-key-for-mira", usage: 4, limit: 10, is_free_tier: false, ...over } });
+
+test("PROBING THE PROVIDER COSTS NOTHING — it never generates", async () => {
+  let seenInit = null;
+  const capturing = async (url, init) => {
+    seenInit = { url, init };
+    return { status: 200, text: async () => keyBody() };
+  };
+  const r = await probeOpenRouterKey("https://openrouter.ai/api/v1", "sk-test", OPTS(capturing));
+
+  assert.equal(r.ok, true, "a valid key with credit is healthy");
+  assert.equal(seenInit.init.method, "GET", "a GET, not a completion");
+  assert.ok(
+    !/chat\/completions/.test(seenInit.url),
+    "a generation probe at the healthy interval would bill ~1900 times a day, and monitoring that costs a fraction of what it monitors gets switched off",
+  );
+});
+
+test("THE KEY AND THE LABEL NEVER REACH THE DETAIL", async () => {
+  const r = await probeOpenRouterKey("https://openrouter.ai/api/v1", "sk-live-SECRET-VALUE", OPTS(fakeFetch(200, keyBody())));
+  const serialised = JSON.stringify(r.detail);
+  assert.ok(!serialised.includes("sk-live-SECRET-VALUE"), "the key must never be logged");
+  assert.ok(!serialised.includes("SECRET"), "nor any part of it");
+  assert.ok(
+    !serialised.includes("sk-my-personal-key-for-mira"),
+    "nor the label — it is a human-chosen key name and has been known to carry identifying text",
+  );
+  assert.equal(r.detail.remaining, 6, "while the number that matters is kept");
+});
+
+test("EXHAUSTED CREDIT IS AN OUTAGE, NOT A 200", async () => {
+  const r = await probeOpenRouterKey("https://x/v1", "sk-test", OPTS(fakeFetch(200, keyBody({ usage: 10, limit: 10 }))));
+  assert.equal(
+    r.ok,
+    false,
+    "the provider answers 200 right up until the credit is gone — treating that as healthy is exactly the silent failure this subsystem exists to end",
+  );
+  assert.equal(r.error, "credit exhausted", "and it is named");
+  assert.equal(r.detail.remaining, 0, "with the figure an operator needs");
+});
+
+test("an unlimited budget is not an exhausted one", async () => {
+  const r = await probeOpenRouterKey("https://x/v1", "sk-test", OPTS(fakeFetch(200, keyBody({ limit: null }))));
+  assert.equal(r.ok, true, "a null limit means unlimited");
+  assert.equal(r.detail.remaining, null, "which is unknown remaining, not zero remaining");
+});
+
+test("a revoked key is distinguished from an outage", async () => {
+  for (const status of [401, 403]) {
+    const r = await probeOpenRouterKey("https://x/v1", "sk-test", OPTS(fakeFetch(status, "{}")));
+    assert.equal(r.ok, false, `${status} is not healthy`);
+    assert.equal(r.error, "invalid key", "our credential, not their outage — different people fix those");
+  }
+  const down = await probeOpenRouterKey("https://x/v1", "sk-test", OPTS(fakeFetch(503, "{}")));
+  assert.equal(down.error, "http 503", "whereas a 503 is theirs");
+});
+
+test("A MISSING KEY BLAMES OUR CONFIG, NOT THE PROVIDER", async () => {
+  let called = false;
+  const spy = async () => {
+    called = true;
+    return { status: 200, text: async () => keyBody() };
+  };
+  for (const key of [undefined, null, "", 5]) {
+    const r = await probeOpenRouterKey("https://x/v1", key, OPTS(spy));
+    assert.equal(r.error, "no api key", `${String(key)} is our own missing configuration`);
+  }
+  assert.equal(
+    called,
+    false,
+    "and no request is made — reporting the PROVIDER broken would send somebody to investigate the wrong system",
+  );
+});
+
+test("probeOpenRouterKey never throws", async () => {
+  const boom = await probeOpenRouterKey("https://x/v1", "sk-test", OPTS(failingFetch(new Error("dns"))));
+  assert.equal(boom.ok, false, "a network failure is a failed probe");
+  assert.equal(boom.error, "dns", "not an exception out of a timer");
+
+  const junk = await probeOpenRouterKey("https://x/v1", "sk-test", OPTS(fakeFetch(200, "not json")));
+  assert.equal(junk.error, "unparseable body", "and a garbage body is reported cleanly");
+});
+
+/* ── the warning that gets a human to act before it stops ──────────────── */
+
+test("CREDIT RUNNING LOW WARNS BEFORE IT RUNS OUT", async () => {
+  assert.equal(creditWarning({ remaining: 5 }), null, "plenty left is not news");
+  const low = creditWarning({ remaining: 1 });
+  assert.equal(low.severity, "high", "nearly gone is worth waking someone for");
+  const gone = creditWarning({ remaining: 0 });
+  assert.equal(gone.severity, "critical", "gone is worse");
+  assert.ok(
+    /knowledge base/i.test(gone.detail),
+    "and it says what the customer actually experiences, not just a number",
+  );
+});
+
+test("AN UNKNOWN BUDGET IS NOT A WARNING", () => {
+  for (const detail of [null, undefined, "nope", 5, {}, { remaining: null }, { remaining: NaN }, { remaining: "3" }]) {
+    assert.equal(
+      creditWarning(detail),
+      null,
+      `${JSON.stringify(detail)} must not warn — crying wolf about an unlimited or unknown budget teaches people to ignore the alert that matters`,
+    );
+  }
 });
