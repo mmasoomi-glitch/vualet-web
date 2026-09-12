@@ -3,6 +3,7 @@ import { mintConnectToken } from "@/lib/connect-token";
 import { putConnect } from "@/lib/store";
 import { whatsappPairUrl } from "@/lib/pairing";
 import { redeemRecovery, getBinding } from "@/lib/channel-binding-store";
+import { BINDING_STATES } from "@/lib/channel-binding-core.mjs";
 import { recordChannelEvent } from "@/lib/channel-event-log";
 import { CHANNEL_EVENTS } from "@/lib/channel-events.mjs";
 
@@ -117,6 +118,28 @@ export async function POST(req: Request) {
     // to reconnect.
     if (binding.accountId !== record.accountId) {
       return NextResponse.json({ error: "binding_mismatch" }, { status: 409 });
+    }
+
+    // A TERMINAL BINDING IS NOT RECONNECTABLE, whatever the token says.
+    //
+    // Revoking a binding now kills its live links, and the bind step refuses a
+    // scan against a dead binding — so this is the third guard on the same
+    // hole. It is here because the other two are elsewhere: a reader of this
+    // route should not have to know about either to see that a superseded
+    // number cannot walk back in, and minting a pairing session that can only
+    // ever be refused wastes the customer's time on a flow that cannot work.
+    if (
+      binding.state === BINDING_STATES.REVOKED ||
+      binding.state === BINDING_STATES.SUPERSEDED ||
+      binding.state === BINDING_STATES.COMPROMISED
+    ) {
+      return NextResponse.json(
+        {
+          error: "link_revoked",
+          message: "This link is no longer valid. Message the assistant again to get a new one.",
+        },
+        { status: 400 },
+      );
     }
 
     const pairToken = mintConnectToken();
