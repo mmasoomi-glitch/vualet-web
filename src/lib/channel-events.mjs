@@ -50,12 +50,30 @@ const FORBIDDEN_KEYS = [
   'phone', 'msisdn', 'jid', 'email', 'token', 'secret', 'password', 'raw', 'identifier',
 ];
 
-/** A value that looks like a phone number or an address, whatever it is called. */
+/**
+ * Does this value look like a phone number or an address, whatever it is called?
+ *
+ * This is the LAST line of defence: it catches an identifying value sitting
+ * under an innocent key, where the forbidden-word check cannot help.
+ *
+ * It strips the punctuation people actually write numbers with before
+ * counting digits. A previous version matched only a narrow shape and let
+ * "(202) 555-1234", "+1 (202) 555-1234" and "202.555.1234" through — all
+ * ordinary ways to write a number, and all of them would then have been
+ * written PERMANENTLY into an append-only chain that cannot be edited or
+ * deleted to take them back out.
+ *
+ * It deliberately errs toward redacting. In a log you can never erase, losing
+ * a field to caution costs an operator one lookup; keeping one costs a
+ * customer their number forever.
+ */
 function looksIdentifying(value) {
   if (typeof value !== 'string') return false;
   if (value.includes('@')) return true;
-  if (/^\+?\d[\d\s-]{6,}$/.test(value)) return true;
-  return false;
+  // Only the separators a phone number is written with. A timestamp or an id
+  // keeps its letters and colons and so fails the all-digits test below.
+  const stripped = value.replace(/[\s\-().+]/g, '');
+  return /^\d{7,}$/.test(stripped);
 }
 
 /**

@@ -75,6 +75,46 @@ test("a value that LOOKS identifying is redacted whatever it is called", () => {
   assert.equal(out.fine, "all good", "ordinary text survives");
 });
 
+test("A NUMBER WRITTEN THE WAY PEOPLE ACTUALLY WRITE IT IS STILL CAUGHT", () => {
+  // Found by an independent review of the shipped code. The previous shape
+  // check matched only a narrow form, so every one of these went through — and
+  // into a chain that cannot be edited or deleted to take it back out.
+  for (const written of [
+    "(202) 555-1234",
+    "+1 (202) 555-1234",
+    "202.555.1234",
+    "+44 20 7946 0958",
+    "971 55 429 2699",
+    "12025551234",
+    "5551234",
+    "12025551234@s.whatsapp.net",
+  ]) {
+    assert.equal(
+      sanitiseDetail({ note: written }).note,
+      "[redacted]",
+      `"${written}" reached an append-only log. Losing a field to caution costs an operator one lookup; keeping one costs a customer their number forever`,
+    );
+  }
+});
+
+test("but the things an operator actually needs still survive", () => {
+  for (const keep of [
+    "2026-09-12T09:20:13.000Z",
+    "inc_1789159166628",
+    "REVOKE_OLD_BINDING",
+    "USER_CHANGED_NUMBER",
+    "bnd_a1b2c3",
+    "no linked devices",
+    "12345",
+  ]) {
+    assert.equal(
+      sanitiseDetail({ note: keep }).note,
+      keep,
+      `"${keep}" was redacted — erring toward caution must not empty the log of the evidence it exists to hold`,
+    );
+  }
+});
+
 test("sanitiseDetail flattens and bounds", () => {
   const out = sanitiseDetail({ nested: { a: 1 }, list: [1, 2], long: "x".repeat(500), nil: null, no: false });
   assert.equal(out.nested, "[omitted]", "nesting could smuggle a value past the key filter");
