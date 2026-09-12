@@ -15,6 +15,8 @@ import {
   probeOpenRouterKey,
   creditWarning,
   probeStore,
+  classifyTransportError,
+  whatsappFailureGuidance,
 } from "../ops/reliability/probes.mjs";
 
 function fakeFetch(status, bodyText) {
@@ -397,4 +399,67 @@ test("probeStore refuses an unwired store and never throws", async () => {
   );
   assert.equal(boom.ok, false, "a throwing store is a failed probe");
   assert.equal(boom.error, "ENOSPC", "not an exception out of a timer");
+});
+
+/* ── which host does somebody actually go to? ──────────────────────────── */
+
+const errWith = (code, message, name) => Object.assign(new Error(message), { code, name });
+
+test("A DEAD TUNNEL IS NOT A DEAD GATEWAY", async () => {
+  // Nothing listening on the local port: the connection is refused outright.
+  const r = await probeWhatsApp(URL_, OPTS(failingFetch(errWith("ECONNREFUSED", "connect ECONNREFUSED 127.0.0.1:8790"))));
+  assert.equal(r.ok, false, "still an outage");
+  assert.equal(r.error, "tunnel down", "but it is the TUNNEL, not the gateway");
+  assert.equal(r.detail.layer, "transport", "classified at the transport layer");
+  assert.ok(
+    /tunnel first/i.test(r.detail.guidance),
+    "and the alert says which host to open — sending somebody to the wrong machine at 3am costs more than the outage did",
+  );
+});
+
+test("A LIVE TUNNEL WITH A DEAD GATEWAY POINTS AT THE OTHER HOST", async () => {
+  // The socket was accepted and then died: the tunnel is up, the far end is not.
+  for (const err of [
+    errWith("ECONNRESET", "socket hang up"),
+    errWith(undefined, "fetch failed: Premature close"),
+    errWith("EPIPE", "write EPIPE"),
+  ]) {
+    const r = await probeWhatsApp(URL_, OPTS(failingFetch(err)));
+    assert.equal(r.error, "gateway unreachable", `${err.message} is a gateway failure`);
+    assert.equal(r.detail.layer, "gateway", "classified at the gateway layer");
+    assert.ok(/gateway host/i.test(r.detail.guidance), "and points at the gateway host");
+  }
+});
+
+test("AN AMBIGUOUS FAILURE IS REPORTED AS AMBIGUOUS, NOT GUESSED", async () => {
+  const abort = Object.assign(new Error("aborted"), { name: "AbortError" });
+  const r = await probeWhatsApp(URL_, OPTS(failingFetch(abort)));
+  assert.equal(r.error, "timeout", "a timeout could be either side");
+  assert.equal(
+    r.detail.layer,
+    "unknown",
+    "a confident wrong answer here sends somebody to the wrong machine, so it says it does not know",
+  );
+  assert.ok(/both|check the tunnel/i.test(r.detail.guidance), "and tells them to check both");
+});
+
+test("classifyTransportError never throws and never invents a message", () => {
+  for (const junk of [null, undefined, 5, "something odd", {}, []]) {
+    const r = classifyTransportError(junk);
+    assert.ok(["transport", "gateway", "unknown"].includes(r.layer), `${String(junk)} still classified`);
+    assert.notEqual(
+      r.error,
+      "undefined",
+      "a non-Error has no .message, and reading one anyway would label every such failure the literal text 'undefined'",
+    );
+  }
+  assert.equal(classifyTransportError("something odd").error, "something odd", "a string error keeps its text");
+});
+
+test("guidance always names something to check", () => {
+  for (const layer of ["transport", "gateway", "unknown", null, undefined, 5, "made up"]) {
+    const g = whatsappFailureGuidance(layer);
+    assert.ok(typeof g === "string" && g.length > 0, `${String(layer)} still yields guidance`);
+    assert.ok(/tunnel|gateway/i.test(g), "naming a system, because guidance that names nothing is not guidance");
+  }
 });
