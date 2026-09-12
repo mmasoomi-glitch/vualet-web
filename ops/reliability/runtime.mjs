@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { probeAssistant, probeInference, probeWhatsApp, probeOpenRouterKey, creditWarning } from './probes.mjs';
+import { probeAssistant, probeInference, probeWhatsApp, probeOpenRouterKey, creditWarning, probeStore } from './probes.mjs';
 import { createNotifier } from './notifier.mjs';
 import { createPoller } from './poller.mjs';
 import { createIncidentLog } from './incidents.mjs';
@@ -158,9 +158,14 @@ export function createRuntime(options = {}) {
     // reach the log and the in-memory buffer and NOBODY IS TOLD — which is the
     // failure this subsystem exists to remove, so production must supply it.
     sendAlert = null,
+    // The store underpins payments, sessions, entitlement and bindings, and its
+    // failure is silent. Injected rather than imported so this directory stays
+    // free of the app's dependencies.
+    storeAdapter = null,
   } = options;
 
   const services = resolveServices(env);
+  if (storeAdapter) services.push({ name: 'store', kind: 'store', url: null, model: null });
   const providers = resolveProviders(env);
   const incidentLog = createIncidentLog({ filePath: logPath, io, maxLines: MAX_LOG_LINES });
 
@@ -238,6 +243,7 @@ export function createRuntime(options = {}) {
       if (fetchImpl) opts.fetchImpl = fetchImpl;
       if (svc.kind === 'inference') return probeInference(svc.url, svc.model, opts);
       if (svc.kind === 'provider_key') return probeProviderKeyAndWarn(svc, opts);
+      if (svc.kind === 'store') return probeStore(storeAdapter, opts);
       if (svc.kind === 'whatsapp') return probeWhatsApp(svc.url, opts);
       return probeAssistant(svc.url, opts);
     },
