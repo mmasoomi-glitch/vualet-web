@@ -12,12 +12,30 @@
  */
 
 import { getRuntime } from "../../ops/reliability/runtime.mjs";
+import { emailConfigured, sendMail } from "@/lib/email";
 
 let started = false;
 
+/**
+ * Deliver an alert to a human.
+ *
+ * Email, because it is the one channel that does not depend on the thing being
+ * alerted about still working. It never throws: the notifier treats a failed
+ * send as un-sent and will retry, which is only correct if the failure gets
+ * back to it rather than being swallowed here.
+ */
+async function sendAlert(message: { subject: string; text: string }): Promise<void> {
+  const to = (process.env.MIRA_ALERT_EMAIL || "").trim();
+  if (!to) throw new Error("MIRA_ALERT_EMAIL is not set");
+  if (!emailConfigured()) throw new Error("SMTP is not configured");
+  // Plain text in both slots on purpose: an alert is read on a phone at 3am and
+  // has nothing to gain from markup.
+  await sendMail(to, message.subject, `<pre>${message.text}</pre>`, message.text);
+}
+
 /** The process-wide runtime, polling. Safe to call on every request. */
 export function reliability() {
-  const runtime = getRuntime({ env: process.env });
+  const runtime = getRuntime({ env: process.env, sendAlert });
   if (!started) {
     started = true;
     // start() is idempotent, but the flag keeps a hot path from re-entering it.

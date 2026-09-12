@@ -275,22 +275,57 @@ export async function probeOpenRouterKey(baseUrl, apiKey, opts = {}) {
       return makeResult(false, o.nowMs, latency, 'unparseable body', { status: res.status });
     }
 
-    const data = json.data && typeof json.data === 'object' ? json.data : {};
-    const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
-    const usage = num(data.usage);
-    const limit = num(data.limit);
-    // A null limit means unlimited, which is not the same as zero remaining.
+    // Either shape: wrapped in `data`, or the fields at the top level.
+    const data = json.data && typeof json.data === 'object' ? json.data : json;
+
+    const firstNumber = (...names) => {
+      for (const name of names) {
+        const v = data[name];
+        if (typeof v === 'number' && Number.isFinite(v)) return v;
+      }
+      return null;
+    };
+    const usage = firstNumber('usage', 'usage_daily', 'used');
+    const limit = firstNumber('limit', 'limit_remaining', 'credit_limit', 'max_credit');
+    const isFreeTier = typeof data.is_free_tier === 'boolean' ? data.is_free_tier : null;
+    const hasLimitKey = Object.prototype.hasOwnProperty.call(data, 'limit');
+
+    // AN UNRECOGNISED PAYLOAD IS NOT HEALTHY.
+    //
+    // These field names came from documentation, not from an observed response.
+    // If the provider changes its schema, or this endpoint ever returns
+    // something else, the numbers silently resolve to null — and without this
+    // branch the probe would report HEALTHY on any 2xx forever, having quietly
+    // degraded into a liveness check that can NEVER detect credit exhaustion.
+    // That is the exact failure this subsystem exists to eliminate, so it is
+    // made loud instead.
+    //
+    // `fields` reports the key NAMES we did see, which is what lets a human fix
+    // the mapping in one look rather than by reading the code. NAMES ONLY: a
+    // value could be a credential.
+    if (usage === null && limit === null && !hasLimitKey) {
+      const fields = Object.keys(data)
+        .sort()
+        .slice(0, 12)
+        .map((k) => k.slice(0, 40));
+      return makeResult(false, o.nowMs, latency, 'unrecognised key payload', {
+        status: res.status,
+        usage: null,
+        limit: null,
+        isFreeTier,
+        remaining: null,
+        fields,
+      });
+    }
+
+    // An explicit null limit means UNLIMITED, which is not the same as
+    // exhausted: there is no ceiling to run into, so there is nothing to warn
+    // about and remaining stays unknown rather than zero.
     const remaining = usage !== null && limit !== null ? limit - usage : null;
 
     // NEVER the key, never any part of it, and never `label` — that is a
     // human-chosen key name and has been known to carry identifying text.
-    const detail = {
-      status: res.status,
-      usage,
-      limit,
-      isFreeTier: typeof data.is_free_tier === 'boolean' ? data.is_free_tier : null,
-      remaining,
-    };
+    const detail = { status: res.status, usage, limit, isFreeTier, remaining };
 
     if (remaining !== null && remaining <= 0) {
       return makeResult(false, o.nowMs, latency, 'credit exhausted', detail);
