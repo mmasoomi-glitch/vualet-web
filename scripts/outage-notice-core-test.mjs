@@ -39,18 +39,49 @@ test("IT NEVER CLAIMS THE CREDIT IS ALREADY APPLIED", () => {
 test("THE SUBJECT DOES NOT PROMISE SOMETHING UNTRUE", () => {
   const { notice } = buildOutageNotice(base());
   assert.ok(
-    !/is back|working again|restored|fixed/i.test(notice.subject),
+    !/is back|working again|restored|is fixed/i.test(notice.subject),
     "she is NOT back until they reconnect — a subject claiming otherwise is the first thing they would find out was wrong",
   );
   assert.ok(!notice.subject.includes("!"), "no exclamation mark in an apology");
   assert.ok(notice.subject.length > 20, "and it says something specific");
 });
 
-test("it leads with what happened and whose fault it was", () => {
+test("IT NEVER ASSERTS A CAUSE WE COULD NOT PROVE", () => {
+  const { notice } = buildOutageNotice(base());
+  const all = both(notice).toLowerCase();
+
+  // Before sending, the store showed no tenant id and no bound identifier on any
+  // affected subscription, and their connect records had already expired. So we
+  // cannot distinguish "we broke an established connection" from "they never
+  // finished pairing". Telling somebody in the second group that we broke their
+  // connection teaches them we do not know what happened to them.
+  for (const claim of [
+    "broke the connection", "we broke", "something we changed",
+    "our fault", "a change on our side", "went wrong on our end",
+  ]) {
+    assert.ok(
+      !all.includes(claim),
+      `"${claim}" names a cause the evidence does not support. Only assert what is provable: they pay, and they have no working assistant.`,
+    );
+  }
+});
+
+test("IT DOES NOT BLAME THE CUSTOMER EITHER", () => {
+  const { notice } = buildOutageNotice(base());
+  const all = both(notice).toLowerCase();
+  // The mirror image of the error above. Not knowing the cause is not licence
+  // to imply they failed to finish something.
+  for (const blame of ["you did not", "you never", "you forgot", "you failed", "incomplete setup"]) {
+    assert.ok(!all.includes(blame), `"${blame}" blames somebody we have no evidence against`);
+  }
+  assert.ok(/not doing anything wrong/i.test(notice.text), "it says so explicitly");
+});
+
+test("it leads with the one thing that IS certain", () => {
   const { notice } = buildOutageNotice(base());
   const first = notice.text.split("\n\n")[0].toLowerCase();
-  assert.ok(/stopped answering/.test(first), "the first sentence says what they experienced");
-  assert.ok(/our fault/.test(first), "and takes the blame in the same breath");
+  assert.ok(/is not connected/.test(first), "the first sentence states the verified fact");
+  assert.ok(/our job to put right/.test(first), "and takes responsibility without inventing a cause");
   assert.ok(
     !/we wanted to let you know|we are reaching out|we are writing to/i.test(notice.text),
     "no throat-clearing — it makes an annoyed reader wait for the point",
@@ -60,8 +91,8 @@ test("it leads with what happened and whose fault it was", () => {
 test("IT SAYS WHAT THEY WILL ACTUALLY BE WORRIED ABOUT", () => {
   const { notice } = buildOutageNotice(base());
   const t = notice.text.toLowerCase();
-  assert.ok(/nothing was lost/.test(t), "their first fear is that they lost everything");
-  assert.ok(/subscription/.test(t) && /remembers/.test(t) && /settings/.test(t), "named specifically");
+  assert.ok(/nothing is lost/.test(t), "their first fear is that they lost everything");
+  assert.ok(/subscription/.test(t) && /learned/.test(t) && /settings/.test(t), "named specifically");
   assert.ok(/costs nothing|free/.test(t), "their second fear is being charged again");
   assert.ok(/about a minute/.test(t), "and how long it will take them");
 });
@@ -86,13 +117,14 @@ test("A TIMESTAMP IS NEVER PASTED INTO A SENTENCE", () => {
     !/\d{4}-\d{2}-\d{2}T/.test(notice.text),
     "an ISO timestamp reads like a log line and makes them do arithmetic to find out how long they lost",
   );
-  assert.ok(/for the last 5 days/.test(notice.text), "it says it the way a person would");
+  assert.ok(/has not been for 5 days/.test(notice.text), "it says it the way a person would");
 });
 
 test("the duration degrades gracefully rather than guessing", () => {
   for (const over of [{ sinceIso: null }, { sinceIso: "" }, { nowIso: null }, { sinceIso: "not a date" }, { nowIso: "2026-09-01T00:00:00Z" }]) {
     const { notice } = buildOutageNotice(base(over));
-    assert.ok(/stopped answering you/.test(notice.text), `${JSON.stringify(over)} still reads properly`);
+    assert.ok(/is not connected to your WhatsApp/.test(notice.text), `${JSON.stringify(over)} still reads properly`);
+    assert.ok(!/WhatsApp and has not been,/.test(notice.text), "and never leaves a dangling clause");
     assert.ok(!/NaN|Invalid|undefined/.test(notice.text), "and never shows the reader a broken value");
   }
   assert.ok(/since yesterday/.test(buildOutageNotice(base({ sinceIso: "2026-09-11T09:00:00.000Z" })).notice.text), "one day reads as yesterday");
@@ -110,7 +142,7 @@ test("THERE IS EXACTLY ONE THING TO DO", () => {
 
 test("html and text carry the same facts", () => {
   const { notice } = buildOutageNotice(base());
-  for (const fact of ["our fault", "Nothing was lost", "15 days of free usage", "support@vualet.com"]) {
+  for (const fact of ["our job to put right", "Nothing is lost", "15 days of free usage", "support@vualet.com"]) {
     assert.ok(notice.text.includes(fact), `text carries "${fact}"`);
     assert.ok(notice.html.includes(fact), `and so does html`);
   }
