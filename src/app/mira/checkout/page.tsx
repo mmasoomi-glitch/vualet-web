@@ -228,7 +228,7 @@ function Checkout() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.url) {
-        window.location.href = data.url;
+        window.location.assign(data.url);
         return;
       }
       // The server re-checks both of these. If it refuses, put the customer back

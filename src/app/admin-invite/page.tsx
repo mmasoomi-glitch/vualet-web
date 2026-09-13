@@ -108,7 +108,7 @@ function AdminInvite() {
               >
                 {busy ? "Saving…" : "Set password"}
               </button>
-              <p className="text-xs text-[var(--muted)]">You'll set up an authenticator app when you first sign in.</p>
+              <p className="text-xs text-[var(--muted)]">You&apos;ll set up an authenticator app when you first sign in.</p>
             </>
           )}
         </form>
