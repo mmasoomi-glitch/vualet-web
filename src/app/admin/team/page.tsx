@@ -63,8 +63,20 @@ export default function TeamPage() {
   }, []);
 
   useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const [meRes, listRes] = await Promise.all([fetch("/api/admin/me"), fetch("/api/admin/admins")]);
+      if (meRes.ok) setPerms((await meRes.json()).permissions || []);
+      if (listRes.ok) {
+        setAdmins((await listRes.json()).admins || []);
+        setError("");
+      } else if (listRes.status === 403) {
+        setError("Your role can't view the admin directory.");
+      }
+      setLoading(false);
+    };
     load();
-  }, [load]);
+  }, []);
 
   const canInvite = perms.includes("admin.invite");
   const canManage = perms.includes("admin.role.assign");

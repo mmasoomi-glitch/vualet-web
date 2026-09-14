@@ -60,7 +60,7 @@
 //   CRC-32 uses IEEE polynomial 0xEDB88320 (reflected form).
 //
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { resolve, dirname, basename, extname, join } from "node:path";
 import { inflateSync, deflateSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
@@ -572,7 +572,7 @@ try {
 } catch (err) {
   console.error(`ERROR: cannot re-read output for self-check: ${err.message}`);
   try {
-    require("node:fs").unlinkSync(outputPath);
+    unlinkSync(outputPath);
   } catch {}
   process.exit(1);
 }
@@ -612,7 +612,7 @@ if (checkW !== targetW || checkH !== targetH) {
   );
   console.error("       Deleting output file.");
   try {
-    require("node:fs").unlinkSync(outputPath);
+    unlinkSync(outputPath);
   } catch {}
   process.exit(1);
 }

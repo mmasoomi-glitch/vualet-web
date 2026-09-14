@@ -96,7 +96,7 @@ export default function MiraBot() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [voiceOn, setVoiceOn] = useState(true);
-  const [supportsMic, setSupportsMic] = useState(false);
+  const [supportsMic] = useState(() => getSR() !== null);
   const [recording, setRecording] = useState(false);
   const [interim, setInterim] = useState("");
   const [recSecs, setRecSecs] = useState(0);
@@ -127,7 +127,6 @@ export default function MiraBot() {
   }, [voiceOn]);
 
   useEffect(() => {
-    setSupportsMic(getSR() !== null);
     const urls = urlsRef.current;
     return () => {
       urls.forEach((u) => URL.revokeObjectURL(u));

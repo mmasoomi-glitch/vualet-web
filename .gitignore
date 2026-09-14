@@ -42,6 +42,7 @@ next-env.d.ts
 
 # local context-ledger coordination state (not shipped)
 .claude/
+.opencode/
 
 # scratchpad workspace — build artifacts, bundle copies, node_modules, .next dirs
 scratchpad/

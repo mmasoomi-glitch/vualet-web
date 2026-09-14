@@ -156,7 +156,7 @@ export default function VeridianChat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [voiceOn, setVoiceOn] = useState(true);
-  const [supportsMic, setSupportsMic] = useState(false);
+  const [supportsMic] = useState(() => getSR() !== null);
   const [recording, setRecording] = useState(false);
   const [interim, setInterim] = useState("");
   const [recSecs, setRecSecs] = useState(0);
@@ -194,7 +194,6 @@ export default function VeridianChat() {
   }, [voiceOn]);
 
   useEffect(() => {
-    setSupportsMic(getSR() !== null);
     // Revoke any object URLs we created on unmount.
     const urls = urlsRef.current;
     return () => {

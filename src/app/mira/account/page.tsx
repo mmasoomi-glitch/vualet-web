@@ -98,7 +98,15 @@ const card: React.CSSProperties = {
 
 export default function MiraAccount() {
   const [me, setMe] = useState<Me | null>(null); // null = loading
-  const [persona, setPersona] = useState<Persona | null>(null);
+  const [persona] = useState<Persona | null>(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("mira_setup") : null;
+      const parsed = raw ? (JSON.parse(raw) as Persona) : null;
+      return parsed && parsed.assistantName ? parsed : null;
+    } catch {
+      return null;
+    }
+  });
   const [order, setOrder] = useState<OrderSummary | null>(null);
   const [portalBusy, setPortalBusy] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
@@ -119,13 +127,6 @@ export default function MiraAccount() {
       .then((r) => r.json())
       .then((d: { summary?: OrderSummary }) => setOrder(d?.summary ?? null))
       .catch(() => setOrder(null));
-    try {
-      const raw = localStorage.getItem("mira_setup");
-      const parsed = raw ? (JSON.parse(raw) as Persona) : null;
-      setPersona(parsed && parsed.assistantName ? parsed : null);
-    } catch {
-      setPersona(null);
-    }
   }, []);
 
   async function openBillingPortal(customerId: string) {
