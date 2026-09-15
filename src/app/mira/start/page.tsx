@@ -247,7 +247,7 @@ export default function ShapeYourMira() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const canAdvance =
-    (step === STEP.Name && name.trim().length > 0) ||
+    (step === STEP.Name) ||
     (step === STEP.Vibe && !!vibe) ||
     (step === STEP.Role && !!role) ||
     (step === STEP.Language && !!lang) ||
